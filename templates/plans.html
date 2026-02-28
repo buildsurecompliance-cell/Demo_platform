@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">Escolha Seu Plano</h2>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-primary shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3>Premium</h3>
+                    <p class="mb-0">$500 / mês</p>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item">✅ Acesso ilimitado a todos os subcontractors</li>
+                        <li class="list-group-item">✅ Dashboard completo com KPIs e gráficos</li>
+                        <li class="list-group-item">✅ Upload e gerenciamento ilimitado de documentos</li>
+                        <li class="list-group-item">✅ Alertas e lembretes automáticos de COI</li>
+                        <li class="list-group-item">✅ Adicionar, editar, deletar e enviar lembretes</li>
+                        <li class="list-group-item">✅ Suporte via e-mail</li>
+                        <li class="list-group-item">✅ Segurança e backups incluídos</li>
+                    </ul>
+                    <div class="d-grid">
+                        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Assinar Agora</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

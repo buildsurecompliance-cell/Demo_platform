@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    body {
+        background-color: #1c1c1e; /* Fundo escuro */
+        color: #f1f1f1;
+    }
+
+    .card {
+        background-color: #2c2c2e;
+        color: #f1f1f1;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .btn-primary {
+        background: linear-gradient(90deg, #28a745, #218838);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(90deg, #218838, #28a745);
+        transform: scale(1.05);
+    }
+
+    a {
+        color: #28a745;
+        text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+</style>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-5 text-center">
+                <h1 class="mb-4">Welcome to SubManage</h1>
+                <p class="lead mb-4">Manage all your subcontractors effortlessly with unlimited access.</p>
+
+                <!-- Buttons -->
+                <div class="d-grid gap-3">
+                    <!-- Register goes to subscription first -->
+                    <a href="{{ url_for('subscribe') }}" class="btn btn-primary btn-lg">Register</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">Login</a>
+                </div>
+
+                <p class="mt-4 text-muted">After completing the payment, you will be able to create your account and access the platform.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

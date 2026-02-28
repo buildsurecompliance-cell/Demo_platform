@@ -1,0 +1,88 @@
+<!-- templates/pdf_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Report</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 30px; font-size: 12px; color: #333; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+    th, td { border: 1px solid #aaa; padding: 6px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: white; }
+    .expired { background-color: #dc3545; }
+    .risk { background-color: #ffc107; color: black; }
+    .compliant { background-color: #198754; }
+    .document-list { font-size: 10px; }
+    .chart { text-align: center; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<h2>Dashboard Report - {{ today }}</h2>
+
+<!-- GRÁFICOS -->
+<div class="chart">
+    <h4>Compliance Status</h4>
+    <img src="data:image/png;base64,{{ compliance_chart }}" alt="Compliance Chart">
+</div>
+
+<div class="chart">
+    <h4>Expiring COIs Next 60 Days</h4>
+    <img src="data:image/png;base64,{{ trend_chart }}" alt="Trend Chart">
+</div>
+
+<!-- TABELA DE SUBS -->
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>COI Expiration</th>
+            <th>Days Left</th>
+            <th>Status</th>
+            <th>Last Reminder</th>
+            <th>Documents</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sub in subs %}
+        {% set days_left = (sub.coi_expiration - today).days if sub.coi_expiration else 'N/A' %}
+        <tr>
+            <td>{{ sub.name }}</td>
+            <td>{{ sub.email }}</td>
+            <td>{{ sub.phone }}</td>
+            <td>{{ sub.role }}</td>
+            <td>{{ sub.coi_expiration }}</td>
+            <td>{{ days_left }}</td>
+            <td>
+                {% if sub.coi_expiration %}
+                    {% if days_left < 0 %}
+                        <span class="badge expired">Expired</span>
+                    {% elif days_left <= 30 %}
+                        <span class="badge risk">At Risk</span>
+                    {% else %}
+                        <span class="badge compliant">Compliant</span>
+                    {% endif %}
+                {% else %}
+                    <span class="badge risk">No COI</span>
+                {% endif %}
+            </td>
+            <td>{{ sub.last_reminder_sent.strftime('%Y-%m-%d') if sub.last_reminder_sent else 'Never' }}</td>
+            <td class="document-list">
+                {% for doc in sub.documents %}
+                    {{ doc.type }}: {{ doc.filename }}<br>
+                {% else %}
+                    -
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>COI SaaS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+            background: linear-gradient(180deg, #0f172a, #1e293b);
+            color: white;
+            padding-top: 30px;
+        }
+
+        .sidebar h4 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .sidebar a {
+            color: #94a3b8;
+            text-decoration: none;
+            display: block;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 6px 15px;
+            transition: 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background: #334155;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+
+        /* ===== NAVBAR TOP ===== */
+        .navbar-top {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: background 0.3s ease;
+        }
+
+        /* ===== DARK MODE ===== */
+        .dark-mode {
+            background-color: #0f172a !important;
+            color: white !important;
+        }
+
+        .dark-mode .navbar-top {
+            background: #1e293b;
+            color: white;
+        }
+
+        .dark-mode .card {
+            background-color: #1e293b;
+            color: white;
+            border: 1px solid #334155;
+        }
+
+        .dark-mode .table {
+            color: white;
+        }
+
+        .dark-mode .table thead {
+            background-color: #1e293b;
+        }
+
+        .dark-mode .form-control,
+        .dark-mode .form-select {
+            background-color: #1e293b;
+            color: white;
+            border: 1px solid #334155;
+        }
+
+        .dark-mode .form-control::placeholder {
+            color: #94a3b8;
+        }
+
+        /* ===== SPINNER ===== */
+        .spinner-overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .dark-mode .spinner-overlay {
+            background: rgba(0,0,0,0.6);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Spinner -->
+<div class="spinner-overlay" id="spinner">
+    <div class="spinner-border text-primary" role="status"></div>
+</div>
+
+{% if current_user.is_authenticated %}
+<div class="sidebar">
+    <h4>COI SaaS</h4>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('add_sub') }}">Add Sub</a>
+    <a href="#" id="toggleDark">Dark Mode</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+{% endif %}
+
+<div class="{% if current_user.is_authenticated %}main-content{% endif %}">
+
+    {% if current_user.is_authenticated %}
+    <div class="navbar-top d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 fw-bold">Dashboard</h5>
+            <small class="text-muted">Manage your COIs efficiently</small>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-success rounded-pill px-3 py-2">
+                Pro Plan
+            </span>
+            <span class="fw-semibold">{{ current_user.email }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Toast -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="toast show align-items-center text-white bg-{{ category }} border-0 mb-2 shadow-lg rounded-3">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                {{ message }}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                                    onclick="this.parentElement.parentElement.remove()"></button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container-fluid">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+<!-- Scripts -->
+<script>
+    const body = document.body;
+    const toggleDarkBtn = document.getElementById("toggleDark");
+
+    // Aplicar preferência salva
+    function applyTheme() {
+        const theme = localStorage.getItem("darkMode");
+        if (theme === "enabled") {
+            body.classList.add("dark-mode");
+            if (toggleDarkBtn) toggleDarkBtn.innerText = "Light Mode";
+        } else {
+            body.classList.remove("dark-mode");
+            if (toggleDarkBtn) toggleDarkBtn.innerText = "Dark Mode";
+        }
+    }
+
+    applyTheme();
+
+    // Alternar modo
+    toggleDarkBtn?.addEventListener("click", function(e) {
+        e.preventDefault();
+
+        if (body.classList.contains("dark-mode")) {
+            localStorage.setItem("darkMode", "disabled");
+        } else {
+            localStorage.setItem("darkMode", "enabled");
+        }
+
+        applyTheme();
+    });
+
+    // Spinner global
+    document.querySelectorAll("form").forEach(form => {
+        form.addEventListener("submit", function() {
+            document.getElementById("spinner").style.display = "flex";
+        });
+    });
+</script>
+
+</body>
+</html>

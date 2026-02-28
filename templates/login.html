@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+
+        <div class="card shadow-sm p-4">
+            <h3 class="text-center mb-4">Login</h3>
+
+            <form method="POST">
+
+                <div class="mb-3">
+                    <label>Email</label>
+                    <input type="email"
+                           name="email"
+                           class="form-control"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label>Password</label>
+                    <input type="password"
+                           name="password"
+                           class="form-control"
+                           required>
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary w-100">
+                    Login
+                </button>
+
+            </form>
+
+            <div class="text-center mt-3">
+                <small>
+                    Don’t have an account?
+                    <a href="{{ url_for('subscribe') }}" class="btn btn-primary">Create Account</a>
+                </small>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
