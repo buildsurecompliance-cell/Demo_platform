@@ -1,7 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, date
@@ -23,12 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
 # Email config segura
-app.config['MAIL_SERVER'] = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
-app.config['MAIL_PORT'] = int(os.environ.get("MAIL_PORT", 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
-app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get("MAIL_USERNAME")
+api_key = os.environ.get("RESEND_API_KEY")
 
 # Upload folder
 UPLOAD_FOLDER = os.path.join('static', 'docs')
@@ -41,7 +35,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-mail = Mail(app)
 
 # ==========================
 # MODELS
@@ -99,7 +92,7 @@ def format_local_time(value, tz_name="US/Eastern"):
 # ==========================
 
 def send_email_reminder(to_email, subject, message):
-    api_key = os.environ.get("Demo_Plataforma")
+    api_key = os.environ.get("RESEND_API_KEY")
 
     response = requests.post(
         "https://api.resend.com/emails",
