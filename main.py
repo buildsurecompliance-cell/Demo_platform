@@ -3,11 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import os
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
+
 
 # ==========================
 # CONFIG
@@ -120,13 +121,18 @@ def send_email_reminder(to_email, subject, message):
 def check_and_send_auto_reminders_for_all_users():
     today = date.today()
     users = User.query.all()
+
     for user in users:
         subs = Subcontractor.query.filter_by(user_id=user.id).all()
+
         for sub in subs:
             if sub.coi_expiration:
                 days_left = (sub.coi_expiration - today).days
+
+                # Evita enviar 2 vezes no mesmo dia
                 if sub.last_reminder_sent and sub.last_reminder_sent.date() == today:
                     continue
+
                 if days_left in [45, 30, 15]:
                     subject = "COI Expiration Reminder"
                     message = f"Hello {sub.name}, your COI is expiring on {sub.coi_expiration}."
@@ -134,10 +140,9 @@ def check_and_send_auto_reminders_for_all_users():
                     sent = send_email_reminder(sub.email, subject, message)
 
                     if sent:
-                        sub.last_reminder_sent = datetime.utcnow()
+                        sub.last_reminder_sent = datetime.now(timezone.utc)
                         db.session.commit()
                         print(f"Reminder sent to {sub.email} ({days_left} days left)")
-
 # ==========================
 # ROUTES
 # ==========================
@@ -364,7 +369,8 @@ def send_reminder(id):
     success = send_email_reminder(sub.email, subject, message)
 
     if success:
-        sub.last_reminder_sent = datetime.utcnow()
+
+        sub.last_reminder_sent = datetime.now(timezone.utc)
         db.session.commit()
         flash("Reminder sent successfully!", "success")
     else:
