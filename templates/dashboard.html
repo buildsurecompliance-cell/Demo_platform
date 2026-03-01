@@ -1,47 +1,49 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3 class="mb-4">Dashboard Overview</h3>
+<h3 class="mb-4 text-center text-md-start">Dashboard Overview</h3>
 
 <!-- KPI -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card card-kpi p-3">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card card-kpi p-3 text-center">
             <h6>Total Subs</h6>
             <h3>{{ subs|length }}</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card card-kpi p-3">
+    <div class="col-6 col-md-3">
+        <div class="card card-kpi p-3 text-center">
             <h6>Expired</h6>
             <h3 class="text-danger">{{ expired|length }}</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card card-kpi p-3">
+    <div class="col-6 col-md-3">
+        <div class="card card-kpi p-3 text-center">
             <h6>At Risk</h6>
             <h3 class="text-warning">{{ at_risk|length }}</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card card-kpi p-3">
+    <div class="col-6 col-md-3">
+        <div class="card card-kpi p-3 text-center">
             <h6>Compliant</h6>
-            <h3 class="text-success">{{ subs|length - expired|length - at_risk|length }}</h3>
+            <h3 class="text-success">
+                {{ subs|length - expired|length - at_risk|length }}
+            </h3>
         </div>
     </div>
 </div>
 
 <!-- Charts -->
-<div class="row mb-4">
-    <div class="col-md-4">
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
         <div class="card p-4 text-center">
             <h5>Compliance Status</h5>
-            <div style="max-width:250px; max-height:250px; margin:auto;">
+            <div style="max-width:250px; margin:auto;">
                 <canvas id="complianceChart"></canvas>
             </div>
         </div>
     </div>
-    <div class="col-md-8">
+    <div class="col-12 col-lg-8">
         <div class="card p-4">
             <h5>Expirations Next 60 Days</h5>
             <div style="max-height:250px;">
@@ -53,11 +55,13 @@
 
 <!-- Filters -->
 <div class="card p-3 mb-3">
-    <div class="row">
-        <div class="col-md-4">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by name or email">
+    <div class="row g-2">
+        <div class="col-12 col-md-4">
+            <input type="text" id="searchInput"
+                   class="form-control form-control-sm"
+                   placeholder="Search by name or email">
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <select id="statusFilter" class="form-select form-select-sm">
                 <option value="all">All Status</option>
                 <option value="expired">Expired</option>
@@ -65,66 +69,112 @@
                 <option value="compliant">Compliant</option>
             </select>
         </div>
-        <div class="col-md-3">
-            <button onclick="exportTable()" class="btn btn-outline-success btn-sm">Export CSV</button>
+        <div class="col-12 col-md-3">
+            <button onclick="exportTable()"
+                    class="btn btn-outline-success btn-sm w-100">
+                Export CSV
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Table -->
-<div class="card p-4">
-    <h5>All Subcontractors</h5>
-    <div class="table-responsive mt-3">
+<div class="card p-3 p-md-4">
+    <h5 class="mb-3">All Subcontractors</h5>
+
+    <div class="table-responsive">
         <table class="table table-hover align-middle" id="subsTable">
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Phone</th>
+                    <th class="d-none d-md-table-cell">Phone</th>
                     <th>COI Expiration</th>
                     <th>Days Left</th>
                     <th>Status</th>
-                    <th>Last Reminder</th>
-                    <th>Documents</th>
-                    <th width="200">Actions</th>
+                    <th class="d-none d-lg-table-cell">Last Reminder</th>
+                    <th class="d-none d-lg-table-cell">Documents</th>
+                    <th width="220">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sub in subs %}
                 {% set days_left = (sub.coi_expiration - today).days if sub.coi_expiration else 'N/A' %}
-                <tr data-name="{{ sub.name|lower }}" data-email="{{ sub.email|lower }}" data-status="{{ sub.status }}">
+
+                <tr data-name="{{ sub.name|lower }}"
+                    data-email="{{ sub.email|lower }}"
+                    data-status="{{ sub.status }}">
+
                     <td>{{ sub.name }}</td>
                     <td>{{ sub.email }}</td>
-                    <td>{{ sub.phone }}</td>
+
+                    <td class="d-none d-md-table-cell">
+                        {{ sub.phone }}
+                    </td>
+
                     <td>{{ sub.coi_expiration }}</td>
                     <td>{{ days_left }}</td>
+
                     <td>
-                        <span class="badge {% if sub.status=='expired' %}bg-danger{% elif sub.status=='risk' %}bg-warning text-dark{% else %}bg-success{% endif %}" 
-                              title="Last reminder: {{ sub.last_reminder_sent|format_local_time(sub.timezone) if sub.last_reminder_sent else 'Never' }}">
+                        <span class="badge 
+                            {% if sub.status=='expired' %}
+                                bg-danger
+                            {% elif sub.status=='risk' %}
+                                bg-warning text-dark
+                            {% else %}
+                                bg-success
+                            {% endif %}"
+                            title="Last reminder: {{ sub.last_reminder_sent|format_local_time(sub.timezone) if sub.last_reminder_sent else 'Never' }}">
                             {{ sub.status|capitalize }}
                         </span>
                     </td>
-                    <td>
+
+                    <td class="d-none d-lg-table-cell">
                         {% if sub.last_reminder_sent %}
                             {{ sub.last_reminder_sent|format_local_time(sub.timezone) }}
                         {% else %}
                             Never
                         {% endif %}
                     </td>
-                    <td>
+
+                    <td class="d-none d-lg-table-cell">
                         {% for doc in sub.documents %}
-                            <a href="{{ url_for('static', filename='docs/' + doc.filename) }}" target="_blank">{{ doc.type }}</a><br>
+                            <a href="{{ url_for('static', filename='docs/' + doc.filename) }}"
+                               target="_blank"
+                               class="d-block small">
+                                {{ doc.type }}
+                            </a>
                         {% endfor %}
                     </td>
+
                     <td>
-                        <form action="{{ url_for('send_reminder', id=sub.id) }}" method="POST">
-                            <button type="submit">Send Reminder</button>
-                        </form>
-                        <a href="{{ url_for('edit_sub', id=sub.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <form action="{{ url_for('delete_sub', id=sub.id) }}" method="POST">
-                            <button type="submit">Delete</button>
-                        </form>
+                        <div class="d-flex flex-column gap-2">
+
+                            <form action="{{ url_for('send_reminder', id=sub.id) }}"
+                                  method="POST">
+                                <button type="submit"
+                                        class="btn btn-sm btn-warning w-100">
+                                    Send Reminder
+                                </button>
+                            </form>
+
+                            <a href="{{ url_for('edit_sub', id=sub.id) }}"
+                               class="btn btn-sm btn-outline-primary w-100">
+                                Edit
+                            </a>
+
+                            <form action="{{ url_for('delete_sub', id=sub.id) }}"
+                                  method="POST"
+                                  onsubmit="return confirm('Are you sure?');">
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger w-100">
+                                    Delete
+                                </button>
+                            </form>
+
+                        </div>
                     </td>
+
                 </tr>
                 {% endfor %}
             </tbody>
@@ -133,6 +183,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 // Doughnut Chart
 new Chart(document.getElementById('complianceChart'), {
@@ -140,11 +191,20 @@ new Chart(document.getElementById('complianceChart'), {
     data: {
         labels: ['Expired','At Risk','Compliant'],
         datasets: [{
-            data: [{{ expired|length }}, {{ at_risk|length }}, {{ subs|length - expired|length - at_risk|length }}],
+            data: [
+                {{ expired|length }},
+                {{ at_risk|length }},
+                {{ subs|length - expired|length - at_risk|length }}
+            ],
             backgroundColor: ['#dc3545','#ffc107','#198754']
         }]
     },
-    options: { cutout: '70%', plugins: { legend: { position: 'bottom' } }, responsive:true, maintainAspectRatio:false }
+    options: {
+        cutout: '70%',
+        plugins: { legend: { position: 'bottom' } },
+        responsive: true,
+        maintainAspectRatio: false
+    }
 });
 
 // 60-day trend
@@ -152,9 +212,21 @@ new Chart(document.getElementById('trendChart'), {
     type: 'bar',
     data: {
         labels: ['0-15d','16-30d','31-45d','46-60d'],
-        datasets: [{ label: 'Expiring COIs', data: [{{ trend_counts[0] }},{{ trend_counts[1] }},{{ trend_counts[2] }},{{ trend_counts[3] }}], backgroundColor:'#0d6efd' }]
+        datasets: [{
+            label: 'Expiring COIs',
+            data: [
+                {{ trend_counts[0] }},
+                {{ trend_counts[1] }},
+                {{ trend_counts[2] }},
+                {{ trend_counts[3] }}
+            ],
+            backgroundColor:'#0d6efd'
+        }]
     },
-    options: { responsive:true, maintainAspectRatio:false }
+    options: {
+        responsive:true,
+        maintainAspectRatio:false
+    }
 });
 
 // Filter & search
@@ -165,13 +237,16 @@ const rows = document.querySelectorAll('#subsTable tbody tr');
 function filterTable() {
     const search = searchInput.value.toLowerCase();
     const status = statusFilter.value;
+
     rows.forEach(row => {
         const name = row.dataset.name;
         const email = row.dataset.email;
         const rowStatus = row.dataset.status;
+
         const matchSearch = name.includes(search) || email.includes(search);
-        const matchStatus = status==='all'||rowStatus===status;
-        row.style.display=(matchSearch && matchStatus)?'':'none';
+        const matchStatus = status === 'all' || rowStatus === status;
+
+        row.style.display = (matchSearch && matchStatus) ? '' : 'none';
     });
 }
 
@@ -182,12 +257,14 @@ statusFilter.addEventListener('change', filterTable);
 function exportTable() {
     let csv=[];
     const tableRows=document.querySelectorAll("#subsTable tr");
+
     tableRows.forEach(row=>{
         let cols=row.querySelectorAll("td,th");
         let rowData=[];
         cols.forEach(col=>rowData.push(`"${col.innerText.replace(/"/g,'""')}"`));
         csv.push(rowData.join(","));
     });
+
     const blob=new Blob([csv.join("\n")],{type:"text/csv"});
     const link=document.createElement("a");
     link.href=URL.createObjectURL(blob);
