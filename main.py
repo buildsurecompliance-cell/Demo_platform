@@ -97,28 +97,28 @@ def format_local_time(value, tz_name="US/Eastern"):
 # EMAIL REMINDER
 # ==========================
 
-def send_email_reminder(sub):
-    if not sub.email:
-        return False
-    try:
-        msg = Message(
-            subject="COI Expiration Reminder",
-            recipients=[sub.email]
-        )
-        msg.body = f"""Hello {sub.name},
+import requests
+import os
 
-Your Certificate of Insurance (COI) will expire on {sub.coi_expiration}.
+def send_email_reminder(to_email, subject, message):
+    api_key = os.environ.get("re_CadK4Zvz_FRJSH5LqoGNskeyUnUbz5cFB")
 
-Please provide an updated COI before expiration.
+    response = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": "onboarding@resend.dev",
+            "to": to_email,
+            "subject": subject,
+            "html": f"<p>{message}</p>",
+        },
+    )
 
-Thank you."""
-        mail.send(msg)
-        sub.last_reminder_sent = datetime.utcnow()
-        db.session.commit()
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
+    print(response.status_code)
+    print(response.text)
 
 # ==========================
 # AUTO REMINDER
