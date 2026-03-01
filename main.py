@@ -13,17 +13,20 @@ from apscheduler.schedulers.background import BackgroundScheduler
 # CONFIG
 # ==========================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'supersecretkey'
+
+# Segurança
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Email config
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
+# Email config segura
+app.config['MAIL_SERVER'] = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+app.config['MAIL_PORT'] = int(os.environ.get("MAIL_PORT", 587))
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'buildsurecompliance@gmail.com'
-app.config['MAIL_PASSWORD'] = 'nzvppysuxbicvygr'
-app.config['MAIL_DEFAULT_SENDER'] = 'buildsurecompliance@gmail.com'
+app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get("MAIL_USERNAME")
 
 # Upload folder
 UPLOAD_FOLDER = os.path.join('static', 'docs')
@@ -216,7 +219,6 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    check_and_send_auto_reminders_for_all_users()
     subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
     today = date.today()
     expired, at_risk = [], []
@@ -322,28 +324,39 @@ def edit_sub(id):
 # --------------------------
 # DELETE / SEND REMINDER
 # --------------------------
-@app.route("/delete/<int:id>")
+@app.route("/delete/<int:id>", methods=["POST"])
 @login_required
 def delete_sub(id):
     sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
-    if sub:
-        db.session.delete(sub)
-        db.session.commit()
-        flash("Deleted successfully!", "success")
-    return redirect(url_for("dashboard"))
 
-@app.route("/send_reminder/<int:id>")
-@login_required
-def send_reminder(id):
-    sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
     if not sub:
         flash("Not found", "danger")
         return redirect(url_for("dashboard"))
 
-    if send_email_reminder(sub):
-        flash(f"Reminder sent! Last reminder updated to {format_local_time(sub.last_reminder_sent, sub.timezone)}", "success")
+    db.session.delete(sub)
+    db.session.commit()
+
+    flash("Deleted successfully!", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/send_reminder/<int:id>", methods=["POST"])
+@login_required
+def send_reminder(id):
+    sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
+
+    if not sub:
+        flash("Not found", "danger")
+        return redirect(url_for("dashboard"))
+
+    success = send_email_reminder(sub)
+
+    if success:
+        db.session.refresh(sub)  # garante dados atualizados
+        formatted_time = format_local_time(sub.last_reminder_sent, sub.timezone)
+        flash(f"Reminder sent successfully at {formatted_time}", "success")
     else:
         flash("Error sending email", "danger")
+
     return redirect(url_for("dashboard"))
 
 # ==========================
