@@ -128,8 +128,14 @@ def check_and_send_auto_reminders_for_all_users():
                 if sub.last_reminder_sent and sub.last_reminder_sent.date() == today:
                     continue
                 if days_left in [45, 30, 15]:
-                    sent = send_email_reminder(sub)
+                    subject = "COI Expiration Reminder"
+                    message = f"Hello {sub.name}, your COI is expiring on {sub.coi_expiration}."
+
+                    sent = send_email_reminder(sub.email, subject, message)
+
                     if sent:
+                        sub.last_reminder_sent = datetime.utcnow()
+                        db.session.commit()
                         print(f"Reminder sent to {sub.email} ({days_left} days left)")
 
 # ==========================
