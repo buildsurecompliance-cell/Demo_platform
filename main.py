@@ -76,6 +76,7 @@ class Document(db.Model):
 # ==========================
 # LOGIN MANAGER
 # ==========================
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -96,6 +97,7 @@ def format_local_time(value, tz_name="US/Eastern"):
 # ==========================
 # EMAIL REMINDER
 # ==========================
+
 def send_email_reminder(sub):
     if not sub.email:
         return False
@@ -122,6 +124,7 @@ Thank you."""
 # ==========================
 # AUTO REMINDER
 # ==========================
+
 def check_and_send_auto_reminders_for_all_users():
     today = date.today()
     users = User.query.all()
@@ -140,6 +143,7 @@ def check_and_send_auto_reminders_for_all_users():
 # ==========================
 # ROUTES
 # ==========================
+
 @app.route("/")
 def home():
     return redirect(url_for("subscribe"))
@@ -147,6 +151,7 @@ def home():
 # --------------------------
 # SUBSCRIBE
 # --------------------------
+
 @app.route("/subscribe", methods=["GET","POST"])
 def subscribe():
     if request.method == "POST":
@@ -160,6 +165,7 @@ def subscribe():
 # --------------------------
 # REGISTER
 # --------------------------
+
 @app.route("/register", methods=["GET","POST"])
 def register():
     # Pega o email enviado do /subscribe
@@ -193,6 +199,7 @@ def register():
 # --------------------------
 # LOGIN
 # --------------------------
+
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
@@ -218,6 +225,7 @@ def logout():
 # --------------------------
 # DASHBOARD
 # --------------------------
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -260,6 +268,7 @@ def dashboard():
 # --------------------------
 # ADD / EDIT SUBCONTRACTOR
 # --------------------------
+
 @app.route("/add", methods=["GET","POST"])
 @login_required
 def add_sub():
@@ -326,6 +335,7 @@ def edit_sub(id):
 # --------------------------
 # DELETE / SEND REMINDER
 # --------------------------
+
 @app.route("/delete/<int:id>", methods=["POST"])
 @login_required
 def delete_sub(id):
@@ -364,6 +374,7 @@ def send_reminder(id):
 # ==========================
 # APSCHEDULER - DAILY REMINDER
 # ==========================
+
 def start_scheduler():
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=check_and_send_auto_reminders_for_all_users, trigger="cron", hour=8, minute=0)
