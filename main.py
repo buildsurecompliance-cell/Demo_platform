@@ -8,6 +8,7 @@ from datetime import datetime, date
 import os
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
+import requests
 
 # ==========================
 # CONFIG
@@ -97,11 +98,8 @@ def format_local_time(value, tz_name="US/Eastern"):
 # EMAIL REMINDER
 # ==========================
 
-import requests
-import os
-
 def send_email_reminder(to_email, subject, message):
-    api_key = os.environ.get("re_CadK4Zvz_FRJSH5LqoGNskeyUnUbz5cFB")
+    api_key = os.environ.get("Demo_Plataforma")
 
     response = requests.post(
         "https://api.resend.com/emails",
@@ -119,6 +117,8 @@ def send_email_reminder(to_email, subject, message):
 
     print(response.status_code)
     print(response.text)
+
+    return response.status_code == 200
 
 # ==========================
 # AUTO REMINDER
@@ -359,12 +359,15 @@ def send_reminder(id):
         flash("Not found", "danger")
         return redirect(url_for("dashboard"))
 
-    success = send_email_reminder(sub)
+    subject = "COI Expiration Reminder"
+    message = f"Hello {sub.name}, your COI is expiring on {sub.coi_expiration}."
+
+    success = send_email_reminder(sub.email, subject, message)
 
     if success:
-        db.session.refresh(sub)  # garante dados atualizados
-        formatted_time = format_local_time(sub.last_reminder_sent, sub.timezone)
-        flash(f"Reminder sent successfully at {formatted_time}", "success")
+        sub.last_reminder_sent = datetime.utcnow()
+        db.session.commit()
+        flash("Reminder sent successfully!", "success")
     else:
         flash("Error sending email", "danger")
 
