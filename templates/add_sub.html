@@ -4,7 +4,7 @@
     <div class="col-md-7">
         <h3 class="mb-4">{{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}</h3>
         <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="mb-3">
                 <label>Name</label>
                 <input type="text" class="form-control" name="name" value="{{ sub.name if sub else '' }}" required>
