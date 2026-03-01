@@ -8,6 +8,7 @@ from datetime import datetime, date
 import os
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
+from flask_wtf import CSRFProtect
 
 # ==========================
 # CONFIG
@@ -19,6 +20,7 @@ app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+csrf = CSRFProtect(app)
 
 # Email config segura
 app.config['MAIL_SERVER'] = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
