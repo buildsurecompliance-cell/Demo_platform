@@ -224,42 +224,59 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
-
-# --------------------------
-# DASHBOARD
-# --------------------------
+#=================================
+#=== DASHBOARD 
+#=================================
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
     subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
     today = date.today()
-    expired, at_risk = [], []
-    trend_counts = [0, 0, 0, 0]
+
+    expired = []
+    at_risk = []
+    trend_counts = {
+        "0_15": 0,
+        "16_30": 0,
+        "31_45": 0,
+        "46_60": 0
+    }
 
     for sub in subs:
-        if sub.coi_expiration:
-            days_left = (sub.coi_expiration - today).days
-            sub.days_left = days_left
-            if days_left < 0:
-                expired.append(sub)
-                sub.status = "expired"
-            elif days_left <= 30:
-                at_risk.append(sub)
-                sub.status = "risk"
-            else:
-                sub.status = "compliant"
+        if not sub.coi_expiration:
+            sub.days_left = None
+            sub.status = "compliant"
+            continue
 
-            if 0 <= days_left <= 15:
-                trend_counts[0] += 1
-            elif 16 <= days_left <= 30:
-                trend_counts[1] += 1
-            elif 31 <= days_left <= 45:
-                trend_counts[2] += 1
-            elif 46 <= days_left <= 60:
-                trend_counts[3] += 1
+        days_left = (sub.coi_expiration - today).days
+        sub.days_left = days_left
 
+        # -------- STATUS --------
+        if days_left < 0:
+            sub.status = "expired"
+            expired.append(sub)
+
+        elif days_left <= 30:
+            sub.status = "risk"
+            at_risk.append(sub)
+
+        else:
+            sub.status = "compliant"
+
+        # -------- TREND COUNTS --------
+        if 0 <= days_left <= 15:
+            trend_counts["0_15"] += 1
+        elif 16 <= days_left <= 30:
+            trend_counts["16_30"] += 1
+        elif 31 <= days_left <= 45:
+            trend_counts["31_45"] += 1
+        elif 46 <= days_left <= 60:
+            trend_counts["46_60"] += 1
+
+    # Commit apenas se realmente necessário
     db.session.commit()
+
     return render_template(
         "dashboard.html",
         subs=subs,
@@ -268,7 +285,6 @@ def dashboard():
         trend_counts=trend_counts,
         today=today
     )
-
 # --------------------------
 # ADD / EDIT SUBCONTRACTOR
 # --------------------------
