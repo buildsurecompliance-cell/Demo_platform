@@ -58,9 +58,16 @@
     </div>
 
     </div>
+    <div class="card-section">
 
+    <div class="section-header">
+        <h2>Project Mobilization Status</h2>
+        <span class="section-subtitle">
+            Real-time operational readiness
+        </span>
+    </div>
 
-    <!-- HIGH RISK SECTION -->
+        <!-- HIGH RISK SECTION -->
     <div class="card-section">
 
         <div class="section-header">
@@ -112,6 +119,37 @@
         </table>
 
     </div>
+
+     <!-- Project Mobilization-->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Contract Value</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>{{ project.name }}</td>
+                <td>${{ "{:,.0f}".format(project.contract_value or 0) }}</td>
+                <td>
+                    {% if project.mobilization_status == "Blocked" %}
+                        <span class="badge badge-danger">Blocked</span>
+                    {% elif project.mobilization_status == "Conditional" %}
+                        <span class="badge badge-warning">Conditional</span>
+                    {% else %}
+                        <span class="badge badge-success">Ready</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
 
 
     <!-- ALL SUBCONTRACTORS -->
@@ -246,12 +284,12 @@ body {
 
 .page-header p {
     margin: 5px 0 0;
-    color: #6b7280;
+    color: #000000;
 }
 
 .header-meta {
     font-size: 14px;
-    color: #6b7280;
+    color: #000000;
 }
 
 
@@ -282,7 +320,7 @@ body {
 
 .kpi-label {
     margin-top: 8px;
-    color: #6b7280;
+    color: #000000;
     font-size: 14px;
 }
 
@@ -310,7 +348,7 @@ body {
 
 .section-subtitle {
     font-size: 13px;
-    color: #6b7280;
+    color: #000000;
 }
 
 
@@ -396,7 +434,7 @@ body {
 }
 
 .btn-doc:hover {
-    background: #334155;
+    background: #00357f;
 }
 
 </style>

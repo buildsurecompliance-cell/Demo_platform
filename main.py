@@ -458,6 +458,39 @@ def send_reminder(id):
     return redirect(url_for("dashboard"))
 
 # ==========================
+#  MOBILIZATION 
+#===========================
+def calculate_mobilization_status(project):
+
+    subs = project.subcontractors  # relação do SQLAlchemy
+
+    has_expired = False
+    has_at_risk = False
+
+    today = date.today()
+
+    for sub in subs:
+
+        if not sub.coi_expiration:
+            continue
+
+        days_left = (sub.coi_expiration - today).days
+
+        if days_left < 0:
+            has_expired = True
+
+        elif days_left <= 30:
+            has_at_risk = True
+
+    if has_expired:
+        return "Blocked"
+
+    if has_at_risk:
+        return "Conditional"
+
+    return "Ready to Mobilize"
+
+# ==========================
 # APSCHEDULER - DAILY REMINDER
 # ==========================
 
