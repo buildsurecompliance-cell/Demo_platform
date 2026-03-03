@@ -340,7 +340,7 @@ def edit_sub(id):
 # DELETE / SEND REMINDER
 # --------------------------
 
-@app.route("/delete/<int:id>", methods=["POST"])
+@app.route("/delete_sub/<int:id>", methods=["POST"])
 @login_required
 def delete_sub(id):
     sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
