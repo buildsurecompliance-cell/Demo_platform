@@ -151,9 +151,9 @@
                     <!-- LAST REMINDER -->
                     <td>
                         {% if sub.last_reminder_sent %}
-                            {{ sub.last_reminder_sent }}
+                            {{ sub.last_reminder_sent.strftime('%H:%M') }}
                         {% else %}
-                            —
+                             —
                         {% endif %}
                     </td>
 
