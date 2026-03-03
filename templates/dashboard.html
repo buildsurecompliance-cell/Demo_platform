@@ -1,31 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3 class="mb-4 text-center text-md-start">Dashboard Overview</h3>
+<h3 class="mb-4">🛡 Project Risk Overview</h3>
 
-<!-- KPI -->
-<div class="row g-3 mb-4">
+<!-- RISK ALERT HEADER -->
+{% if expired|length > 0 %}
+<div class="alert alert-danger d-flex justify-content-between align-items-center">
+    <strong>
+        🚨 {{ expired|length }} Subcontractor(s) Expired – Immediate Attention Required
+    </strong>
+</div>
+{% elif at_risk|length > 0 %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+    <strong>
+        ⚠ {{ at_risk|length }} COI(s) Expiring Soon
+    </strong>
+</div>
+{% else %}
+<div class="alert alert-success">
+    <strong>✔ All COIs Currently Protected</strong>
+</div>
+{% endif %}
+
+<!-- KPI ROW -->
+<div class="row g-3 mb-4 text-center">
     <div class="col-6 col-md-3">
-        <div class="card card-kpi p-3 text-center">
+        <div class="card p-3 shadow-sm">
             <h6>Total Subs</h6>
             <h3>{{ subs|length }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-kpi p-3 text-center">
-            <h6>Expired</h6>
+        <div class="card p-3 shadow-sm">
+            <h6 class="text-danger">Expired</h6>
             <h3 class="text-danger">{{ expired|length }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-kpi p-3 text-center">
-            <h6>At Risk</h6>
+        <div class="card p-3 shadow-sm">
+            <h6 class="text-warning">At Risk</h6>
             <h3 class="text-warning">{{ at_risk|length }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-kpi p-3 text-center">
-            <h6>Compliant</h6>
+        <div class="card p-3 shadow-sm">
+            <h6 class="text-success">Protected</h6>
             <h3 class="text-success">
                 {{ subs|length - expired|length - at_risk|length }}
             </h3>
@@ -33,93 +52,23 @@
     </div>
 </div>
 
-<!-- ================= RISK SCORE ENTERPRISE ================= -->
-
-{% set total = subs|length %}
-{% set expired_count = expired|length %}
-{% set risk_count = at_risk|length %}
-{% set compliant_count = total - expired_count - risk_count %}
-
-{% if total > 0 %}
-    {% set raw_score = ((expired_count * 2) + risk_count) / (total * 2) * 100 %}
-{% else %}
-    {% set raw_score = 0 %}
-{% endif %}
-
-{% set risk_score = raw_score|round(0) %}
-
-{% if risk_score <= 20 %}
-    {% set risk_label = "Low Risk" %}
-    {% set risk_color = "success" %}
-{% elif risk_score <= 50 %}
-    {% set risk_label = "Moderate Risk" %}
-    {% set risk_color = "warning" %}
-{% elif risk_score <= 75 %}
-    {% set risk_label = "High Risk" %}
-    {% set risk_color = "danger" %}
-{% else %}
-    {% set risk_label = "Critical Risk" %}
-    {% set risk_color = "dark" %}
-{% endif %}
-
-<div class="card p-4 mb-4 shadow-sm">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Portfolio Risk Score</h5>
-        <span class="badge bg-{{ risk_color }} fs-6">
-            {{ risk_label }}
-        </span>
-    </div>
-
-    <div class="display-4 fw-bold mb-2">
-        {{ risk_score }} / 100
-    </div>
-
-    <div class="progress" style="height: 20px;">
-        <div class="progress-bar bg-{{ risk_color }}"
-             style="width: {{ risk_score }}%;">
-        </div>
-    </div>
-</div>
-
-<!-- ================= CHARTS ================= -->
-
-<div class="row g-3 mb-4">
-    <div class="col-12 col-lg-4">
-        <div class="card p-4 text-center">
-            <h5>Compliance Status</h5>
-            <div style="max-width:250px; margin:auto;">
-                <canvas id="complianceChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-lg-8">
-        <div class="card p-4">
-            <h5>Expirations Next 60 Days</h5>
-            <div style="max-height:250px;">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ================= FILTERS ================= -->
-
-<div class="card p-3 mb-3">
+<!-- FILTERS -->
+<div class="card p-3 mb-3 shadow-sm">
     <div class="row g-2">
-        <div class="col-12 col-md-4">
+        <div class="col-md-4">
             <input type="text" id="searchInput"
                    class="form-control form-control-sm"
-                   placeholder="Search by name or email">
+                   placeholder="Search subcontractor...">
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
             <select id="statusFilter" class="form-select form-select-sm">
                 <option value="all">All Status</option>
                 <option value="expired">Expired</option>
                 <option value="risk">At Risk</option>
-                <option value="compliant">Compliant</option>
+                <option value="compliant">Protected</option>
             </select>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
             <button onclick="exportTable()"
                     class="btn btn-outline-success btn-sm w-100">
                 Export CSV
@@ -128,139 +77,95 @@
     </div>
 </div>
 
-<!-- ================= TABLE ================= -->
-
-<div class="card p-3 p-md-4">
-    <h5 class="mb-3">All Subcontractors</h5>
+<!-- RISK TABLE -->
+<div class="card p-4 shadow-sm">
+    <h5 class="mb-3">🚨 Risk by Urgency</h5>
 
     <div class="table-responsive">
-        <table class="table table-hover align-middle" id="subsTable">
+        <table class="table align-middle table-hover" id="subsTable">
             <thead class="table-light">
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th class="d-none d-md-table-cell">Phone</th>
-                    <th>COI Expiration</th>
-                    <th>Days Left</th>
                     <th>Status</th>
-                    <th class="d-none d-lg-table-cell">Last Reminder</th>
-                    <th class="d-none d-lg-table-cell">Documents</th>
-                    <th width="220">Actions</th>
+                    <th>Subcontractor</th>
+                    <th>Expires In</th>
+                    <th>Expiration Date</th>
+                    <th>Last Reminder</th>
+                    <th width="200">Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sub in subs %}
-                {% set days_left = (sub.coi_expiration - today).days if sub.coi_expiration else 'N/A' %}
                 <tr data-name="{{ sub.name|lower }}"
-                    data-email="{{ sub.email|lower }}"
-                    data-status="{{ sub.status }}">
-                    <td>{{ sub.name }}</td>
-                    <td>{{ sub.email }}</td>
-                    <td class="d-none d-md-table-cell">{{ sub.phone }}</td>
-                    <td>{{ sub.coi_expiration }}</td>
-                    <td>{{ days_left }}</td>
+                    data-status="{{ sub.status }}"
+                    class="{% if sub.status=='expired' %}table-danger{% endif %}">
+
                     <td>
-                        <span class="badge 
-                            {% if sub.status=='expired' %}
-                                bg-danger
-                            {% elif sub.status=='risk' %}
-                                bg-warning text-dark
-                            {% else %}
-                                bg-success
-                            {% endif %}">
-                            {{ sub.status|capitalize }}
-                        </span>
+                        {% if sub.status == "expired" %}
+                            <span class="badge bg-danger">Expired</span>
+                        {% elif sub.days_left is not none and sub.days_left <= 15 %}
+                            <span class="badge bg-danger">0–15 Days</span>
+                        {% elif sub.days_left is not none and sub.days_left <= 30 %}
+                            <span class="badge bg-warning text-dark">16–30 Days</span>
+                        {% elif sub.days_left is not none and sub.days_left <= 45 %}
+                            <span class="badge bg-warning text-dark">31–45 Days</span>
+                        {% else %}
+                            <span class="badge bg-success">Protected</span>
+                        {% endif %}
                     </td>
-                    <td class="d-none d-lg-table-cell">
+
+                    <td>
+                        <strong>{{ sub.name }}</strong><br>
+                        <small class="text-muted">{{ sub.email }}</small>
+                    </td>
+
+                    <td>
+                        {% if sub.days_left is not none %}
+                            {% if sub.days_left < 0 %}
+                                <span class="text-danger">
+                                    Expired {{ sub.days_left|abs }} days ago
+                                </span>
+                            {% else %}
+                                {{ sub.days_left }} days
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {{ sub.coi_expiration if sub.coi_expiration else "-" }}
+                    </td>
+
+                    <td>
                         {% if sub.last_reminder_sent %}
                             {{ sub.last_reminder_sent|format_local_time(sub.timezone) }}
                         {% else %}
-                            Never
+                            <span class="text-muted">Never</span>
                         {% endif %}
                     </td>
-                    <td class="d-none d-lg-table-cell">
-                        {% for doc in sub.documents %}
-                            <a href="{{ url_for('static', filename='docs/' + doc.filename) }}"
-                               target="_blank"
-                               class="d-block small">
-                                {{ doc.type }}
-                            </a>
-                        {% endfor %}
-                    </td>
+
                     <td>
-                        <div class="d-flex flex-column gap-2">
-                            <form action="{{ url_for('send_reminder', id=sub.id) }}" method="POST">
-                                <button type="submit"
-                                        class="btn btn-sm btn-warning w-100">
-                                    Send Reminder
-                                </button>
-                            </form>
-                            <a href="{{ url_for('edit_sub', id=sub.id) }}"
-                               class="btn btn-sm btn-outline-primary w-100">
-                                Edit
-                            </a>
-                            <form action="{{ url_for('delete_sub', id=sub.id) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Are you sure?');">
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-danger w-100">
-                                    Delete
-                                </button>
-                            </form>
-                        </div>
+                        <form action="{{ url_for('send_reminder', id=sub.id) }}" method="POST">
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-primary w-100">
+                                Send Reminder
+                            </button>
+                        </form>
                     </td>
+
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <p class="mt-3 text-muted small">
+        Automatic reminders are sent at 45, 30, and 15 days before expiration.
+    </p>
 </div>
 
-<!-- ================= JS ================= -->
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<!-- JS FILTER + EXPORT -->
 <script>
-new Chart(document.getElementById('complianceChart'), {
-    type: 'doughnut',
-    data: {
-        labels: ['Expired','At Risk','Compliant'],
-        datasets: [{
-            data: [
-                {{ expired|length }},
-                {{ at_risk|length }},
-                {{ compliant_count }}
-            ],
-            backgroundColor: ['#dc3545','#ffc107','#198754']
-        }]
-    },
-    options: {
-        cutout: '70%',
-        plugins: { legend: { position: 'bottom' } },
-        responsive: true,
-        maintainAspectRatio: false
-    }
-});
-
-new Chart(document.getElementById('trendChart'), {
-    type: 'bar',
-    data: {
-        labels: ['0-15d','16-30d','31-45d','46-60d'],
-        datasets: [{
-            label: 'Expiring COIs',
-            data: [
-                {{ trend_counts[0] }},
-                {{ trend_counts[1] }},
-                {{ trend_counts[2] }},
-                {{ trend_counts[3] }}
-            ],
-            backgroundColor:'#0d6efd'
-        }]
-    },
-    options: { responsive:true, maintainAspectRatio:false }
-});
-
-// FILTER
 const searchInput = document.getElementById('searchInput');
 const statusFilter = document.getElementById('statusFilter');
 const rows = document.querySelectorAll('#subsTable tbody tr');
@@ -271,10 +176,9 @@ function filterTable() {
 
     rows.forEach(row => {
         const name = row.dataset.name;
-        const email = row.dataset.email;
         const rowStatus = row.dataset.status;
 
-        const matchSearch = name.includes(search) || email.includes(search);
+        const matchSearch = name.includes(search);
         const matchStatus = status === 'all' || rowStatus === status;
 
         row.style.display = (matchSearch && matchStatus) ? '' : 'none';
@@ -284,7 +188,6 @@ function filterTable() {
 searchInput.addEventListener('keyup', filterTable);
 statusFilter.addEventListener('change', filterTable);
 
-// EXPORT CSV
 function exportTable() {
     let csv=[];
     const tableRows=document.querySelectorAll("#subsTable tr");
@@ -299,7 +202,7 @@ function exportTable() {
     const blob=new Blob([csv.join("\n")],{type:"text/csv"});
     const link=document.createElement("a");
     link.href=URL.createObjectURL(blob);
-    link.download="subcontractors.csv";
+    link.download="risk_dashboard.csv";
     link.click();
 }
 </script>
