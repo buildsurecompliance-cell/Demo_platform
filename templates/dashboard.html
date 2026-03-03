@@ -119,6 +119,8 @@
                     <th>Role</th>
                     <th>Expiration</th>
                     <th>Status</th>
+                    <th>Last Reminder</th>
+                    <th>Reminder</th>   
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
@@ -135,6 +137,7 @@
                     <td>{{ sub.email }}</td>
                     <td>{{ sub.role }}</td>
                     <td>{{ sub.coi_expiration }}</td>
+
                     <td>
                         {% if sub.computed_status == "expired" %}
                             <span class="badge badge-danger">Expired</span>
@@ -144,6 +147,28 @@
                             <span class="badge badge-success">Compliant</span>
                         {% endif %}
                     </td>
+
+                    <!-- LAST REMINDER -->
+                    <td>
+                        {% if sub.last_reminder_sent %}
+                            {{ sub.last_reminder_sent }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <!-- SEND REMINDER BUTTON -->
+                    <td>
+                        <form method="POST"
+                            action="{{ url_for('send_reminder', id=sub.id) }}"
+                            style="display:inline;">
+                            <button type="submit" class="btn-reminder">
+                                Send
+                            </button>
+                        </form>
+                    </td>
+
+                    <!-- ACTIONS -->
                     <td style="text-align:right;">
                         <a href="{{ url_for('edit_sub', id=sub.id) }}" class="btn-edit">
                             Edit
@@ -151,8 +176,8 @@
 
                         <form method="POST"
                             action="{{ url_for('delete_sub', id=sub.id) }}"
-                              style="display:inline;"
-                              onsubmit="return confirm('Are you sure you want to delete this subcontractor?');">
+                            style="display:inline;"
+                            onsubmit="return confirm('Are you sure you want to delete this subcontractor?');">
                             <button type="submit" class="btn-delete">
                                 Delete
                             </button>
