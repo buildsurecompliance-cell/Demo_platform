@@ -273,7 +273,7 @@ def dashboard():
 # ADD / EDIT SUBCONTRACTOR
 # --------------------------
 
-@app.route("/add", methods=["GET","POST"])
+@app.route("/add_sub", methods=["GET","POST"])
 @login_required
 def add_sub():
     if request.method == "POST":
@@ -307,7 +307,7 @@ def add_sub():
         return redirect(url_for("dashboard"))
     return render_template("add_sub.html", sub=None)
 
-@app.route("/edit/<int:id>", methods=["GET","POST"])
+@app.route("/edit_sub/<int:id>", methods=["GET","POST"])
 @login_required
 def edit_sub(id):
     sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
