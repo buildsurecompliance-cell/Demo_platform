@@ -40,7 +40,6 @@ login_manager.login_view = "login"
 # ==========================
 # MODELS
 # ==========================
-
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -48,7 +47,6 @@ class User(db.Model, UserMixin):
     timezone = db.Column(db.String(50), default="US/Eastern")
     paid = db.Column(db.Boolean, default=False)
     subs = db.relationship('Subcontractor', backref='owner', lazy=True)
-
 
 class Subcontractor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -62,26 +60,6 @@ class Subcontractor(db.Model):
     timezone = db.Column(db.String(50), default="US/Eastern")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     documents = db.relationship('Document', backref='sub', lazy=True)
-
-    # 🔥 PROPRIEDADE PROFISSIONAL PARA DASHBOARD
-    @property
-    def days_left(self):
-        if self.coi_expiration:
-            return (self.coi_expiration - date.today()).days
-        return None
-
-    # 🔥 STATUS CALCULADO AUTOMATICAMENTE (opcional, nível SaaS)
-    @property
-    def computed_status(self):
-        if self.days_left is None:
-            return "unknown"
-        if self.days_left < 0:
-            return "expired"
-        elif self.days_left <= 30:
-            return "at_risk"
-        else:
-            return "compliant"
-
 
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -256,40 +234,35 @@ def logout():
 def dashboard():
     subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
     today = date.today()
+    expired, at_risk = [], []
+    trend_counts = [0, 0, 0, 0]
 
-    expired = []
-    at_risk = []
-    trend_counts = [0, 0, 0, 0]  # expired, 0-15, 16-30, 31+
-
-    # Classificação de risco
     for sub in subs:
-        if sub.days_left is not None:
-            if sub.days_left < 0:
+        if sub.coi_expiration:
+            days_left = (sub.coi_expiration - today).days
+            sub.days_left = days_left
+            if days_left < 0:
                 expired.append(sub)
-                trend_counts[0] += 1
-            elif sub.days_left <= 15:
+                sub.status = "expired"
+            elif days_left <= 30:
                 at_risk.append(sub)
-                trend_counts[1] += 1
-            elif sub.days_left <= 30:
-                trend_counts[2] += 1
+                sub.status = "risk"
             else:
+                sub.status = "compliant"
+
+            if 0 <= days_left <= 15:
+                trend_counts[0] += 1
+            elif 16 <= days_left <= 30:
+                trend_counts[1] += 1
+            elif 31 <= days_left <= 45:
+                trend_counts[2] += 1
+            elif 46 <= days_left <= 60:
                 trend_counts[3] += 1
 
-    # Ordenação por prioridade (menor days_left primeiro)
-    def risk_priority(sub):
-        if sub.days_left is None:
-            return 9999
-        return sub.days_left
-
-    sorted_subs = sorted(subs, key=risk_priority)
-
-    # Top 10 mais críticos
-    top_risk = sorted_subs[:10]
-
+    db.session.commit()
     return render_template(
         "dashboard.html",
         subs=subs,
-        top_risk=top_risk,
         expired=expired,
         at_risk=at_risk,
         trend_counts=trend_counts,
@@ -416,16 +389,12 @@ def start_scheduler():
     scheduler.start()
 
 # ==========================
-# APP STARTUP
-# ==========================
-
-with app.app_context():
-    db.create_all()
-    start_scheduler()
-
-# ==========================
-# LOCAL DEV ONLY
+# RUN
 # ==========================
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+        start_scheduler()
+
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
