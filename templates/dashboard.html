@@ -43,6 +43,19 @@
             </div>
             <div class="kpi-label">Compliant</div>
         </div>
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${{ "{:,.0f}".format(total_portfolio) }}
+        </div>
+        <div class="kpi-label">Total Portfolio</div>
+    </div>
+
+    <div class="kpi-card danger">
+        <div class="kpi-value">
+        ${{ "{:,.0f}".format(revenue_at_risk) }}
+        </div>
+        <div class="kpi-label">Revenue at Risk</div>
+    </div>
 
     </div>
 

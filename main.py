@@ -68,6 +68,31 @@ class Document(db.Model):
     sub_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'))
 
 # ==========================
+# PROJECT MODELS (NOVO)
+# ==========================
+
+class Project(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150))
+    contract_value = db.Column(db.Float)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    required_coverage = db.Column(db.Float, default=1000000)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    subs = db.relationship('ProjectSubcontractor', backref='project', lazy=True)
+
+
+class ProjectSubcontractor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    subcontractor_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'))
+    approved_for_project = db.Column(db.Boolean, default=False)
+
+    subcontractor = db.relationship('Subcontractor')
+    coverage_limit = db.Column(db.Float, default=1000000)
+
+# ==========================
 # LOGIN MANAGER
 # ==========================
 
@@ -129,7 +154,6 @@ def check_and_send_auto_reminders_for_all_users():
             if sub.coi_expiration:
                 days_left = (sub.coi_expiration - today).days
 
-                # Evita enviar 2 vezes no mesmo dia
                 if sub.last_reminder_sent and sub.last_reminder_sent.date() == today:
                     continue
 
@@ -143,6 +167,34 @@ def check_and_send_auto_reminders_for_all_users():
                         sub.last_reminder_sent = datetime.now(timezone.utc)
                         db.session.commit()
                         print(f"Reminder sent to {sub.email} ({days_left} days left)")
+
+# ==========================
+# MOBILIZATION STATUS LOGIC
+# ==========================
+
+def calculate_mobilization_status(project):
+    today = date.today()
+
+    if not project.subs:
+        return "Not Cleared"
+
+    for ps in project.subs:
+        sub = ps.subcontractor
+
+        if not sub.coi_expiration:
+            return "Not Cleared"
+
+        if project.end_date and sub.coi_expiration < project.end_date:
+            return "Not Cleared"
+
+        if sub.coverage_limit < project.required_coverage:
+            return "Not Cleared"
+
+        days_left = (sub.coi_expiration - today).days
+        if days_left <= 30:
+            return "Pending Compliance"
+
+    return "Ready to Mobilize"
 # ==========================
 # ROUTES
 # ==========================
@@ -233,8 +285,14 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
+
     today = date.today()
+
+    # =============================
+    # COI RISK LOGIC
+    # =============================
+
+    subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
 
     for sub in subs:
         if sub.coi_expiration:
@@ -251,17 +309,43 @@ def dashboard():
             sub.days_left = None
             sub.computed_status = "compliant"
 
-    # mantém seu bloco de high risk
     top_risk = sorted(
         subs,
         key=lambda x: x.days_left if x.days_left is not None else 999
     )
 
+    # =============================
+    # MOBILIZATION LOGIC
+    # =============================
+
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+
+    total_portfolio = 0
+    revenue_at_risk = 0
+
+    for project in projects:
+
+        contract_value = project.contract_value or 0
+        total_portfolio += contract_value
+
+        status = calculate_mobilization_status(project)
+        project.mobilization_status = status
+
+        if status != "Ready to Mobilize":
+            revenue_at_risk += contract_value
+
+    # =============================
+    # RETURN TEMPLATE
+    # =============================
+
     return render_template(
         "dashboard.html",
         subs=subs,
         top_risk=top_risk,
-        today=today
+        today=today,
+        projects=projects,
+        total_portfolio=total_portfolio,
+        revenue_at_risk=revenue_at_risk
     )
 # --------------------------
 # ADD / EDIT SUBCONTRACTOR
