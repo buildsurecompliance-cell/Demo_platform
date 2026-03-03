@@ -240,6 +240,8 @@ def dashboard():
     for sub in subs:
         if sub.coi_expiration:
             days_left = (sub.coi_expiration - today).days
+            sub.days_left = days_left
+            
             if days_left < 0:
                 expired.append(sub)
                 sub.status = "expired"
