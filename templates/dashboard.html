@@ -33,7 +33,56 @@
     </div>
 </div>
 
-<!-- Charts -->
+<!-- ================= RISK SCORE ENTERPRISE ================= -->
+
+{% set total = subs|length %}
+{% set expired_count = expired|length %}
+{% set risk_count = at_risk|length %}
+{% set compliant_count = total - expired_count - risk_count %}
+
+{% if total > 0 %}
+    {% set raw_score = ((expired_count * 2) + risk_count) / (total * 2) * 100 %}
+{% else %}
+    {% set raw_score = 0 %}
+{% endif %}
+
+{% set risk_score = raw_score|round(0) %}
+
+{% if risk_score <= 20 %}
+    {% set risk_label = "Low Risk" %}
+    {% set risk_color = "success" %}
+{% elif risk_score <= 50 %}
+    {% set risk_label = "Moderate Risk" %}
+    {% set risk_color = "warning" %}
+{% elif risk_score <= 75 %}
+    {% set risk_label = "High Risk" %}
+    {% set risk_color = "danger" %}
+{% else %}
+    {% set risk_label = "Critical Risk" %}
+    {% set risk_color = "dark" %}
+{% endif %}
+
+<div class="card p-4 mb-4 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Portfolio Risk Score</h5>
+        <span class="badge bg-{{ risk_color }} fs-6">
+            {{ risk_label }}
+        </span>
+    </div>
+
+    <div class="display-4 fw-bold mb-2">
+        {{ risk_score }} / 100
+    </div>
+
+    <div class="progress" style="height: 20px;">
+        <div class="progress-bar bg-{{ risk_color }}"
+             style="width: {{ risk_score }}%;">
+        </div>
+    </div>
+</div>
+
+<!-- ================= CHARTS ================= -->
+
 <div class="row g-3 mb-4">
     <div class="col-12 col-lg-4">
         <div class="card p-4 text-center">
@@ -53,7 +102,8 @@
     </div>
 </div>
 
-<!-- Filters -->
+<!-- ================= FILTERS ================= -->
+
 <div class="card p-3 mb-3">
     <div class="row g-2">
         <div class="col-12 col-md-4">
@@ -78,7 +128,8 @@
     </div>
 </div>
 
-<!-- Table -->
+<!-- ================= TABLE ================= -->
+
 <div class="card p-3 p-md-4">
     <h5 class="mb-3">All Subcontractors</h5>
 
@@ -100,21 +151,14 @@
             <tbody>
                 {% for sub in subs %}
                 {% set days_left = (sub.coi_expiration - today).days if sub.coi_expiration else 'N/A' %}
-
                 <tr data-name="{{ sub.name|lower }}"
                     data-email="{{ sub.email|lower }}"
                     data-status="{{ sub.status }}">
-
                     <td>{{ sub.name }}</td>
                     <td>{{ sub.email }}</td>
-
-                    <td class="d-none d-md-table-cell">
-                        {{ sub.phone }}
-                    </td>
-
+                    <td class="d-none d-md-table-cell">{{ sub.phone }}</td>
                     <td>{{ sub.coi_expiration }}</td>
                     <td>{{ days_left }}</td>
-
                     <td>
                         <span class="badge 
                             {% if sub.status=='expired' %}
@@ -123,12 +167,10 @@
                                 bg-warning text-dark
                             {% else %}
                                 bg-success
-                            {% endif %}"
-                            title="Last reminder: {{ sub.last_reminder_sent|format_local_time(sub.timezone) if sub.last_reminder_sent else 'Never' }}">
+                            {% endif %}">
                             {{ sub.status|capitalize }}
                         </span>
                     </td>
-
                     <td class="d-none d-lg-table-cell">
                         {% if sub.last_reminder_sent %}
                             {{ sub.last_reminder_sent|format_local_time(sub.timezone) }}
@@ -136,7 +178,6 @@
                             Never
                         {% endif %}
                     </td>
-
                     <td class="d-none d-lg-table-cell">
                         {% for doc in sub.documents %}
                             <a href="{{ url_for('static', filename='docs/' + doc.filename) }}"
@@ -146,23 +187,18 @@
                             </a>
                         {% endfor %}
                     </td>
-
                     <td>
                         <div class="d-flex flex-column gap-2">
-
-                            <form action="{{ url_for('send_reminder', id=sub.id) }}"
-                                  method="POST">
+                            <form action="{{ url_for('send_reminder', id=sub.id) }}" method="POST">
                                 <button type="submit"
                                         class="btn btn-sm btn-warning w-100">
                                     Send Reminder
                                 </button>
                             </form>
-
                             <a href="{{ url_for('edit_sub', id=sub.id) }}"
                                class="btn btn-sm btn-outline-primary w-100">
                                 Edit
                             </a>
-
                             <form action="{{ url_for('delete_sub', id=sub.id) }}"
                                   method="POST"
                                   onsubmit="return confirm('Are you sure?');">
@@ -171,10 +207,8 @@
                                     Delete
                                 </button>
                             </form>
-
                         </div>
                     </td>
-
                 </tr>
                 {% endfor %}
             </tbody>
@@ -182,10 +216,11 @@
     </div>
 </div>
 
+<!-- ================= JS ================= -->
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Doughnut Chart
 new Chart(document.getElementById('complianceChart'), {
     type: 'doughnut',
     data: {
@@ -194,7 +229,7 @@ new Chart(document.getElementById('complianceChart'), {
             data: [
                 {{ expired|length }},
                 {{ at_risk|length }},
-                {{ subs|length - expired|length - at_risk|length }}
+                {{ compliant_count }}
             ],
             backgroundColor: ['#dc3545','#ffc107','#198754']
         }]
@@ -207,7 +242,6 @@ new Chart(document.getElementById('complianceChart'), {
     }
 });
 
-// 60-day trend
 new Chart(document.getElementById('trendChart'), {
     type: 'bar',
     data: {
@@ -223,13 +257,10 @@ new Chart(document.getElementById('trendChart'), {
             backgroundColor:'#0d6efd'
         }]
     },
-    options: {
-        responsive:true,
-        maintainAspectRatio:false
-    }
+    options: { responsive:true, maintainAspectRatio:false }
 });
 
-// Filter & search
+// FILTER
 const searchInput = document.getElementById('searchInput');
 const statusFilter = document.getElementById('statusFilter');
 const rows = document.querySelectorAll('#subsTable tbody tr');
@@ -253,7 +284,7 @@ function filterTable() {
 searchInput.addEventListener('keyup', filterTable);
 statusFilter.addEventListener('change', filterTable);
 
-// Export CSV
+// EXPORT CSV
 function exportTable() {
     let csv=[];
     const tableRows=document.querySelectorAll("#subsTable tr");
