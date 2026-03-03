@@ -82,40 +82,65 @@
         }
 
         /* ===== DARK MODE ===== */
-        .dark-mode {
-            background-color: #0f172a !important;
-            color: white !important;
-        }
+.dark-mode {
+    background-color: #0f172a !important;
+}
 
-        .dark-mode .navbar-top {
-            background: #1e293b;
-            color: white;
-        }
+/* Texto geral */
+.dark-mode {
+    color: #f1f5f9;
+}
 
-        .dark-mode .card {
-            background-color: #1e293b;
-            color: white;
-            border: 1px solid #334155;
-        }
+/* Navbar */
+.dark-mode .navbar-top {
+    background: #1e293b;
+    color: #f1f5f9;
+}
 
-        .dark-mode .table {
-            color: white;
-        }
+/* Cards */
+.dark-mode .card {
+    background-color: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+}
 
-        .dark-mode .table thead {
-            background-color: #1e293b;
-        }
+/* Tables */
+.dark-mode .table {
+    color: #f1f5f9;
+}
 
-        .dark-mode .form-control,
-        .dark-mode .form-select {
-            background-color: #1e293b;
-            color: white;
-            border: 1px solid #334155;
-        }
+.dark-mode .table thead {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
 
-        .dark-mode .form-control::placeholder {
-            color: #94a3b8;
-        }
+/* Corrige table-light do Bootstrap */
+.dark-mode .table-light {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+/* Inputs */
+.dark-mode .form-control,
+.dark-mode .form-select {
+    background-color: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+}
+
+.dark-mode .form-control::placeholder {
+    color: #94a3b8;
+}
+
+/* Corrige text-muted */
+.dark-mode .text-muted {
+    color: #94a3b8 !important;
+}
+
+/* Corrige badges warning */
+.dark-mode .badge.bg-warning {
+    color: #000 !important;
+}
 
         /* ===== SPINNER ===== */
         .spinner-overlay {
