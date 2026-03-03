@@ -150,7 +150,7 @@
                         </a>
 
                         <form method="POST"
-                            action="{{ url_for('delete_sub', id=sub.id) }}">
+                            action="{{ url_for('delete_sub', id=sub.id) }}"
                               style="display:inline;"
                               onsubmit="return confirm('Are you sure you want to delete this subcontractor?');">
                             <button type="submit" class="btn-delete">
