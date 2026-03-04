@@ -102,50 +102,60 @@
         <!-- PROJECT STATUS -->
     <div class="card">
         <div class="card-header">
-            <h2>Project Mobilization</h2>
-        </div>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Project</th>
-                    <th>Contract Value</th>
-                    <th>Subs Assigned</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in projects %}
-                <tr>
-                    <td>{{ project.name }}</td>
+    <table class="styled-table">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th class="text-right">Contract Value</th>
+                <th class="text-center">Subs Assigned</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
 
-                    <td>
-                        ${{ "{:,.0f}".format(project.contract_value or 0) }}
-                    </td>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>{{ project.name }}</td>
 
-                    <td>
-                        {{ project.subs|length }}
-                    </td>
+                <td class="text-right">
+                    ${{ "{:,.2f}".format(project.contract_value or 0) }}
+                </td>
 
-                    <td>
-                        {% if project.mobilization_status == "Blocked" %}
-                            <span class="badge badge-danger">Blocked</span>
-                        {% elif project.mobilization_status == "Conditional" %}
-                            <span class="badge badge-warning">Conditional</span>
+                <td class="text-center">
+                    {{ project.subs|length }}
+                </td>
+
+                <td class="text-center">
+                    <span class="status-badge
+                        {% if project.mobilization_status == 'Ready to Mobilize' %}
+                            status-ready
+                        {% elif project.mobilization_status == 'Pending Compliance' %}
+                            status-pending
                         {% else %}
-                            <span class="badge badge-success">Ready</span>
+                            status-blocked
                         {% endif %}
-                    </td>
-                    <td><a href="{{ url_for('edit_project', project_id=project.id) }}"
-                        class="btn btn-sm btn-primary">
+                    ">
+                        {{ project.mobilization_status }}
+                    </span>
+                </td>
+
+                <td class="actions-cell">
+                    <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn btn-edit">
                         Edit
-                        </a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </a>
+
+                    <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-view">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     </div>
+</div>
 
     <!-- ALL SUBS -->
     <div class="card">
@@ -169,66 +179,72 @@
             </thead>
 
             <tbody>
-                {% for sub in subs %}
-                <tr class="
-                    {% if sub.computed_status == 'expired' %} row-danger
-                    {% elif sub.computed_status == 'at_risk' %} row-warning
-                    {% endif %}
-                ">
+    {% for sub in subs %}
+    <tr class="
+        {% if sub.computed_status == 'expired' %} row-danger
+        {% elif sub.computed_status == 'at_risk' %} row-warning
+        {% endif %}
+    ">
 
-                    <td>{{ sub.name }}</td>
-                    <td>{{ sub.email }}</td>
-                    <td>{{ sub.coi_expiration }}</td>
+        <td>{{ sub.name }}</td>
+        <td>{{ sub.email }}</td>
 
-                    <td>
-                        {% if sub.computed_status == "expired" %}
-                            <span class="badge badge-danger">Expired</span>
-                        {% elif sub.computed_status == "at_risk" %}
-                            <span class="badge badge-warning">At Risk</span>
-                        {% else %}
-                            <span class="badge badge-success">Compliant</span>
-                        {% endif %}
-                    </td>
+        <td>
+            {{ sub.coi_expiration if sub.coi_expiration else "—" }}
+        </td>
 
-                    <td>
-                        {% if sub.documents %}
-                            <span class="doc-count">
-                                {{ sub.documents|length }} file(s)
-                            </span>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
+        <td>
+            {% if sub.computed_status == "expired" %}
+                <span class="badge badge-danger">Expired</span>
+            {% elif sub.computed_status == "at_risk" %}
+                <span class="badge badge-warning">At Risk</span>
+            {% else %}
+                <span class="badge badge-success">Compliant</span>
+            {% endif %}
+        </td>
 
-                    <td>
-                        <a href="{{ url_for('send_reminder', sub_id=sub.id) }}"
-                        class="btn btn-sm btn-warning">
-                        Send Reminder
-                        </a>
-                    </td>
+        <td>
+            {% if sub.documents %}
+                <span class="doc-count">
+                    {{ sub.documents|length }} file(s)
+                </span>
+            {% else %}
+                —
+            {% endif %}
+        </td>
 
-                    <td style="text-align:right;">
-                        <a href="{{ url_for('edit_sub', id=sub.id) }}" class="btn-edit">
-                            Edit
-                        </a>
+        <!-- 🔹 ACTIONS COLUMN (UNIFIED) -->
+        <td style="text-align:right; white-space:nowrap;">
 
-                        <form method="POST"
-                              action="{{ url_for('delete_sub', id=sub.id) }}"
-                              style="display:inline;">
-                            <button type="submit" class="btn-delete">
-                                Delete
-                            </button>
-                        </form>
-                    </td>
+            <a href="{{ url_for('send_reminder', sub_id=sub.id) }}"
+               class="btn-warning">
+               Reminder
+            </a>
 
-                </tr>
-                {% endfor %}
-            </tbody>
+            <a href="{{ url_for('edit_sub', id=sub.id) }}"
+               class="btn-edit">
+               Edit
+            </a>
+
+            <form method="POST"
+                  action="{{ url_for('delete_sub', id=sub.id) }}"
+                  style="display:inline;">
+                <button type="submit" class="btn-delete">
+                    Delete
+                </button>
+            </form>
+
+        </td>
+
+    </tr>
+    {% endfor %}
+</tbody>
         </table>
     </div>
 
 </div>
 
+    
 
 
 <style>
@@ -331,6 +347,74 @@
     border: none;
     border-radius: 8px;
     font-size: 13px;
+}
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.styled-table th {
+    text-align: left;
+    padding: 14px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.styled-table td {
+    padding: 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-ready {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pending {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.status-blocked {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-view {
+    background: #475569;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    margin-left: 6px;
+}
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    margin-right: 6px;
+}
+
+.actions-cell a,
+.actions-cell form {
+    display: inline-block;
 }
 </style>
 

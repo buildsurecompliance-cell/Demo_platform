@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ project.name }}</h2>
+
+<p><strong>Contract Value:</strong>
+    ${{ "{:,.2f}".format(project.contract_value or 0) }}
+</p>
+
+<p><strong>Status:</strong>
+    {{ project.mobilization_status }}
+</p>
+
+<h3>Subcontractors</h3>
+
+<ul>
+    {% for ps in project.subs %}
+        <li>{{ ps.subcontractor.name }}</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
