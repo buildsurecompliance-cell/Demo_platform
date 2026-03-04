@@ -60,12 +60,21 @@ class Subcontractor(db.Model):
     timezone = db.Column(db.String(50), default="US/Eastern")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     documents = db.relationship('Document', backref='sub', lazy=True)
+    documents = db.relationship(
+    "Document",
+    backref="sub",
+    lazy=True,
+    cascade="all, delete-orphan"
+)
 
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(200))
     type = db.Column(db.String(50))
-    sub_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'))
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sub_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
 
 # ==========================
 # PROJECT MODELS (NOVO)
@@ -82,6 +91,20 @@ class Project(db.Model):
 
     subs = db.relationship('ProjectSubcontractor', backref='project', lazy=True)
 
+    documents = db.relationship(
+        'Document',
+        backref='project',
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    documents = db.relationship(
+    "Document",
+    backref="project",
+    lazy=True,
+    cascade="all, delete-orphan"
+)
+
 
 class ProjectSubcontractor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -91,6 +114,7 @@ class ProjectSubcontractor(db.Model):
 
     subcontractor = db.relationship('Subcontractor')
     coverage_limit = db.Column(db.Float, default=1000000)
+
 
 # ==========================
 # LOGIN MANAGER
@@ -433,27 +457,41 @@ def delete_sub(id):
     flash("Deleted successfully!", "success")
     return redirect(url_for("dashboard"))
 
-@app.route("/send_reminder/<int:id>", methods=["POST"])
+@app.route("/send_reminder/<int:sub_id>")
 @login_required
-def send_reminder(id):
-    sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
+def send_reminder(sub_id):
 
-    if not sub:
-        flash("Not found", "danger")
+    sub = Subcontractor.query.get_or_404(sub_id)
+
+    if not sub.email:
         return redirect(url_for("dashboard"))
 
-    subject = "COI Expiration Reminder"
-    message = f"Hello {sub.name}, your COI is expiring on {sub.coi_expiration}."
+    days_left = (sub.coi_expiration - date.today()).days
 
-    success = send_email_reminder(sub.email, subject, message)
+    if days_left > 30:
+        return redirect(url_for("dashboard"))
 
-    if success:
+    subject = "Insurance Expiration Reminder"
 
-        sub.last_reminder_sent = datetime.now(timezone.utc)
-        db.session.commit()
-        flash("Reminder sent successfully!", "success")
-    else:
-        flash("Error sending email", "danger")
+    body = f"""
+    Hello {sub.name},
+
+    This is a reminder that your Certificate of Insurance
+    will expire on {sub.coi_expiration}.
+
+    Please upload an updated COI.
+
+    Thank you.
+    """
+
+    # exemplo usando flask-mail
+    msg = Message(
+        subject,
+        recipients=[sub.email],
+        body=body
+    )
+
+    mail.send(msg)
 
     return redirect(url_for("dashboard"))
 
@@ -462,7 +500,7 @@ def send_reminder(id):
 #===========================
 def calculate_mobilization_status(project):
 
-    subs = project.subcontractors  # relação do SQLAlchemy
+    subs = project.subs  # relação do SQLAlchemy
 
     has_expired = False
     has_at_risk = False
@@ -490,6 +528,134 @@ def calculate_mobilization_status(project):
 
     return "Ready to Mobilize"
 
+#================
+# ADD PROJECT 
+#================
+
+@app.route("/add_project", methods=["GET", "POST"])
+@login_required
+def add_project():
+
+    subs = Subcontractor.query.filter_by(
+        user_id=current_user.id
+    ).all()
+
+    if request.method == "POST":
+
+        try:
+            name = request.form.get("name")
+            contract_value = float(request.form.get("contract_value") or 0)
+
+            start_date = request.form.get("start_date")
+            end_date = request.form.get("end_date")
+            required_coverage = float(
+                request.form.get("required_coverage") or 1000000
+            )
+
+            new_project = Project(
+                name=name,
+                contract_value=contract_value,
+                start_date=datetime.strptime(start_date, "%Y-%m-%d") if start_date else None,
+                end_date=datetime.strptime(end_date, "%Y-%m-%d") if end_date else None,
+                required_coverage=required_coverage,
+                user_id=current_user.id
+            )
+
+            db.session.add(new_project)
+            db.session.flush()  # gera ID antes do commit
+
+            selected_subs = request.form.getlist("subcontractors")
+
+            for sub_id in selected_subs:
+
+                # 🔐 Garante que o sub pertence ao usuário
+                sub = Subcontractor.query.filter_by(
+                    id=int(sub_id),
+                    user_id=current_user.id
+                ).first()
+
+                if sub:
+                    ps = ProjectSubcontractor(
+                        project_id=new_project.id,
+                        subcontractor_id=sub.id
+                    )
+                    db.session.add(ps)
+
+            db.session.commit()
+
+            return redirect(url_for("dashboard"))
+
+        except Exception as e:
+            db.session.rollback()
+            return f"Erro ao criar projeto: {str(e)}"
+
+    return render_template("add_project.html", subs=subs)
+#===================
+# EDIT PROJECT 
+#===================
+@app.route("/edit_project/<int:project_id>", methods=["GET", "POST"])
+@login_required
+def edit_project(project_id):
+
+    project = Project.query.get_or_404(project_id)
+
+    if request.method == "POST":
+
+        project.name = request.form.get("name")
+        project.contract_value = float(request.form.get("contract_value") or 0)
+
+        db.session.commit()
+
+        return redirect(url_for("dashboard"))
+
+    return render_template("edit_project.html", project=project)
+
+#===============
+# DOC PROJECT
+#===============
+@app.route("/project/<int:project_id>/upload", methods=["POST"])
+@login_required
+def upload_project_document(project_id):
+
+    # 🔐 Garante que o projeto pertence ao usuário
+    project = Project.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    if "file" not in request.files:
+        return redirect(request.referrer)
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return redirect(request.referrer)
+
+    filename = secure_filename(file.filename)
+
+    # 🔒 Evita sobrescrever arquivos
+    unique_name = f"{uuid.uuid4().hex}_{filename}"
+
+    upload_folder = os.path.join("static", "uploads")
+
+    # Garante que a pasta existe
+    os.makedirs(upload_folder, exist_ok=True)
+
+    upload_path = os.path.join(upload_folder, unique_name)
+    file.save(upload_path)
+
+    new_doc = Document(
+        filename=unique_name,
+        type="Project Document",
+        project_id=project.id
+    )
+
+    db.session.add(new_doc)
+    db.session.commit()
+
+    return redirect(url_for("dashboard"))
+
+
 # ==========================
 # APSCHEDULER - DAILY REMINDER
 # ==========================
@@ -502,7 +668,10 @@ def start_scheduler():
 # ==========================
 # RUN
 # ==========================
+
 if __name__ == "__main__":
+    app.run(debug=True)
+
     with app.app_context():
         db.create_all()
         start_scheduler()
