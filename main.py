@@ -8,7 +8,7 @@ import os
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
-
+from flask_mail import Mail, Message
 
 # ==========================
 # CONFIG
@@ -670,7 +670,7 @@ def start_scheduler():
 # ==========================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+  #  app.run(debug=True)
 
     with app.app_context():
         db.create_all()
