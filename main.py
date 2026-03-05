@@ -18,6 +18,12 @@ from flask import send_from_directory
 # ==========================
 app = Flask(__name__)
 
+ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "doc", "docx"}
+
+def allowed_file(filename):
+    return "." in filename and \
+        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 # Segurança
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key")
 
@@ -74,7 +80,14 @@ class Subcontractor(db.Model):
     timezone = db.Column(db.String(50))
     coi_expiration = db.Column(db.Date)
 
-    last_reminder_sent = db.Column(db.DateTime)  # 🔥 ADICIONE ISSO
+    last_reminder_sent = db.Column(db.DateTime)
+
+    documents = db.relationship(
+        'Document',
+        backref='sub',
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
     @property
     def days_left(self):
@@ -84,10 +97,11 @@ class Subcontractor(db.Model):
 
     @property
     def computed_status(self):
-        if not self.coi_expiration:
-            return "compliant"
 
         days = self.days_left
+
+        if days is None:
+            return "compliant"
 
         if days < 0:
             return "expired"
@@ -102,6 +116,7 @@ class Subcontractor(db.Model):
     lazy=True,
     cascade="all, delete-orphan"
 )
+    from datetime import datetime
     
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -135,6 +150,45 @@ class Project(db.Model):
         lazy=True,
         cascade="all, delete-orphan"
     )
+    @property
+    def mobilization_status(self):
+
+        if not self.subs:
+            return "Not Cleared"
+
+        has_pending = False
+        has_blocked = False
+
+        for ps in self.subs:
+
+            sub = ps.subcontractor
+
+            if not sub:
+                has_blocked = True
+                continue
+
+            if not sub.coi_expiration:
+                has_blocked = True
+                continue
+
+            if self.end_date and sub.coi_expiration < self.end_date:
+                has_blocked = True
+                continue
+
+            if ps.coverage_limit < self.required_coverage:
+                has_blocked = True
+                continue
+
+            if sub.days_left is not None and sub.days_left <= 30:
+                has_pending = True
+
+        if has_blocked:
+            return "Not Cleared"
+
+        if has_pending:
+            return "Pending Compliance"
+
+        return "Ready to Mobilize"
 
 
 class ProjectSubcontractor(db.Model):
@@ -173,6 +227,7 @@ def format_local_time(value, tz_name="US/Eastern"):
 # ==========================
 
 def send_email_reminder(to_email, subject, message):
+
     api_key = os.environ.get("RESEND_API_KEY")
 
     response = requests.post(
@@ -182,17 +237,17 @@ def send_email_reminder(to_email, subject, message):
             "Content-Type": "application/json",
         },
         json={
-            "from": "onboarding@resend.dev",
-            "to": to_email,
+            "from": "buildsurecompliance@gmail.com",
+            "to": [to_email],
             "subject": subject,
             "html": f"<p>{message}</p>",
         },
     )
 
-    print(response.status_code)
-    print(response.text)
+    print("STATUS:", response.status_code)
+    print("RESPONSE:", response.text)
 
-    return response.status_code == 200
+    return response.status_code in [200, 202]
 
 # ==========================
 # AUTO REMINDER
@@ -368,6 +423,7 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
 #===============
 # DASHBOARD
 #===============
@@ -413,10 +469,7 @@ def dashboard():
         contract_value = project.contract_value or 0
         total_portfolio += contract_value
 
-        status = calculate_mobilization_status(project)
-        project.mobilization_status = status
-
-        if status != "Ready to Mobilize":
+        if project.mobilization_status != "Ready to Mobilize":
             revenue_at_risk += contract_value
 
     return render_template(
@@ -427,7 +480,6 @@ def dashboard():
         total_portfolio=total_portfolio,
         revenue_at_risk=revenue_at_risk
     )
-
 # ==========================
 # VIEW SUB DOCUMENTS (SaaS)
 # ==========================
@@ -722,12 +774,7 @@ Thank you.
 """
 
     try:
-        msg = Message(
-            subject=subject,
-            recipients=[sub.email],
-            body=body
-        )
-
+        
         send_email_reminder(sub.email, subject, body)
 
         flash("Reminder sent successfully.", "success")
@@ -848,12 +895,6 @@ def upload_project_document(project_id):
     upload_folder = app.config["UPLOAD_FOLDER"]
     os.makedirs(upload_folder, exist_ok=True)
 
-    ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "doc", "docx"}
-
-    def allowed_file(filename):
-        return "." in filename and \
-        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
     upload_path = os.path.join(upload_folder, unique_name)
     file.save(upload_path)
 
@@ -893,7 +934,7 @@ def start_scheduler():
 # RUN
 # ==========================
 
-if __name__ == "__main__":
+if __name__ == "__main__" and not os.environ.get("WERKZEUG_RUN_MAIN"):
 
     with app.app_context():
         db.create_all()
