@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 import os
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,8 +11,7 @@ import requests
 from flask_mail import Mail, Message
 from pytz import timezone
 import uuid
-
-
+from flask import send_from_directory
 
 # ==========================
 # CONFIG
@@ -51,30 +50,65 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     timezone = db.Column(db.String(50), default="US/Eastern")
     paid = db.Column(db.Boolean, default=False)
-    subs = db.relationship('Subcontractor', backref='owner', lazy=True)
+
+    subs = db.relationship(
+        'Subcontractor',
+        backref='owner',
+        cascade="all, delete-orphan",
+        lazy=True
+    )
 
 class Subcontractor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    email = db.Column(db.String(120))
-    phone = db.Column(db.String(20))
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id'),
+        nullable=False
+    )
+
+    name = db.Column(db.String(150))
+    email = db.Column(db.String(150))
+    phone = db.Column(db.String(30))
     role = db.Column(db.String(100))
+    timezone = db.Column(db.String(50))
     coi_expiration = db.Column(db.Date)
-    last_reminder_sent = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(20), default="compliant")
-    timezone = db.Column(db.String(50), default="US/Eastern")
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    last_reminder_sent = db.Column(db.DateTime)  # 🔥 ADICIONE ISSO
+
+    @property
+    def days_left(self):
+        if not self.coi_expiration:
+            return None
+        return (self.coi_expiration - date.today()).days
+
+    @property
+    def computed_status(self):
+        if not self.coi_expiration:
+            return "compliant"
+
+        days = self.days_left
+
+        if days < 0:
+            return "expired"
+        elif days <= 30:
+            return "at_risk"
+        else:
+            return "compliant"
+    
     documents = db.relationship(
-    "Document",
-    backref="sub",
+    'Document',
+    backref='sub',
     lazy=True,
     cascade="all, delete-orphan"
 )
-
+    
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(200))
+    original_name = db.Column(db.String(200))  # NOVO
     type = db.Column(db.String(50))
+    version = db.Column(db.Integer, default=1)  # NOVO
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
 
     sub_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'), nullable=True)
@@ -334,58 +368,39 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
-
-
-#=================================
-#=== DASHBOARD 
-#=================================
-
+#===============
+# DASHBOARD
+#===============
 @app.route("/dashboard")
 @login_required
 def dashboard():
 
-    today = date.today()
+    status_filter = request.args.get("status")
+    search = request.args.get("search")
 
-    # =============================
-    # COI RISK LOGIC
-    # =============================
-
-    subs = Subcontractor.query.filter_by(
+    # SUBCONTRACTORS
+    query = Subcontractor.query.filter_by(
         user_id=current_user.id
-    ).all()
+    )
 
-    for sub in subs:
+    if search:
+        query = query.filter(Subcontractor.name.ilike(f"%{search}%"))
 
-        if sub.coi_expiration:
-            days_left = (sub.coi_expiration - today).days
-            sub.days_left = days_left
+    subs = query.all()
 
-            if days_left < 0:
-                sub.computed_status = "expired"
-            elif days_left <= 30:
-                sub.computed_status = "at_risk"
-            else:
-                sub.computed_status = "compliant"
-
-        else:
-            sub.days_left = None
-            sub.computed_status = "missing"
+    if status_filter:
+        subs = [s for s in subs if s.computed_status == status_filter]
 
     def risk_priority(s):
         if s.computed_status == "expired":
             return -999
-        if s.computed_status == "missing":
-            return -500
         if s.computed_status == "at_risk":
-            return s.days_left
+            return s.days_left or 0
         return 999
 
     top_risk = sorted(subs, key=risk_priority)
 
-    # =============================
-    # PROJECT LOGIC
-    # =============================
-
+    # PROJECTS
     projects = Project.query.filter_by(
         user_id=current_user.id
     ).all()
@@ -404,24 +419,92 @@ def dashboard():
         if status != "Ready to Mobilize":
             revenue_at_risk += contract_value
 
-    # =============================
-    # RETURN
-    # =============================
-
     return render_template(
         "dashboard.html",
         subs=subs,
         top_risk=top_risk,
-        today=today,
         projects=projects,
         total_portfolio=total_portfolio,
         revenue_at_risk=revenue_at_risk
     )
 
+# ==========================
+# VIEW SUB DOCUMENTS (SaaS)
+# ==========================
+@app.route("/sub/<int:sub_id>/documents")
+@login_required
+def view_sub_documents(sub_id):
+
+    sub = Subcontractor.query.filter_by(
+        id=sub_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    documents = Document.query.filter_by(
+        sub_id=sub.id
+    ).order_by(Document.upload_date.desc()).all()
+
+    return render_template(
+        "view_sub_documents.html",
+        sub=sub,
+        documents=documents
+    )
+#===============
+# DOCS
+#===============
+@app.route("/document/<int:doc_id>")
+@login_required
+def view_document(doc_id):
+
+    doc = Document.query.get_or_404(doc_id)
+
+    # 🔒 Documento vinculado a Subcontractor
+    if doc.sub_id:
+        sub = Subcontractor.query.get(doc.sub_id)
+        if not sub or sub.user_id != current_user.id:
+            flash("Unauthorized", "danger")
+            return redirect(url_for("dashboard"))
+
+    # 🔒 Documento vinculado a Project
+    if doc.project_id:
+        project = Project.query.get(doc.project_id)
+        if not project or project.user_id != current_user.id:
+            flash("Unauthorized", "danger")
+            return redirect(url_for("dashboard"))
+
+    return send_from_directory(
+        app.config["UPLOAD_FOLDER"],
+        doc.filename
+    )
+# ==========================
+# DELETE DOCUMENT
+# ==========================
+@app.route("/delete_document/<int:doc_id>", methods=["POST"])
+@login_required
+def delete_document(doc_id):
+
+    doc = Document.query.get_or_404(doc_id)
+
+    if doc.sub_id:
+        sub = Subcontractor.query.get(doc.sub_id)
+        if sub.user_id != current_user.id:
+            flash("Unauthorized", "danger")
+            return redirect(url_for("dashboard"))
+
+    # remove arquivo físico
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], doc.filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    db.session.delete(doc)
+    db.session.commit()
+
+    flash("Document deleted successfully.", "success")
+    return redirect(request.referrer)
+
 # --------------------------
 # ADD SUBCONTRACTOR
 # --------------------------
-
 @app.route("/add_sub", methods=["GET", "POST"])
 @login_required
 def add_sub():
@@ -434,7 +517,6 @@ def add_sub():
         role = request.form.get("role")
         timezone = current_user.timezone
 
-        # 🔹 Data segura
         coi_raw = request.form.get("coi_expiration")
 
         if coi_raw:
@@ -449,7 +531,7 @@ def add_sub():
         else:
             coi_expiration = None
 
-        # 🔹 Criar Sub
+        # Criar Sub
         new_sub = Subcontractor(
             name=name,
             email=email,
@@ -461,41 +543,48 @@ def add_sub():
         )
 
         db.session.add(new_sub)
-        db.session.flush()  # gera ID antes de salvar docs
+        db.session.flush()
 
-        # 🔹 Upload múltiplo seguro
+        # 🔥 TUDO AQUI DENTRO DO POST
         files = request.files.getlist("documents")
 
         for file in files:
 
             if file and file.filename != "":
 
-                unique_name = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-                path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
-
-                file.save(path)
-
                 doc_type = request.form.get("doc_type") or "Document"
+                original_name = secure_filename(file.filename)
+
+                existing_doc = Document.query.filter_by(
+                    sub_id=new_sub.id
+                ).order_by(Document.version.desc()).first()
+
+                new_version = 1
+                if existing_doc:
+                    new_version = existing_doc.version + 1
+
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
+                path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+                file.save(path)
 
                 new_doc = Document(
                     filename=unique_name,
+                    original_name=original_name,
                     type=doc_type,
+                    version=new_version,
                     sub_id=new_sub.id
                 )
 
                 db.session.add(new_doc)
 
         db.session.commit()
-
         flash("Subcontractor added successfully!", "success")
         return redirect(url_for("dashboard"))
 
     return render_template("add_sub.html", sub=None)
-
-#===========
-# EDIT 
-#===========
-
+# ==========================
+# EDIT SUBCONTRACTOR
+# ==========================
 @app.route("/edit_sub/<int:id>", methods=["GET", "POST"])
 @login_required
 def edit_sub(id):
@@ -503,22 +592,18 @@ def edit_sub(id):
     sub = Subcontractor.query.filter_by(
         id=id,
         user_id=current_user.id
-    ).first()
-
-    if not sub:
-        flash("Subcontractor not found.", "danger")
-        return redirect(url_for("dashboard"))
+    ).first_or_404()
 
     if request.method == "POST":
 
-        # 🔹 Dados básicos
+        # 🔹 Atualiza dados básicos
         sub.name = request.form.get("name")
         sub.email = request.form.get("email")
         sub.phone = request.form.get("phone")
         sub.role = request.form.get("role")
         sub.timezone = current_user.timezone
 
-        # 🔹 Data COI (segura)
+        # 🔹 Atualiza COI expiration
         expiration_raw = request.form.get("coi_expiration")
 
         if expiration_raw:
@@ -529,28 +614,39 @@ def edit_sub(id):
                 ).date()
             except ValueError:
                 flash("Invalid date format.", "danger")
-                return redirect(url_for("dashboard"))
+                return redirect(url_for("edit_sub", id=sub.id))
         else:
             sub.coi_expiration = None
 
-        # 🔹 Upload múltiplo
+        # 🔥 Upload com versionamento automático
         files = request.files.getlist("documents")
 
         for file in files:
 
             if file and file.filename != "":
 
-                # Gera nome único (evita sobrescrever arquivo)
-                unique_name = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+                doc_type = request.form.get("doc_type") or "Document"
+                original_name = secure_filename(file.filename)
 
+                # pega última versão daquele tipo
+                existing_doc = Document.query.filter_by(
+                    sub_id=sub.id,
+                    type=doc_type
+                ).order_by(Document.version.desc()).first()
+
+                new_version = 1
+                if existing_doc:
+                    new_version = existing_doc.version + 1
+
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
                 path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
                 file.save(path)
 
-                doc_type = request.form.get("doc_type") or "Document"
-
                 new_doc = Document(
                     filename=unique_name,
+                    original_name=original_name,
                     type=doc_type,
+                    version=new_version,
                     sub_id=sub.id
                 )
 

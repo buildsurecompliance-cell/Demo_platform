@@ -10,13 +10,8 @@
             <p>Live compliance and operational intelligence</p>
         </div>
 
-        <div class="top-actions">
-            <a href="{{ url_for('add_project') }}" class="btn-add">
-                + New Project
-            </a>
-        </div>
     </div>
-
+<h3>${{ "{:,.0f}".format(total_portfolio) }}</h3>
 
     <!-- KPI GRID -->
     <div class="kpi-grid">
@@ -48,7 +43,8 @@
         </div>
 
         <div class="kpi-card">
-            <h3>${{ "{:,.0f}".format(total_portfolio) }}</h3>
+            <h3>${{ "{:,.0f}".format(total_portfolio or 0) }}</h3>
+            <h3>${{ "{:,.0f}".format(revenue_at_risk or 0) }}</h3>
             <span>Total Portfolio</span>
         </div>
 
@@ -102,7 +98,11 @@
         <!-- PROJECT STATUS -->
     <div class="card">
         <div class="card-header">
-
+            <h2>Project</h2>
+            <a href="{{ url_for('add_project') }}" class="btn-add">
+                + New Project
+        </a>
+    </div>
     <table class="styled-table">
         <thead>
             <tr>
@@ -120,7 +120,7 @@
                 <td>{{ project.name }}</td>
 
                 <td class="text-right">
-                    ${{ "{:,.2f}".format(project.contract_value or 0) }}
+                    {{ "%.2f"|format(project.contract_value or 0) }}
                 </td>
 
                 <td class="text-center">
@@ -165,7 +165,36 @@
                 + Add Sub
             </a>
         </div>
+<form method="GET" style="margin-bottom:20px; display:flex; gap:10px;">
 
+    <input type="text"
+           name="search"
+           placeholder="Search by name"
+           value="{{ request.args.get('search', '') }}">
+
+    <select name="status">
+        <option value="">All Status</option>
+        <option value="compliant"
+            {% if request.args.get('status') == 'compliant' %}selected{% endif %}>
+            Compliant
+        </option>
+        <option value="at_risk"
+            {% if request.args.get('status') == 'at_risk' %}selected{% endif %}>
+            At Risk
+        </option>
+        <option value="expired"
+            {% if request.args.get('status') == 'expired' %}selected{% endif %}>
+            Expired
+        </option>
+    </select>
+
+    <button type="submit" class="btn-edit">Filter</button>
+
+    <a href="{{ url_for('dashboard') }}" class="btn-delete">
+        Reset
+    </a>
+
+</form>
         <table class="table">
             <thead>
                 <tr>
@@ -174,6 +203,7 @@
                     <th>Expiration</th>
                     <th>Status</th>
                     <th>Docs</th>
+                    <th>Last Reminder</th>
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
@@ -205,14 +235,23 @@
 
         <td>
             {% if sub.documents %}
-                <span class="doc-count">
+                <a href="{{ url_for('view_sub_documents', sub_id=sub.id) }}">
                     {{ sub.documents|length }} file(s)
-                </span>
+                </a>
             {% else %}
                 —
             {% endif %}
         </td>
 
+        
+           <td>
+                {% if sub.last_reminder_sent %}
+                    {{ sub.last_reminder_sent.strftime("%m/%d/%Y %H:%M") }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        
         <!-- 🔹 ACTIONS COLUMN (UNIFIED) -->
         <td style="text-align:right; white-space:nowrap;">
 

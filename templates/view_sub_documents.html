@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>{{ sub.name }} — Documents</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>File</th>
+            <th>Type</th>
+            <th>Version</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for doc in documents %}
+        <tr>
+            <td>{{ doc.original_name }}</td>
+            <td>{{ doc.type }}</td>
+            <td>v{{ doc.version }}</td>
+            <td>
+                <a href="{{ url_for('view_document', doc_id=doc.id) }}"
+                    target="_blank">
+                   Open
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
