@@ -776,7 +776,7 @@ def send_reminder(sub_id):
 
     sub = Subcontractor.query.get_or_404(sub_id)
 
-    # 🔒 Segurança: garante que o sub pertence ao usuário logado
+    # 🔒 Segurança
     if sub.user_id != current_user.id:
         flash("Unauthorized action.", "danger")
         return redirect(url_for("dashboard"))
@@ -812,8 +812,13 @@ Thank you.
 """
 
     try:
-        
+
         send_email_reminder(sub.email, subject, body)
+
+        # 🔥 SALVA DATA DO REMINDER
+        sub.last_reminder_sent = datetime.utcnow()
+
+        db.session.commit()
 
         flash("Reminder sent successfully.", "success")
 
@@ -822,7 +827,6 @@ Thank you.
         flash("Error sending email.", "danger")
 
     return redirect(url_for("dashboard"))
-
 
 #================
 # ADD PROJECT 
