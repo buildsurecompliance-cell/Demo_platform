@@ -143,58 +143,74 @@ class Document(db.Model):
 # ==========================
 
 class Project(db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150))
+    name = db.Column(db.String(200))
     contract_value = db.Column(db.Float)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-    required_coverage = db.Column(db.Float, default=1000000)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
-    subs = db.relationship('ProjectSubcontractor', backref='project', lazy=True)
+    subs = db.relationship("ProjectSubcontractor", backref="project")
 
-    documents = db.relationship(
-        'Document',
-        backref='project',
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
+    # =========================
+    # COMPLIANCE SCORE
+    # =========================
     @property
-    def mobilization_status(self):
+    def compliance_score(self):
 
         if not self.subs:
-            return "Not Cleared"
+            return 100
 
-        has_pending = False
-        has_blocked = False
+        total = len(self.subs)
+        compliant = 0
 
         for ps in self.subs:
 
-            sub = ps.subcontractor
+            if ps.subcontractor.computed_status == "compliant":
+                compliant += 1
 
-            if not sub:
-                has_blocked = True
-                continue
+        return int((compliant / total) * 100)
 
-            if not sub.coi_expiration:
-                has_blocked = True
-                continue
 
-            if self.end_date and sub.coi_expiration < self.end_date:
-                has_blocked = True
-                continue
+    # =========================
+    # RISK LEVEL
+    # =========================
+    @property
+    def risk_level(self):
 
-            if ps.coverage_limit < self.required_coverage:
-                has_blocked = True
-                continue
+        score = self.compliance_score
 
-            if sub.days_left is not None and sub.days_left <= 30:
-                has_pending = True
+        if score == 100:
+            return "Low"
 
-        if has_blocked:
-            return "Not Cleared"
+        if score >= 70:
+            return "Medium"
 
-        if has_pending:
+        return "High"
+
+
+    # =========================
+    # MOBILIZATION STATUS
+    # =========================
+    @property
+    def mobilization_status(self):
+
+        has_expired = False
+        has_risk = False
+
+        for ps in self.subs:
+
+            status = ps.subcontractor.computed_status
+
+            if status == "expired":
+                has_expired = True
+
+            elif status == "at_risk":
+                has_risk = True
+
+        if has_expired:
+            return "Blocked"
+
+        if has_risk:
             return "Pending Compliance"
 
         return "Ready to Mobilize"

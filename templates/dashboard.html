@@ -130,7 +130,9 @@
 <tr>
     <th>Project</th>
     <th class="text-right">Contract Value</th>
-    <th class="text-center">Subs Assigned</th>
+    <th class="text-center">Subs</th>
+    <th class="text-center">Compliance</th>
+    <th class="text-center">Risk</th>
     <th class="text-center">Status</th>
     <th class="text-center">Actions</th>
 </tr>
@@ -152,6 +154,38 @@
     {{ project.subs|length }}
 </td>
 
+<!-- Compliance Score -->
+
+<td class="text-center">
+
+<div class="score-pill">
+
+{{ project.compliance_score }}%
+
+</div>
+
+</td>
+
+
+<!-- Risk Level -->
+
+<td class="text-center">
+
+{% if project.risk_level == "Low" %}
+<span class="risk-low">Low</span>
+
+{% elif project.risk_level == "Medium" %}
+<span class="risk-medium">Medium</span>
+
+{% else %}
+<span class="risk-high">High</span>
+{% endif %}
+
+</td>
+
+
+<!-- Mobilization Status -->
+
 <td class="text-center">
 
 <span class="status-badge
@@ -167,6 +201,7 @@
 </span>
 
 </td>
+
 
 <td class="actions-cell">
 
@@ -191,8 +226,6 @@
 </table>
 
 </div>
-
-
 
 <!-- ALL SUBCONTRACTORS -->
 <div class="card">
