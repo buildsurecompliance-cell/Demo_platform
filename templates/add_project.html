@@ -10,18 +10,21 @@
 
     <div class="card-section">
 
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
 
+            <!-- PROJECT NAME -->
             <div class="form-group">
                 <label>Project Name</label>
                 <input type="text" name="name" required>
             </div>
 
+            <!-- CONTRACT VALUE -->
             <div class="form-group">
                 <label>Contract Value</label>
                 <input type="number" step="0.01" name="contract_value">
             </div>
 
+            <!-- SUBCONTRACTORS -->
             <div class="form-group">
                 <label>Select Subcontractors</label>
 
@@ -35,7 +38,30 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-save">Create Project</button>
+            <!-- DOCUMENT TYPE -->
+            <div class="form-group">
+                <label>Document Type</label>
+
+                <select name="doc_type">
+                    <option value="Contract">Contract</option>
+                    <option value="Subcontract">Subcontract</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Permit">Permit</option>
+                    <option value="Safety Plan">Safety Plan</option>
+                    <option value="Change Order">Change Order</option>
+                </select>
+            </div>
+
+            <!-- FILE UPLOAD -->
+            <div class="form-group">
+                <label>Upload Project Documents</label>
+
+                <input type="file" name="documents" multiple>
+            </div>
+
+            <button type="submit" class="btn-save">
+                Create Project
+            </button>
 
         </form>
 
@@ -55,7 +81,8 @@
     margin-bottom: 8px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
     padding: 10px;
     border-radius: 8px;
