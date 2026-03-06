@@ -3,31 +3,72 @@
 
 <h3>{{ sub.name }} — Documents</h3>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>File</th>
-            <th>Type</th>
-            <th>Version</th>
-            <th>Action</th>
-        </tr>
-    </thead>
+{% if documents %}
 
-    <tbody>
-        {% for doc in documents %}
-        <tr>
-            <td>{{ doc.original_name }}</td>
-            <td>{{ doc.type }}</td>
-            <td>v{{ doc.version }}</td>
-            <td>
-                <a href="{{ url_for('view_document', doc_id=doc.id) }}"
-                   target="_blank">
-                   Open
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
+<table class="table">
+
+```
+<thead>
+    <tr>
+        <th>File</th>
+        <th>Type</th>
+        <th>Version</th>
+        <th>Action</th>
+    </tr>
+</thead>
+
+<tbody>
+
+    {% for doc in documents %}
+
+    <tr>
+
+        <td>
+            {{ doc.original_name or doc.filename }}
+        </td>
+
+        <td>
+            {{ doc.document_type }}
+        </td>
+
+        <td>
+            v{{ doc.version }}
+        </td>
+
+        <td>
+
+            <a href="{{ url_for('view_document', doc_id=doc.id) }}"
+               target="_blank"
+               class="btn btn-sm btn-primary">
+               Open
+            </a>
+
+            <form action="{{ url_for('delete_document', doc_id=doc.id) }}"
+                  method="POST"
+                  style="display:inline;">
+
+                <button class="btn btn-sm btn-danger"
+                        onclick="return confirm('Delete this document?')">
+                    Delete
+                </button>
+
+            </form>
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</tbody>
+```
+
 </table>
+
+{% else %}
+
+<p>No documents uploaded for this subcontractor.</p>
+
+{% endif %}
 
 {% endblock %}

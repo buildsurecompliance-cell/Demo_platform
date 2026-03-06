@@ -19,6 +19,28 @@
                value="{{ project.contract_value }}">
     </div>
 
+    <label>Subcontractors</label>
+
+    <select name="subcontractors" multiple class="form-control">
+
+        {% for sub in subs %}
+
+            <option value="{{ sub.id }}"
+            {% for link in project.subs %}
+                {% if link.subcontractor_id == sub.id %}
+                    selected
+                {% endif %}
+            {% endfor %}
+            >
+
+            {{ sub.name }}
+
+            </option>
+
+        {% endfor %}
+
+    </select>
+
     <button type="submit" class="btn btn-success">
         Save Changes
     </button>

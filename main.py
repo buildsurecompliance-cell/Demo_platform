@@ -65,6 +65,7 @@ class User(db.Model, UserMixin):
     )
 
 class Subcontractor(db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
 
     user_id = db.Column(
@@ -83,8 +84,8 @@ class Subcontractor(db.Model):
     last_reminder_sent = db.Column(db.DateTime)
 
     documents = db.relationship(
-        'Document',
-        backref='sub',
+        "Document",
+        backref="sub",
         lazy=True,
         cascade="all, delete-orphan"
     )
@@ -105,29 +106,37 @@ class Subcontractor(db.Model):
 
         if days < 0:
             return "expired"
+
         elif days <= 30:
             return "at_risk"
+
         else:
             return "compliant"
-    
-    documents = db.relationship(
-    'Document',
-    backref='sub',
-    lazy=True,
-    cascade="all, delete-orphan"
-)
-    from datetime import datetime
-    
+   
+
 class Document(db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
+
     filename = db.Column(db.String(200))
-    original_name = db.Column(db.String(200))  # NOVO
-    type = db.Column(db.String(50))
-    version = db.Column(db.Integer, default=1)  # NOVO
+    original_name = db.Column(db.String(200))
+
+    document_type = db.Column(db.String(50))
+    version = db.Column(db.Integer, default=1)
+
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
 
-    sub_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'), nullable=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    sub_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subcontractor.id"),
+        nullable=True
+    )
+
+    project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project.id"),
+        nullable=True
+    )
 
 # ==========================
 # PROJECT MODELS (NOVO)
@@ -583,21 +592,23 @@ def add_sub():
         else:
             coi_expiration = None
 
-        # Criar Sub
+
+        # 🔹 Criar Subcontractor
         new_sub = Subcontractor(
             name=name,
             email=email,
             phone=phone,
             role=role,
-            coi_expiration=coi_expiration,
             timezone=timezone,
+            coi_expiration=coi_expiration,
             user_id=current_user.id
         )
 
         db.session.add(new_sub)
-        db.session.flush()
+        db.session.flush()  # gera ID antes dos documentos
 
-        # 🔥 TUDO AQUI DENTRO DO POST
+
+        # 🔹 Upload de documentos
         files = request.files.getlist("documents")
 
         for file in files:
@@ -607,31 +618,44 @@ def add_sub():
                 doc_type = request.form.get("doc_type") or "Document"
                 original_name = secure_filename(file.filename)
 
+                # 🔹 Busca última versão daquele tipo
                 existing_doc = Document.query.filter_by(
-                    sub_id=new_sub.id
+                    sub_id=new_sub.id,
+                    document_type=doc_type
                 ).order_by(Document.version.desc()).first()
 
                 new_version = 1
                 if existing_doc:
                     new_version = existing_doc.version + 1
 
+
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
-                path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+
+                path = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    unique_name
+                )
+
                 file.save(path)
+
 
                 new_doc = Document(
                     filename=unique_name,
                     original_name=original_name,
-                    type=doc_type,
+                    document_type=doc_type,
                     version=new_version,
                     sub_id=new_sub.id
                 )
 
                 db.session.add(new_doc)
 
+
         db.session.commit()
+
         flash("Subcontractor added successfully!", "success")
+
         return redirect(url_for("dashboard"))
+
 
     return render_template("add_sub.html", sub=None)
 # ==========================
@@ -661,8 +685,7 @@ def edit_sub(id):
         if expiration_raw:
             try:
                 sub.coi_expiration = datetime.strptime(
-                    expiration_raw,
-                    "%Y-%m-%d"
+                    expiration_raw, "%Y-%m-%d"
                 ).date()
             except ValueError:
                 flash("Invalid date format.", "danger")
@@ -670,7 +693,11 @@ def edit_sub(id):
         else:
             sub.coi_expiration = None
 
-        # 🔥 Upload com versionamento automático
+
+        # =====================
+        # DOCUMENT UPLOAD
+        # =====================
+
         files = request.files.getlist("documents")
 
         for file in files:
@@ -678,35 +705,46 @@ def edit_sub(id):
             if file and file.filename != "":
 
                 doc_type = request.form.get("doc_type") or "Document"
+
                 original_name = secure_filename(file.filename)
 
-                # pega última versão daquele tipo
+                # 🔹 pega última versão daquele tipo
                 existing_doc = Document.query.filter_by(
                     sub_id=sub.id,
-                    type=doc_type
+                    document_type=doc_type
                 ).order_by(Document.version.desc()).first()
 
                 new_version = 1
+
                 if existing_doc:
                     new_version = existing_doc.version + 1
 
+
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
-                path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+
+                path = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    unique_name
+                )
+
                 file.save(path)
+
 
                 new_doc = Document(
                     filename=unique_name,
                     original_name=original_name,
-                    type=doc_type,
+                    document_type=doc_type,
                     version=new_version,
                     sub_id=sub.id
                 )
 
                 db.session.add(new_doc)
 
+
         db.session.commit()
 
         flash("Subcontractor updated successfully!", "success")
+
         return redirect(url_for("dashboard"))
 
     return render_template("add_sub.html", sub=sub)
@@ -800,35 +838,54 @@ def add_project():
 
     if request.method == "POST":
 
-        name = request.form["name"]
-        contract_value = request.form.get("contract_value") or 0
+        name = request.form.get("name")
+
+        contract_value = request.form.get("contract_value")
+        contract_value = float(contract_value) if contract_value else 0
+
         selected_subs = request.form.getlist("subcontractors")
 
+
+        # 🔹 Criar projeto
         new_project = Project(
             name=name,
-            contract_value=float(contract_value),
+            contract_value=contract_value,
             user_id=current_user.id
         )
 
         db.session.add(new_project)
-        db.session.commit()
+        db.session.flush()   # pega o ID sem commit
 
-        # 🔗 Criar vínculos com subs
+
+        # 🔹 Criar vínculos com subs
         for sub_id in selected_subs:
 
-            link = ProjectSubcontractor(
-                project_id=new_project.id,
-                subcontractor_id=int(sub_id),
-                coverage_limit=0  # valor inicial padrão
-            )
+            sub = Subcontractor.query.filter_by(
+                id=sub_id,
+                user_id=current_user.id
+            ).first()
 
-            db.session.add(link)
+            if sub:
+
+                link = ProjectSubcontractor(
+                    project_id=new_project.id,
+                    subcontractor_id=sub.id,
+                    coverage_limit=0
+                )
+
+                db.session.add(link)
+
 
         db.session.commit()
+
+        flash("Project created successfully!", "success")
 
         return redirect(url_for("dashboard"))
 
-    return render_template("add_project.html", subs=subs)
+    return render_template(
+        "add_project.html",
+        subs=subs
+    )
 #===================
 # EDIT PROJECT 
 #===================
@@ -836,19 +893,63 @@ def add_project():
 @login_required
 def edit_project(project_id):
 
-    project = Project.query.get_or_404(project_id)
+    project = Project.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    subs = Subcontractor.query.filter_by(
+        user_id=current_user.id
+    ).all()
 
     if request.method == "POST":
 
         project.name = request.form.get("name")
-        project.contract_value = float(request.form.get("contract_value") or 0)
+
+        contract_value = request.form.get("contract_value")
+        project.contract_value = float(contract_value) if contract_value else 0
+
+        selected_subs = request.form.getlist("subcontractors")
+
+        # 🔹 remover vínculos antigos
+        old_links = ProjectSubcontractor.query.filter_by(
+            project_id=project.id
+        ).all()
+
+        for link in old_links:
+            db.session.delete(link)
+
+        db.session.flush()
+
+        # 🔹 recriar vínculos
+        for sub_id in selected_subs:
+
+            sub = Subcontractor.query.filter_by(
+                id=sub_id,
+                user_id=current_user.id
+            ).first()
+
+            if sub:
+
+                new_link = ProjectSubcontractor(
+                    project_id=project.id,
+                    subcontractor_id=sub.id,
+                    coverage_limit=0
+                )
+
+                db.session.add(new_link)
 
         db.session.commit()
 
+        flash("Project updated successfully!", "success")
+
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_project.html", project=project)
-
+    return render_template(
+        "edit_project.html",
+        project=project,
+        subs=subs
+    )
 #==================
 # VIEW PROJECT
 #==================
@@ -864,7 +965,7 @@ def view_project(project_id):
     return render_template("view_project.html", project=project)
 
 #===============
-# DOC PROJECT
+# UP DOC PROJECT
 #===============
 @app.route("/project/<int:project_id>/upload", methods=["POST"])
 @login_required
@@ -875,13 +976,9 @@ def upload_project_document(project_id):
         user_id=current_user.id
     ).first_or_404()
 
-    if "file" not in request.files:
-        flash("No file selected", "danger")
-        return redirect(request.referrer)
+    file = request.files.get("file")
 
-    file = request.files["file"]
-
-    if file.filename == "":
+    if not file or file.filename == "":
         flash("No file selected", "danger")
         return redirect(request.referrer)
 
@@ -889,18 +986,22 @@ def upload_project_document(project_id):
         flash("Invalid file type", "danger")
         return redirect(request.referrer)
 
-    filename = secure_filename(file.filename)
-    unique_name = f"{uuid.uuid4().hex}_{filename}"
+    # 🔹 tipo do documento
+    doc_type = request.form.get("doc_type") or "Document"
 
-    upload_folder = app.config["UPLOAD_FOLDER"]
-    os.makedirs(upload_folder, exist_ok=True)
+    original_name = secure_filename(file.filename)
 
-    upload_path = os.path.join(upload_folder, unique_name)
-    file.save(upload_path)
+    unique_name = f"{uuid.uuid4().hex}_{original_name}"
+
+    path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+
+    file.save(path)
 
     new_doc = Document(
         filename=unique_name,
-        type="Project Document",
+        original_name=original_name,
+        document_type=doc_type,
+        version=1,
         project_id=project.id
     )
 
@@ -908,7 +1009,8 @@ def upload_project_document(project_id):
     db.session.commit()
 
     flash("Document uploaded successfully!", "success")
-    return redirect(url_for("dashboard"))
+
+    return redirect(url_for("view_project", project_id=project.id))
 
 # ==========================
 # APSCHEDULER - DAILY REMINDER
@@ -934,7 +1036,7 @@ def start_scheduler():
 # RUN
 # ==========================
 
-if __name__ == "__main__" and not os.environ.get("WERKZEUG_RUN_MAIN"):
+if __name__ == "__main__":
 
     with app.app_context():
         db.create_all()
