@@ -1,140 +1,140 @@
 {% extends "base.html" %}
 {% block content %}
 
+
 <div class="container">
 
 <!-- HEADER -->
-<div class="top-bar">
-    <div>
-        <h1>Risk & Mobilization Dashboard</h1>
-        <p>Live compliance and operational intelligence</p>
-    </div>
-</div>
 
+<div class="top-bar">
+<div>
+<h1>Risk & Mobilization Dashboard</h1>
+<p>Live compliance and operational intelligence</p>
+</div>
+</div>
 
 <!-- KPI GRID -->
+
 <div class="kpi-grid">
 
-    <div class="kpi-card">
-        <h3>{{ subs|length }}</h3>
-        <span>Total Subs</span>
-    </div>
+<div class="kpi-card">
+<h3>{{ subs|length }}</h3>
+<span>Total Subs</span>
+</div>
 
-    <div class="kpi-card danger">
-        <h3>
-            {{ subs|selectattr("computed_status","equalto","expired")|list|length }}
-        </h3>
-        <span>Expired COIs</span>
-    </div>
+<div class="kpi-card danger">
+<h3>{{ expired_count }}</h3>
+<span>Expired COIs</span>
+</div>
 
-    <div class="kpi-card warning">
-        <h3>
-            {{ subs|selectattr("computed_status","equalto","at_risk")|list|length }}
-        </h3>
-        <span>At Risk (≤30 days)</span>
-    </div>
+<div class="kpi-card warning">
+<h3>{{ at_risk_count }}</h3>
+<span>At Risk (≤30 days)</span>
+</div>
 
-    <div class="kpi-card success">
-        <h3>
-            {{ subs|selectattr("computed_status","equalto","compliant")|list|length }}
-        </h3>
-        <span>Compliant</span>
-    </div>
+<div class="kpi-card success">
+<h3>{{ compliant_count }}</h3>
+<span>Compliant</span>
+</div>
 
-    <div class="kpi-card">
-        <h3>${{ "{:,.0f}".format(total_portfolio or 0) }}</h3>
-        <span>Total Portfolio</span>
-    </div>
+<div class="kpi-card">
+<h3>${{ "{:,.0f}".format(total_portfolio or 0) }}</h3>
+<span>Total Portfolio</span>
+</div>
 
-    <div class="kpi-card danger">
-        <h3>${{ "{:,.0f}".format(revenue_at_risk or 0) }}</h3>
-        <span>Revenue at Risk</span>
-    </div>
+<div class="kpi-card danger">
+<h3>${{ "{:,.0f}".format(revenue_at_risk or 0) }}</h3>
+<span>Revenue at Risk</span>
+</div>
 
 </div>
 
 
-<!-- HIGH RISK -->
-<div class="card">
-    <div class="card-header">
-        <h2>High Risk COIs</h2>
-    </div>
+<!-- HIGH RISK COIs -->
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Sub</th>
-                <th>Expiration</th>
-                <th>Days Left</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-
-        <tbody>
-        {% for sub in subs %}
-        {% if sub.computed_status != "compliant" %}
-
-        <tr class="
-            {% if sub.computed_status == 'expired' %}row-danger
-            {% elif sub.computed_status == 'at_risk' %}row-warning
-            {% endif %}
-        ">
-
-            <td>{{ sub.name }}</td>
-
-            <td>
-                {{ sub.coi_expiration if sub.coi_expiration else "—" }}
-            </td>
-
-            <td>
-                {{ sub.days_left if sub.days_left is not none else "—" }}
-            </td>
-
-            <td>
-
-                {% if sub.computed_status == "expired" %}
-                    <span class="badge badge-danger">Expired</span>
-
-                {% elif sub.computed_status == "at_risk" %}
-                    <span class="badge badge-warning">At Risk</span>
-
-                {% endif %}
-
-            </td>
-
-        </tr>
-
-        {% endif %}
-        {% endfor %}
-        </tbody>
-
-    </table>
-</div>
-
-
-
-<!-- PROJECT STATUS -->
 <div class="card">
 
 <div class="card-header">
-    <h2>Projects</h2>
+<h2>High Risk COIs</h2>
+</div>
 
-    <a href="{{ url_for('add_project') }}" class="btn-add">
-        + New Project
-    </a>
+<table class="table">
+
+<thead>
+<tr>
+<th>Sub</th>
+<th>Expiration</th>
+<th>Days Left</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for sub in subs if sub.computed_status != "compliant" %}
+
+<tr class="
+{% if sub.computed_status == 'expired' %}row-danger
+{% elif sub.computed_status == 'at_risk' %}row-warning
+{% endif %}
+">
+
+<td>{{ sub.name }}</td>
+
+<td>
+{{ sub.coi_expiration.strftime("%m/%d/%Y") if sub.coi_expiration else "—" }}
+</td>
+
+<td>
+{{ sub.days_left if sub.days_left is not none else "—" }}
+</td>
+
+<td>
+
+{% if sub.computed_status == "expired" %} <span class="badge badge-danger">Expired</span>
+
+{% elif sub.computed_status == "at_risk" %} <span class="badge badge-warning">At Risk</span>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+<!-- PROJECTS -->
+
+<div class="card">
+
+<div class="card-header">
+<h2>Projects</h2>
+
+<a href="{{ url_for('add_project') }}" class="btn-add">
++ New Project
+</a>
+
 </div>
 
 <table class="styled-table">
 
 <thead>
 <tr>
-    <th>Project</th>
-    <th class="text-right">Contract Value</th>
-    <th class="text-center">Subs</th>
-    <th class="text-center">Compliance</th>
-    <th class="text-center">Risk</th>
-    <th class="text-center">Status</th>
-    <th class="text-center">Actions</th>
+
+<th>Project</th>
+<th class="text-right">Contract Value</th>
+<th class="text-center">Subs</th>
+<th class="text-center">Compliance</th>
+<th class="text-center">Risk</th>
+<th class="text-center">Mobilization</th>
+<th class="text-center">Actions</th>
+
 </tr>
 </thead>
 
@@ -147,27 +147,21 @@
 <td>{{ project.name }}</td>
 
 <td class="text-right">
-    ${{ "{:,.2f}".format(project.contract_value or 0) }}
+${{ "{:,.2f}".format(project.contract_value or 0) }}
 </td>
 
 <td class="text-center">
-    {{ project.subs|length }}
+{{ project.subs|length }}
 </td>
 
-<!-- Compliance Score -->
-
 <td class="text-center">
-
-<div class="score-pill">
-
+<div class="progress">
+<div class="progress-bar"
+style="width:{{ project.compliance_score }}%">
 {{ project.compliance_score }}%
-
 </div>
-
+</div>
 </td>
-
-
-<!-- Risk Level -->
 
 <td class="text-center">
 
@@ -183,37 +177,44 @@
 
 </td>
 
-
-<!-- Mobilization Status -->
-
 <td class="text-center">
 
 <span class="status-badge
-    {% if project.mobilization_status == 'Ready to Mobilize' %}
-        status-ready
-    {% elif project.mobilization_status == 'Pending Compliance' %}
-        status-pending
-    {% else %}
-        status-blocked
-    {% endif %}
+{% if project.mobilization_status == 'Ready to Mobilize' %}
+status-ready
+{% elif project.mobilization_status == 'Pending Compliance' %}
+status-pending
+{% else %}
+status-blocked
+{% endif %}
 ">
-    {{ project.mobilization_status }}
+
+{{ project.mobilization_status }}
+
 </span>
 
 </td>
 
-
 <td class="actions-cell">
 
-<a href="{{ url_for('edit_project', project_id=project.id) }}"
-   class="btn-edit">
-   Edit
+<a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn-edit">
+Edit
 </a>
 
-<a href="{{ url_for('view_project', project_id=project.id) }}"
-   class="btn-view">
-   View
+<a href="{{ url_for('view_project', project_id=project.id) }}" class="btn-view">
+View
 </a>
+
+<form action="{{ url_for('delete_project', id=project.id) }}"
+method="POST"
+style="display:inline;">
+
+<button class="btn btn-sm btn-danger"
+onclick="return confirm('Delete this project?')">
+Delete
+</button>
+
+</form>
 
 </td>
 
@@ -228,6 +229,7 @@
 </div>
 
 <!-- ALL SUBCONTRACTORS -->
+
 <div class="card">
 
 <div class="card-header">
@@ -240,13 +242,12 @@
 
 </div>
 
-
 <form method="GET" style="margin-bottom:20px; display:flex; gap:10px;">
 
 <input type="text"
-       name="search"
-       placeholder="Search by name"
-       value="{{ request.args.get('search','') }}">
+name="search"
+placeholder="Search by name"
+value="{{ request.args.get('search','') }}">
 
 <select name="status">
 
@@ -279,11 +280,10 @@ Reset
 
 </form>
 
-
-
 <table class="table">
 
 <thead>
+
 <tr>
 
 <th>Name</th>
@@ -295,8 +295,8 @@ Reset
 <th style="text-align:right;">Actions</th>
 
 </tr>
-</thead>
 
+</thead>
 
 <tbody>
 
@@ -313,64 +313,50 @@ Reset
 <td>{{ sub.email }}</td>
 
 <td>
-{{ sub.coi_expiration if sub.coi_expiration else "—" }}
+{{ sub.coi_expiration.strftime("%m/%d/%Y") if sub.coi_expiration else "—" }}
 </td>
 
 <td>
 
-{% if sub.computed_status == "expired" %}
-<span class="badge badge-danger">Expired</span>
+{% if sub.computed_status == "expired" %} <span class="badge badge-danger">Expired</span>
 
-{% elif sub.computed_status == "at_risk" %}
-<span class="badge badge-warning">At Risk</span>
+{% elif sub.computed_status == "at_risk" %} <span class="badge badge-warning">At Risk</span>
 
-{% else %}
-<span class="badge badge-success">Compliant</span>
+{% else %} <span class="badge badge-success">Compliant</span>
 {% endif %}
 
 </td>
 
 <td>
 
-{% if sub.documents %}
-
-<a href="{{ url_for('view_sub_documents', sub_id=sub.id) }}">
-{{ sub.documents|length }} file(s)
-</a>
-
+{% if sub.documents %} <a href="{{ url_for('view_sub_documents', sub_id=sub.id) }}">
+{{ sub.documents|length }} file(s) </a>
 {% else %}
 —
 {% endif %}
 
 </td>
 
-
 <td>
 
-{% if sub.last_reminder_sent %}
-{{ sub.last_reminder_sent.strftime("%m/%d/%Y %H:%M") }}
-{% else %}
-—
-{% endif %}
+{{ sub.last_reminder_sent.strftime("%m/%d/%Y %H:%M") if sub.last_reminder_sent else "—" }}
 
 </td>
-
 
 <td style="text-align:right; white-space:nowrap;">
 
 <a href="{{ url_for('send_reminder', sub_id=sub.id) }}"
-   class="btn-warning">
-Reminder
-</a>
+class="btn-warning">
+Reminder </a>
 
 <a href="{{ url_for('edit_sub', id=sub.id) }}"
-   class="btn-edit">
-Edit
-</a>
+class="btn-edit">
+Edit </a>
 
 <form method="POST"
-      action="{{ url_for('delete_sub', id=sub.id) }}"
-      style="display:inline;">
+action="{{ url_for('delete_sub', id=sub.id) }}"
+style="display:inline;"
+onsubmit="return confirm('Delete this subcontractor?');">
 
 <button type="submit" class="btn-delete">
 Delete
@@ -392,19 +378,15 @@ Delete
 
 </div>
 
-
-
 <style>
 
 .container{
-max-width:1300px;
+max-width:1400px;
 margin:auto;
 padding:40px 20px;
 }
 
 .top-bar{
-display:flex;
-justify-content:space-between;
 margin-bottom:40px;
 }
 
@@ -419,39 +401,35 @@ margin-bottom:40px;
 background:white;
 padding:25px;
 border-radius:14px;
-box-shadow:0 10px 30px rgba(0,0,0,0.05);
+box-shadow:0 10px 25px rgba(0,0,0,.05);
 }
 
 .kpi-card h3{
 margin:0;
 font-size:32px;
-font-weight:700;
-color:#0f172a;
 }
 
 .kpi-card span{
 color:#64748b;
-font-size:14px;
 }
 
-.kpi-card.danger{
-border-left:5px solid #dc2626;
-}
+.kpi-card.danger{border-left:5px solid #dc2626;}
+.kpi-card.warning{border-left:5px solid #f59e0b;}
+.kpi-card.success{border-left:5px solid #16a34a;}
 
-.kpi-card.warning{
-border-left:5px solid #f59e0b;
-}
-
-.kpi-card.success{
-border-left:5px solid #16a34a;
+.charts{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:30px;
+margin-bottom:40px;
 }
 
 .card{
 background:white;
 padding:30px;
 border-radius:16px;
+box-shadow:0 10px 25px rgba(0,0,0,.05);
 margin-bottom:40px;
-box-shadow:0 10px 30px rgba(0,0,0,0.05);
 }
 
 .card-header{
@@ -471,7 +449,7 @@ border-bottom:1px solid #f1f5f9;
 }
 
 .badge{
-padding:5px 10px;
+padding:4px 10px;
 border-radius:8px;
 font-size:12px;
 font-weight:600;
@@ -484,97 +462,153 @@ font-weight:600;
 .row-danger{background:#fff1f1}
 .row-warning{background:#fff8e6}
 
+.progress{
+background:#f1f5f9;
+border-radius:20px;
+height:20px;
+overflow:hidden;
+}
+
+.progress-bar{
+background:#16a34a;
+height:100%;
+text-align:center;
+color:white;
+font-size:12px;
+}
+
 .btn-add{
 background:#16a34a;
 color:white;
 padding:8px 14px;
 border-radius:8px;
 text-decoration:none;
-font-weight:600;
 }
 
 .btn-edit{
 background:#2563eb;
 color:white;
-padding:6px 12px;
-border-radius:8px;
+padding:6px 10px;
+border-radius:6px;
 text-decoration:none;
-font-size:13px;
 }
 
-.btn-delete{
-background:#dc2626;
+.btn-view{
+background:#475569;
 color:white;
-padding:6px 12px;
-border:none;
-border-radius:8px;
-font-size:13px;
+padding:6px 10px;
+border-radius:6px;
+text-decoration:none;
 }
 
 .btn-warning{
 background:#f59e0b;
 color:white;
 padding:6px 10px;
-border-radius:8px;
+border-radius:6px;
 text-decoration:none;
-font-size:13px;
 }
 
-.btn-view{
-background:#475569;
+.btn-delete{
+background:#dc2626;
 color:white;
-padding:6px 12px;
-border-radius:8px;
-text-decoration:none;
-font-size:13px;
-margin-left:6px;
+padding:6px 10px;
+border:none;
+border-radius:6px;
 }
 
-.styled-table{
-width:100%;
-border-collapse:collapse;
+.status-ready{background:#dcfce7;color:#166534;padding:4px 10px;border-radius:20px}
+.status-pending{background:#fef9c3;color:#854d0e;padding:4px 10px;border-radius:20px}
+.status-blocked{background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:20px}
+
+/* DARK MODE FIX */
+
+.dark-mode .kpi-card{
+background:#1e293b;
+color:white;
 }
 
-.styled-table th{
-text-align:left;
-padding:14px;
-font-size:13px;
-text-transform:uppercase;
-letter-spacing:.5px;
-color:#64748b;
-border-bottom:2px solid #e2e8f0;
+.dark-mode .kpi-card h3{
+color:white;
 }
 
-.styled-table td{
-padding:14px;
-border-bottom:1px solid #f1f5f9;
+.dark-mode .kpi-card span{
+color:#cbd5f5;
 }
 
-.text-right{text-align:right}
-.text-center{text-align:center}
-
-.status-badge{
-padding:6px 12px;
-border-radius:20px;
-font-size:12px;
-font-weight:600;
+.dark-mode .card{
+background:#1e293b;
+color:white;
+border:1px solid #334155;
 }
 
-.status-ready{
-background:#dcfce7;
-color:#166534;
+.dark-mode .table th{
+color:#cbd5f5;
 }
 
-.status-pending{
-background:#fef9c3;
-color:#854d0e;
+.dark-mode .table td{
+border-bottom:1px solid #334155;
 }
 
-.status-blocked{
-background:#fee2e2;
-color:#991b1b;
+.dark-mode .styled-table td{
+border-bottom:1px solid #334155;
 }
 
+.dark-mode .progress{
+background:#334155;
+}
+
+.actions-cell{
+text-align:center;
+white-space:nowrap;
+}
+
+.actions-cell a,
+.actions-cell button{
+margin:0 4px;
+}
 </style>
+
+<script>
+
+new Chart(document.getElementById("riskChart"),{
+
+type:"doughnut",
+
+data:{
+labels:["Expired","At Risk","Compliant"],
+
+datasets:[{
+data:[
+{{ expired_count }},
+{{ at_risk_count }},
+{{ compliant_count }}
+]
+}]
+}
+
+});
+
+
+new Chart(document.getElementById("expirationChart"),{
+
+type:"bar",
+
+data:{
+labels:["Expired","≤30 Days","Compliant"],
+
+datasets:[{
+label:"COIs",
+data:[
+{{ expired_count }},
+{{ at_risk_count }},
+{{ compliant_count }}
+]
+}]
+}
+
+});
+
+</script>
 
 {% endblock %}

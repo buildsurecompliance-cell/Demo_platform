@@ -1,100 +1,231 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-from datetime import datetime, date, timezone, timedelta
 import os
-import pytz
-from apscheduler.schedulers.background import BackgroundScheduler
-import requests
-from flask_mail import Mail, Message
-from pytz import timezone
 import uuid
-from flask import send_from_directory
 
+from datetime import datetime, timedelta, date, timezone
+
+import pytz
+import requests
+
+from flask import (
+    Flask, render_template, request,
+    redirect, url_for, flash,
+    send_from_directory, session
+)
+
+from flask_sqlalchemy import SQLAlchemy
+
+from flask_login import (
+    LoginManager,
+    login_user,
+    login_required,
+    logout_user,
+    current_user,
+    UserMixin
+)
+
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash
+)
+
+from werkzeug.utils import secure_filename
+
+from dotenv import load_dotenv
+
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from sqlalchemy.orm import joinedload
+import re
 # ==========================
 # CONFIG
 # ==========================
+
+load_dotenv()
+
 app = Flask(__name__)
 
-ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "doc", "docx"}
+# ==========================
+# SECURITY
+# ==========================
 
-def allowed_file(filename):
-    return "." in filename and \
-        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
-# Segurança
-app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key")
+if not app.config["SECRET_KEY"]:
+    raise RuntimeError("SECRET_KEY not set in environment variables")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# ==========================
+# DATABASE
+# ==========================
 
+database_url = os.getenv("DATABASE_URL")
 
-# Email config segura
-api_key = os.environ.get("RESEND_API_KEY")
+# corrige postgres:// para postgresql://
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# Upload folder
-UPLOAD_FOLDER = os.path.join('static', 'docs')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# ==========================
+# FILE UPLOAD
+# ==========================
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "uploads")
+
+# limite de upload (10MB)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+
+ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
+
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 # ==========================
 # INIT
 # ==========================
+
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
+
+login_manager = LoginManager()
+
 login_manager.login_view = "login"
+login_manager.login_message = "Please log in to access this page."
 
-# ==========================
-# MODELS
-# ==========================
+login_manager.init_app(app)
 
-class User(db.Model, UserMixin):
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return db.session.get(User, int(user_id))
+    except (ValueError, TypeError):
+        return None
+
+class User(UserMixin, db.Model):
+
+    __tablename__ = "user"
+
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    timezone = db.Column(db.String(50), default="US/Eastern")
-    paid = db.Column(db.Boolean, default=False)
 
-    subs = db.relationship(
-        'Subcontractor',
-        backref='owner',
-        cascade="all, delete-orphan",
-        lazy=True
+    email = db.Column(
+        db.String(120),
+        unique=True,
+        index=True,
+        nullable=False
     )
 
+    password_hash = db.Column(db.String(200), nullable=False)
+
+    # controle de assinatura SaaS
+    paid = db.Column(db.Boolean, default=False)
+
+    # timezone do usuário
+    timezone = db.Column(db.String(50), default="US/Eastern")
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    # relationships
+    projects = db.relationship(
+        "Project",
+        backref="owner",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    subs = db.relationship(
+        "Subcontractor",
+        backref="owner",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    # ==========================
+    # PASSWORD METHODS
+    # ==========================
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+#====================
+# CLASS SUBCONTRACTOR
+#====================
+
 class Subcontractor(db.Model):
+
+    __tablename__ = "subcontractor"
 
     id = db.Column(db.Integer, primary_key=True)
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('user.id'),
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True
+    )
+
+    name = db.Column(
+        db.String(150),
         nullable=False
     )
 
-    name = db.Column(db.String(150))
-    email = db.Column(db.String(150))
+    email = db.Column(
+        db.String(150),
+        index=True
+    )
+
     phone = db.Column(db.String(30))
+
     role = db.Column(db.String(100))
-    timezone = db.Column(db.String(50))
-    coi_expiration = db.Column(db.Date)
+
+    timezone = db.Column(
+        db.String(50),
+        default="US/Eastern"
+    )
+
+    coi_expiration = db.Column(
+        db.Date,
+        index=True
+    )
 
     last_reminder_sent = db.Column(db.DateTime)
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    # ==========================
+    # RELATIONSHIPS
+    # ==========================
 
     documents = db.relationship(
         "Document",
         backref="sub",
-        lazy=True,
+        lazy="selectin",
         cascade="all, delete-orphan"
     )
 
+    # ==========================
+    # BUSINESS LOGIC
+    # ==========================
+
     @property
     def days_left(self):
+
         if not self.coi_expiration:
             return None
-        return (self.coi_expiration - date.today()).days
+
+        today = date.today()
+
+        return (self.coi_expiration - today).days
+
 
     @property
     def computed_status(self):
@@ -107,35 +238,61 @@ class Subcontractor(db.Model):
         if days < 0:
             return "expired"
 
-        elif days <= 30:
+        if days <= 30:
             return "at_risk"
 
-        else:
-            return "compliant"
-   
+        return "compliant"
+#====================
+#CLASS DOCUMENT
+#====================
 
 class Document(db.Model):
 
+    __tablename__ = "document"
+
     id = db.Column(db.Integer, primary_key=True)
 
-    filename = db.Column(db.String(200))
-    original_name = db.Column(db.String(200))
+    filename = db.Column(
+        db.String(255),
+        nullable=False
+    )
 
-    document_type = db.Column(db.String(50))
-    version = db.Column(db.Integer, default=1)
+    original_name = db.Column(
+        db.String(255),
+        nullable=False
+    )
 
-    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    document_type = db.Column(
+        db.String(50),
+        default="Document",
+        index=True
+    )
+
+    version = db.Column(
+        db.Integer,
+        default=1
+    )
+
+    uploaded_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        index=True
+    )
+
+    # ==========================
+    # RELATIONSHIPS
+    # ==========================
 
     sub_id = db.Column(
         db.Integer,
         db.ForeignKey("subcontractor.id"),
-        nullable=True
+        index=True
     )
 
     project_id = db.Column(
         db.Integer,
         db.ForeignKey("project.id"),
-        nullable=True
+        index=True
     )
 
 # ==========================
@@ -144,12 +301,39 @@ class Document(db.Model):
 
 class Project(db.Model):
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200))
-    contract_value = db.Column(db.Float)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    __tablename__ = "project"
 
-    subs = db.relationship("ProjectSubcontractor", backref="project")
+    id = db.Column(db.Integer, primary_key=True)
+
+    name = db.Column(
+        db.String(200),
+        nullable=False
+    )
+
+    contract_value = db.Column(
+        db.Float,
+        default=0
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True
+    )
+
+    subs = db.relationship(
+        "ProjectSubcontractor",
+        backref="project",
+        lazy="selectin"
+    )
+
+    documents = db.relationship(
+        "Document",
+        backref="project",
+        lazy="selectin",
+        cascade="all, delete-orphan"
+    )
 
     # =========================
     # COMPLIANCE SCORE
@@ -165,11 +349,15 @@ class Project(db.Model):
 
         for ps in self.subs:
 
-            if ps.subcontractor.computed_status == "compliant":
+            sub = ps.subcontractor
+
+            if not sub:
+                continue
+
+            if sub.computed_status == "compliant":
                 compliant += 1
 
         return int((compliant / total) * 100)
-
 
     # =========================
     # RISK LEVEL
@@ -187,44 +375,81 @@ class Project(db.Model):
 
         return "High"
 
-
     # =========================
     # MOBILIZATION STATUS
     # =========================
     @property
     def mobilization_status(self):
 
-        has_expired = False
-        has_risk = False
+        statuses = []
 
         for ps in self.subs:
 
-            status = ps.subcontractor.computed_status
+            sub = ps.subcontractor
 
-            if status == "expired":
-                has_expired = True
+            if not sub:
+                continue
 
-            elif status == "at_risk":
-                has_risk = True
+            statuses.append(sub.computed_status)
 
-        if has_expired:
+        if "expired" in statuses:
             return "Blocked"
 
-        if has_risk:
+        if "at_risk" in statuses:
             return "Pending Compliance"
 
         return "Ready to Mobilize"
-
+#=================
+# CLASS PROJECTSUB
+#=================
 
 class ProjectSubcontractor(db.Model):
+
+    __tablename__ = "project_subcontractor"
+
     id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-    subcontractor_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'))
-    approved_for_project = db.Column(db.Boolean, default=False)
 
-    subcontractor = db.relationship('Subcontractor')
-    coverage_limit = db.Column(db.Float, default=1000000)
+    project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project.id"),
+        nullable=False,
+        index=True
+    )
 
+    subcontractor_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subcontractor.id"),
+        nullable=False,
+        index=True
+    )
+
+    approved_for_project = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    coverage_limit = db.Column(
+        db.Float,
+        default=1000000
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    subcontractor = db.relationship(
+        "Subcontractor",
+        lazy="joined"
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "project_id",
+            "subcontractor_id",
+            name="unique_project_sub"
+        ),
+    )
 
 # ==========================
 # LOGIN MANAGER
@@ -232,21 +457,40 @@ class ProjectSubcontractor(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    if not user_id:
+        return None
+
+    try:
+        return db.session.get(User, int(user_id))
+    except (ValueError, TypeError):
+        return None
 
 # ==========================
 # TEMPLATE FILTER
 # ==========================
-@app.template_filter('format_local_time')
-def format_local_time(value, tz_name="US/Eastern"):
+
+@app.template_filter("format_local_time")
+def format_local_time(value):
+
     if not value:
         return ""
+
+    # timezone do usuário ou padrão
+    tz_name = getattr(current_user, "timezone", "US/Eastern")
+
     try:
         tz = pytz.timezone(tz_name)
-        return value.astimezone(tz).strftime("%Y-%m-%d %H:%M")
+
+        # garante que o datetime está em UTC
+        if value.tzinfo is None:
+            value = pytz.utc.localize(value)
+
+        local_time = value.astimezone(tz)
+
+        return local_time.strftime("%Y-%m-%d %H:%M")
+
     except Exception:
         return value.strftime("%Y-%m-%d %H:%M")
-
 # ==========================
 # EMAIL REMINDER
 # ==========================
@@ -255,113 +499,163 @@ def send_email_reminder(to_email, subject, message):
 
     api_key = os.environ.get("RESEND_API_KEY")
 
-    response = requests.post(
-        "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "from": "buildsurecompliance@gmail.com",
-            "to": [to_email],
-            "subject": subject,
-            "html": f"<p>{message}</p>",
-        },
-    )
+    if not api_key:
+        print("RESEND_API_KEY not configured")
+        return False
 
-    print("STATUS:", response.status_code)
-    print("RESPONSE:", response.text)
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "BuildSure <notifications@buildsure.com>",
+                "to": [to_email],
+                "subject": subject,
+                "html": f"<p>{message}</p>",
+            },
+            timeout=10
+        )
 
-    return response.status_code in [200, 202]
+        print("EMAIL STATUS:", response.status_code)
+        print("EMAIL RESPONSE:", response.text)
 
+        return response.status_code in (200, 202)
+
+    except requests.exceptions.RequestException as e:
+        print("EMAIL ERROR:", str(e))
+        return False
 # ==========================
 # AUTO REMINDER
 # ==========================
+from datetime import date, datetime, timezone
+from sqlalchemy.orm import joinedload
+
+REMINDER_DAYS = {45, 30, 15, 7, 3, 1}
 
 def check_and_send_auto_reminders_for_all_users():
+
     today = date.today()
-    users = User.query.all()
 
-    for user in users:
-        subs = Subcontractor.query.filter_by(user_id=user.id).all()
+    subs = (
+        Subcontractor.query
+        .options(joinedload(Subcontractor.owner))
+        .filter(Subcontractor.coi_expiration.isnot(None))
+        .filter(Subcontractor.email.isnot(None))
+        .all()
+    )
 
-        updates_made = False
+    reminders_sent = 0
 
-        for sub in subs:
+    for sub in subs:
 
-            if not sub.coi_expiration or not sub.email:
+        expiration = sub.coi_expiration
+
+        # garante que é date
+        if isinstance(expiration, datetime):
+            expiration = expiration.date()
+
+        days_left = (expiration - today).days
+
+        # não envia se já expirou
+        if days_left < 0:
+            continue
+
+        if days_left not in REMINDER_DAYS:
+            continue
+
+        # evita duplicação no mesmo dia
+        if sub.last_reminder_sent:
+            if sub.last_reminder_sent.date() == today:
                 continue
 
-            days_left = (sub.coi_expiration - today).days
+        subject = "COI Expiration Reminder"
 
-            # evita enviar mais de 1x por dia
-            if sub.last_reminder_sent and sub.last_reminder_sent.date() == today:
-                continue
-
-            if days_left in [45, 30, 15, 7, 3, 1]:
-
-                subject = "COI Expiration Reminder"
-
-                message = f"""
+        message = f"""
 Hello {sub.name},
 
-Your Certificate of Insurance will expire on {sub.coi_expiration}.
+Your Certificate of Insurance will expire on {expiration}.
 
 Please upload an updated COI to remain compliant.
 
-Thank you.
+Thank you,
+BuildSure Compliance
 """
 
-                sent = send_email_reminder(sub.email, subject, message)
+        sent = send_email_reminder(sub.email, subject, message)
 
-                if sent:
-                    sub.last_reminder_sent = datetime.now(timezone.utc)
-                    updates_made = True
-                    print(f"Reminder sent to {sub.email} ({days_left} days left)")
+        if sent:
+            sub.last_reminder_sent = datetime.now(timezone.utc)
+            reminders_sent += 1
 
-        if updates_made:
+            print(
+                f"[REMINDER SENT] {sub.email} | {days_left} days left"
+            )
+
+    if reminders_sent > 0:
+        try:
             db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("DB ERROR:", e)
 
+    print(f"Total reminders sent: {reminders_sent}")
 # ==========================
 # MOBILIZATION STATUS LOGIC
 # ==========================
 
+from datetime import date, datetime
+
 def calculate_mobilization_status(project):
+
     today = date.today()
 
     if not project.subs:
         return "Not Cleared"
 
     has_pending = False
-    has_blocked = False
 
     for ps in project.subs:
 
         sub = ps.subcontractor
 
+        # Subcontractor inválido
         if not sub:
-            has_blocked = True
-            continue
+            return "Not Cleared"
 
-        if not sub.coi_expiration:
-            has_blocked = True
-            continue
+        expiration = sub.coi_expiration
 
-        if project.end_date and sub.coi_expiration < project.end_date:
-            has_blocked = True
-            continue
+        # COI inexistente
+        if not expiration:
+            return "Not Cleared"
 
-        if ps.coverage_limit < project.required_coverage:
-            has_blocked = True
-            continue
+        # garante tipo date
+        if isinstance(expiration, datetime):
+            expiration = expiration.date()
 
-        days_left = (sub.coi_expiration - date.today()).days
+        # COI já expirado
+        if expiration < today:
+            return "Not Cleared"
+
+        # COI expira antes do final do projeto
+        if project.end_date and expiration < project.end_date:
+            return "Not Cleared"
+
+        # coverage mínimo do projeto
+        required = getattr(project, "required_coverage", None)
+
+        if required:
+            coverage = ps.coverage_limit or 0
+
+            if coverage < required:
+                return "Not Cleared"
+
+        days_left = (expiration - today).days
 
         if days_left <= 30:
             has_pending = True
-
-    if has_blocked:
-        return "Not Cleared"
 
     if has_pending:
         return "Pending Compliance"
@@ -373,80 +667,150 @@ def calculate_mobilization_status(project):
 
 @app.route("/")
 def home():
-    return redirect(url_for("subscribe"))
 
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+
+    return render_template("landing.html")
 # --------------------------
 # SUBSCRIBE
 # --------------------------
 
-@app.route("/subscribe", methods=["GET","POST"])
+@app.route("/subscribe", methods=["GET", "POST"])
 def subscribe():
+
     if request.method == "POST":
-        email = request.form.get("email")
-        # Aqui você processaria o pagamento via Stripe/PayPal
-        # Simulando pagamento OK:
-        flash("Payment successful! Now please create your account.", "success")
+
+        email = request.form.get("email", "").lower().strip()
+
+        if not email:
+            flash("Email is required.", "danger")
+            return redirect(url_for("subscribe"))
+
+        if not EMAIL_REGEX.match(email):
+            flash("Invalid email address.", "danger")
+            return redirect(url_for("subscribe"))
+
+        # pagamento simulado
+        flash(
+            "Payment successful! Now create your account.",
+            "success"
+        )
+
         return redirect(url_for("register", email=email))
-    return render_template("subscribe.html")
+
+    email_prefill = request.args.get("email", "")
+
+    return render_template(
+        "subscribe.html",
+        email_prefill=email_prefill
+    )
 
 # --------------------------
 # REGISTER
 # --------------------------
+EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
 
-@app.route("/register", methods=["GET","POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    # Pega o email enviado do /subscribe
-    email_prefill = request.args.get("email", "")
+
+    email_prefill = request.args.get("email", "").lower().strip()
 
     if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
 
-        # Validação: email já registrado
-        if User.query.filter_by(email=email).first():
+        email = request.form.get("email", "").lower().strip()
+        password = request.form.get("password", "")
+
+        if not email:
+            flash("Email is required", "danger")
+            return render_template("register.html", email_prefill=email)
+
+        if not EMAIL_REGEX.match(email):
+            flash("Invalid email address", "danger")
+            return render_template("register.html", email_prefill=email)
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
             flash("Email already registered", "danger")
             return render_template("register.html", email_prefill=email)
 
-        # Validação: senha mínima 8 caracteres
-        if not password or len(password) < 8:
+        if len(password) < 8:
             flash("Password must be at least 8 characters", "danger")
             return render_template("register.html", email_prefill=email)
 
-        # Criação do usuário pago
-        hashed = generate_password_hash(password)
-        new_user = User(email=email, password=hashed, paid=True)
-        db.session.add(new_user)
-        db.session.commit()
+        try:
+            new_user = User(email=email, paid=True)
+            new_user.set_password(password)
+
+            db.session.add(new_user)
+            db.session.commit()
+
+        except Exception as e:
+            db.session.rollback()
+            print("REGISTER ERROR:", e)
+
+            flash("Something went wrong. Please try again.", "danger")
+            return render_template("register.html", email_prefill=email)
 
         flash("Account created successfully! You can now log in.", "success")
         return redirect(url_for("login"))
 
     return render_template("register.html", email_prefill=email_prefill)
-
 # --------------------------
 # LOGIN
 # --------------------------
 
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+
+        email = request.form.get("email", "").lower().strip()
+        password = request.form.get("password", "")
+
+        if not email or not password:
+            flash("Email and password are required.", "danger")
+            return render_template("login.html", email=email)
+
         user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
+
+        if user and check_password_hash(user.password_hash, password):
+
             if not user.paid:
-                flash("You need to subscribe before accessing the platform.", "warning")
+                flash(
+                    "You need to subscribe before accessing the platform.",
+                    "warning"
+                )
                 return redirect(url_for("subscribe"))
-            login_user(user)
+
+            login_user(user, remember=True)
+
+            next_page = request.args.get("next")
+
+            if next_page:
+                return redirect(next_page)
+
             return redirect(url_for("dashboard"))
-        else:
-            flash("Invalid credentials", "danger")
+
+        flash("Invalid credentials", "danger")
+
     return render_template("login.html")
+
+#==========
+# LOGOUT
+#==========
+
 
 @app.route("/logout")
 @login_required
 def logout():
+
     logout_user()
+
+    session.clear()
+
+    flash("You have been logged out.", "info")
+
     return redirect(url_for("login"))
 
 #===============
@@ -457,31 +821,71 @@ def logout():
 def dashboard():
 
     status_filter = request.args.get("status")
-    search = request.args.get("search")
+    search = request.args.get("search", "").strip()
 
+    # =========================
     # SUBCONTRACTORS
+    # =========================
+
     query = Subcontractor.query.filter_by(
         user_id=current_user.id
     )
 
     if search:
-        query = query.filter(Subcontractor.name.ilike(f"%{search}%"))
+        query = query.filter(
+            Subcontractor.name.ilike(f"%{search}%")
+        )
 
     subs = query.all()
 
-    if status_filter:
-        subs = [s for s in subs if s.computed_status == status_filter]
+    # KPI counters
+    expired_count = 0
+    at_risk_count = 0
+    compliant_count = 0
 
-    def risk_priority(s):
-        if s.computed_status == "expired":
-            return -999
-        if s.computed_status == "at_risk":
-            return s.days_left or 0
-        return 999
+    for sub in subs:
+
+        status = sub.computed_status
+
+        if status == "expired":
+            expired_count += 1
+
+        elif status == "at_risk":
+            at_risk_count += 1
+
+        else:
+            compliant_count += 1
+
+    # filtro por status
+    if status_filter:
+        subs = [
+            s for s in subs
+            if s.computed_status == status_filter
+        ]
+
+    # =========================
+    # RISK PRIORITY
+    # =========================
+
+    def risk_priority(sub):
+
+        status = sub.computed_status
+        days_left = sub.days_left
+
+        if status == "expired":
+            return (-2, 0)
+
+        if status == "at_risk":
+            return (-1, days_left or 0)
+
+        return (0, 999)
 
     top_risk = sorted(subs, key=risk_priority)
 
+    # =========================
     # PROJECTS
+    # =========================
+
     projects = Project.query.filter_by(
         user_id=current_user.id
     ).all()
@@ -497,11 +901,18 @@ def dashboard():
         if project.mobilization_status != "Ready to Mobilize":
             revenue_at_risk += contract_value
 
+    # =========================
+    # TEMPLATE
+    # =========================
+
     return render_template(
         "dashboard.html",
         subs=subs,
         top_risk=top_risk,
         projects=projects,
+        expired_count=expired_count,
+        at_risk_count=at_risk_count,
+        compliant_count=compliant_count,
         total_portfolio=total_portfolio,
         revenue_at_risk=revenue_at_risk
     )
@@ -517,15 +928,71 @@ def view_sub_documents(sub_id):
         user_id=current_user.id
     ).first_or_404()
 
-    documents = Document.query.filter_by(
-        sub_id=sub.id
-    ).order_by(Document.upload_date.desc()).all()
+    documents = (
+        Document.query
+        .filter_by(sub_id=sub.id)
+        .order_by(Document.uploaded_at.desc())
+        .all()
+    )
 
     return render_template(
         "view_sub_documents.html",
         sub=sub,
         documents=documents
     )
+
+# ==========================
+# MANUAL REMINDER
+# ==========================
+from datetime import datetime, timezone
+
+@app.route("/send_reminder/<int:sub_id>", methods=["GET", "POST"])
+@login_required
+def send_reminder(sub_id):
+
+    sub = Subcontractor.query.filter_by(
+        id=sub_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    if not sub.email:
+        flash("Subcontractor does not have an email.", "danger")
+        return redirect(url_for("dashboard"))
+
+    subject = "COI Expiration Reminder"
+
+    expiration = sub.coi_expiration
+
+    message = f"""
+Hello {sub.name},
+
+This is a reminder that your Certificate of Insurance expires on {expiration}.
+
+Please upload an updated COI to remain compliant.
+
+Thank you,
+BuildSure Compliance
+"""
+
+    sent = send_email_reminder(sub.email, subject, message)
+
+    if sent:
+        try:
+            sub.last_reminder_sent = datetime.now(timezone.utc)
+            db.session.commit()
+
+            flash("Reminder sent successfully.", "success")
+
+        except Exception as e:
+            db.session.rollback()
+            print("REMINDER DB ERROR:", e)
+            flash("Reminder sent but failed to record it.", "warning")
+
+    else:
+        flash("Failed to send reminder.", "danger")
+
+    return redirect(url_for("dashboard"))
+
 #===============
 # DOCS
 #===============
@@ -533,25 +1000,46 @@ def view_sub_documents(sub_id):
 @login_required
 def view_document(doc_id):
 
-    doc = Document.query.get_or_404(doc_id)
+    doc = db.session.get(Document, doc_id)
 
-    # 🔒 Documento vinculado a Subcontractor
+    if not doc:
+        flash("Document not found.", "danger")
+        return redirect(url_for("dashboard"))
+
+    # documento sem vínculo
+    if not doc.sub_id and not doc.project_id:
+        flash("Unauthorized", "danger")
+        return redirect(url_for("dashboard"))
+
+    # valida subcontractor
     if doc.sub_id:
-        sub = Subcontractor.query.get(doc.sub_id)
+        sub = db.session.get(Subcontractor, doc.sub_id)
+
         if not sub or sub.user_id != current_user.id:
             flash("Unauthorized", "danger")
             return redirect(url_for("dashboard"))
 
-    # 🔒 Documento vinculado a Project
+    # valida projeto
     if doc.project_id:
-        project = Project.query.get(doc.project_id)
+        project = db.session.get(Project, doc.project_id)
+
         if not project or project.user_id != current_user.id:
             flash("Unauthorized", "danger")
             return redirect(url_for("dashboard"))
 
-    return send_from_directory(
+    filepath = os.path.join(
         app.config["UPLOAD_FOLDER"],
         doc.filename
+    )
+
+    if not os.path.exists(filepath):
+        flash("File not found.", "danger")
+        return redirect(url_for("dashboard"))
+
+    return send_from_directory(
+        app.config["UPLOAD_FOLDER"],
+        doc.filename,
+        as_attachment=False
     )
 # ==========================
 # DELETE DOCUMENT
@@ -560,47 +1048,83 @@ def view_document(doc_id):
 @login_required
 def delete_document(doc_id):
 
-    doc = Document.query.get_or_404(doc_id)
+    doc = db.session.get(Document, doc_id)
 
+    if not doc:
+        flash("Document not found.", "danger")
+        return redirect(url_for("dashboard"))
+
+    # documento sem vínculo
+    if not doc.sub_id and not doc.project_id:
+        flash("Unauthorized", "danger")
+        return redirect(url_for("dashboard"))
+
+    # vinculado a subcontractor
     if doc.sub_id:
-        sub = Subcontractor.query.get(doc.sub_id)
-        if sub.user_id != current_user.id:
+        sub = db.session.get(Subcontractor, doc.sub_id)
+
+        if not sub or sub.user_id != current_user.id:
             flash("Unauthorized", "danger")
             return redirect(url_for("dashboard"))
 
-    # remove arquivo físico
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], doc.filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # vinculado a project
+    if doc.project_id:
+        project = db.session.get(Project, doc.project_id)
 
-    db.session.delete(doc)
-    db.session.commit()
+        if not project or project.user_id != current_user.id:
+            flash("Unauthorized", "danger")
+            return redirect(url_for("dashboard"))
 
-    flash("Document deleted successfully.", "success")
-    return redirect(request.referrer)
+    file_path = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        doc.filename
+    )
+
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        db.session.delete(doc)
+        db.session.commit()
+
+        flash("Document deleted successfully.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        print("DELETE DOCUMENT ERROR:", e)
+        flash("Error deleting document.", "danger")
+
+    return redirect(request.referrer or url_for("dashboard"))
 
 # --------------------------
 # ADD SUBCONTRACTOR
 # --------------------------
+def allowed_file(filename):
+    return "." in filename and \
+           filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 @app.route("/add_sub", methods=["GET", "POST"])
 @login_required
 def add_sub():
 
     if request.method == "POST":
 
-        name = request.form.get("name")
-        email = request.form.get("email")
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").lower().strip()
         phone = request.form.get("phone")
         role = request.form.get("role")
-        timezone = current_user.timezone
+
+        if not name:
+            flash("Subcontractor name is required.", "danger")
+            return redirect(url_for("add_sub"))
 
         coi_raw = request.form.get("coi_expiration")
 
         if coi_raw:
             try:
                 coi_expiration = datetime.strptime(
-                    coi_raw,
-                    "%Y-%m-%d"
+                    coi_raw, "%Y-%m-%d"
                 ).date()
             except ValueError:
                 flash("Invalid date format.", "danger")
@@ -609,41 +1133,47 @@ def add_sub():
             coi_expiration = None
 
 
-        # 🔹 Criar Subcontractor
         new_sub = Subcontractor(
             name=name,
             email=email,
             phone=phone,
             role=role,
-            timezone=timezone,
+            timezone=current_user.timezone,
             coi_expiration=coi_expiration,
             user_id=current_user.id
         )
 
         db.session.add(new_sub)
-        db.session.flush()  # gera ID antes dos documentos
+        db.session.flush()
 
-
-        # 🔹 Upload de documentos
         files = request.files.getlist("documents")
 
         for file in files:
 
-            if file and file.filename != "":
+            if not file or file.filename == "":
+                continue
 
-                doc_type = request.form.get("doc_type") or "Document"
+            if not allowed_file(file.filename):
+                flash(f"Invalid file type: {file.filename}", "danger")
+                continue
+
+            try:
+
                 original_name = secure_filename(file.filename)
 
-                # 🔹 Busca última versão daquele tipo
-                existing_doc = Document.query.filter_by(
-                    sub_id=new_sub.id,
-                    document_type=doc_type
-                ).order_by(Document.version.desc()).first()
+                doc_type = request.form.get("doc_type") or "Document"
 
-                new_version = 1
-                if existing_doc:
-                    new_version = existing_doc.version + 1
+                existing_doc = (
+                    Document.query
+                    .filter_by(
+                        sub_id=new_sub.id,
+                        document_type=doc_type
+                    )
+                    .order_by(Document.version.desc())
+                    .first()
+                )
 
+                new_version = existing_doc.version + 1 if existing_doc else 1
 
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
@@ -653,7 +1183,6 @@ def add_sub():
                 )
 
                 file.save(path)
-
 
                 new_doc = Document(
                     filename=unique_name,
@@ -665,13 +1194,15 @@ def add_sub():
 
                 db.session.add(new_doc)
 
+            except Exception as e:
+                print("UPLOAD ERROR:", e)
+                flash(f"Error uploading {file.filename}", "danger")
 
         db.session.commit()
 
         flash("Subcontractor added successfully!", "success")
 
         return redirect(url_for("dashboard"))
-
 
     return render_template("add_sub.html", sub=None)
 # ==========================
@@ -688,20 +1219,28 @@ def edit_sub(id):
 
     if request.method == "POST":
 
-        # 🔹 Atualiza dados básicos
-        sub.name = request.form.get("name")
-        sub.email = request.form.get("email")
-        sub.phone = request.form.get("phone")
-        sub.role = request.form.get("role")
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").lower().strip()
+        phone = request.form.get("phone")
+        role = request.form.get("role")
+
+        if not name:
+            flash("Subcontractor name is required.", "danger")
+            return redirect(url_for("edit_sub", id=sub.id))
+
+        sub.name = name
+        sub.email = email
+        sub.phone = phone
+        sub.role = role
         sub.timezone = current_user.timezone
 
-        # 🔹 Atualiza COI expiration
         expiration_raw = request.form.get("coi_expiration")
 
         if expiration_raw:
             try:
                 sub.coi_expiration = datetime.strptime(
-                    expiration_raw, "%Y-%m-%d"
+                    expiration_raw,
+                    "%Y-%m-%d"
                 ).date()
             except ValueError:
                 flash("Invalid date format.", "danger")
@@ -709,141 +1248,60 @@ def edit_sub(id):
         else:
             sub.coi_expiration = None
 
+        try:
+            db.session.commit()
+            flash("Subcontractor updated successfully.", "success")
 
-        # =====================
-        # DOCUMENT UPLOAD
-        # =====================
-
-        files = request.files.getlist("documents")
-
-        for file in files:
-
-            if file and file.filename != "":
-
-                doc_type = request.form.get("doc_type") or "Document"
-
-                original_name = secure_filename(file.filename)
-
-                # 🔹 pega última versão daquele tipo
-                existing_doc = Document.query.filter_by(
-                    sub_id=sub.id,
-                    document_type=doc_type
-                ).order_by(Document.version.desc()).first()
-
-                new_version = 1
-
-                if existing_doc:
-                    new_version = existing_doc.version + 1
-
-
-                unique_name = f"{uuid.uuid4().hex}_{original_name}"
-
-                path = os.path.join(
-                    app.config["UPLOAD_FOLDER"],
-                    unique_name
-                )
-
-                file.save(path)
-
-
-                new_doc = Document(
-                    filename=unique_name,
-                    original_name=original_name,
-                    document_type=doc_type,
-                    version=new_version,
-                    sub_id=sub.id
-                )
-
-                db.session.add(new_doc)
-
-
-        db.session.commit()
-
-        flash("Subcontractor updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            print("EDIT SUB ERROR:", e)
+            flash("Error updating subcontractor.", "danger")
 
         return redirect(url_for("dashboard"))
 
-    return render_template("add_sub.html", sub=sub)
-# ------------
-# DELETE 
-# ------------
-
+    return render_template("edit_sub.html", sub=sub)
+# ==========================
+# DELETE SUBCONTRACTOR
+# ==========================
 @app.route("/delete_sub/<int:id>", methods=["POST"])
 @login_required
 def delete_sub(id):
-    sub = Subcontractor.query.filter_by(id=id, user_id=current_user.id).first()
 
-    if not sub:
-        flash("Not found", "danger")
-        return redirect(url_for("dashboard"))
-
-    db.session.delete(sub)
-    db.session.commit()
-
-    flash("Deleted successfully!", "success")
-    return redirect(url_for("dashboard"))
-
-#================
-# SEND REMINDER
-#================
-@app.route("/send_reminder/<int:sub_id>")
-@login_required
-def send_reminder(sub_id):
-
-    sub = Subcontractor.query.get_or_404(sub_id)
-
-    # 🔒 Segurança
-    if sub.user_id != current_user.id:
-        flash("Unauthorized action.", "danger")
-        return redirect(url_for("dashboard"))
-
-    # ❗ Verifica email
-    if not sub.email:
-        flash("Subcontractor has no email registered.", "warning")
-        return redirect(url_for("dashboard"))
-
-    # ❗ Verifica data
-    if not sub.coi_expiration:
-        flash("No COI expiration date found.", "warning")
-        return redirect(url_for("dashboard"))
-
-    days_left = (sub.coi_expiration - date.today()).days
-
-    # ❗ Só envia se faltar 30 dias ou menos
-    if days_left > 30:
-        flash("COI is not close to expiration.", "info")
-        return redirect(url_for("dashboard"))
-
-    subject = "Insurance Expiration Reminder"
-
-    body = f"""
-Hello {sub.name},
-
-This is a reminder that your Certificate of Insurance
-will expire on {sub.coi_expiration.strftime('%m/%d/%Y')}.
-
-Please upload an updated COI as soon as possible.
-
-Thank you.
-"""
+    sub = Subcontractor.query.filter_by(
+        id=id,
+        user_id=current_user.id
+    ).first_or_404()
 
     try:
 
-        send_email_reminder(sub.email, subject, body)
+        # apagar documentos físicos
+        for doc in sub.documents:
 
-        # 🔥 SALVA DATA DO REMINDER
-        sub.last_reminder_sent = datetime.utcnow()
+            file_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                doc.filename
+            )
 
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print("FILE DELETE ERROR:", e)
+
+        db.session.delete(sub)
         db.session.commit()
 
-        flash("Reminder sent successfully.", "success")
+        flash("Subcontractor deleted successfully.", "success")
 
     except Exception as e:
-        print("Email error:", e)
-        flash("Error sending email.", "danger")
+
+        db.session.rollback()
+        print("DELETE SUB ERROR:", e)
+
+        flash("Error deleting subcontractor.", "danger")
 
     return redirect(url_for("dashboard"))
-
+ 
 #================
 # ADD PROJECT 
 #================
@@ -858,47 +1316,78 @@ def add_project():
 
     if request.method == "POST":
 
-        name = request.form.get("name")
+        name = request.form.get("name", "").strip()
+        value_raw = request.form.get("contract_value")
 
-        contract_value = request.form.get("contract_value")
-        contract_value = float(contract_value) if contract_value else 0
+        if not name:
+            flash("Project name is required.", "danger")
+            return redirect(url_for("add_project"))
 
-        selected_subs = request.form.getlist("subcontractors")
+        try:
+            contract_value = float(value_raw) if value_raw else 0
+        except ValueError:
+            flash("Invalid contract value.", "danger")
+            return redirect(url_for("add_project"))
 
-
-        # 🔹 Criar projeto
-        new_project = Project(
+        project = Project(
             name=name,
             contract_value=contract_value,
             user_id=current_user.id
         )
 
-        db.session.add(new_project)
-        db.session.flush()   # pega o ID sem commit
+        db.session.add(project)
+        db.session.flush()
 
+        # =================
+        # DOCUMENT UPLOAD
+        # =================
 
-        # 🔹 Criar vínculos com subs
-        for sub_id in selected_subs:
+        files = request.files.getlist("documents")
 
-            sub = Subcontractor.query.filter_by(
-                id=sub_id,
-                user_id=current_user.id
-            ).first()
+        for file in files:
 
-            if sub:
+            if not file or file.filename == "":
+                continue
 
-                link = ProjectSubcontractor(
-                    project_id=new_project.id,
-                    subcontractor_id=sub.id,
-                    coverage_limit=0
+            if not allowed_file(file.filename):
+                flash(f"Invalid file type: {file.filename}", "danger")
+                continue
+
+            try:
+
+                filename = secure_filename(file.filename)
+
+                unique_name = f"{uuid.uuid4().hex}_{filename}"
+
+                filepath = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    unique_name
                 )
 
-                db.session.add(link)
+                file.save(filepath)
 
+                doc = Document(
+                    filename=unique_name,
+                    original_name=file.filename,
+                    document_type="Project Document",
+                    project_id=project.id
+                )
 
-        db.session.commit()
+                db.session.add(doc)
 
-        flash("Project created successfully!", "success")
+            except Exception as e:
+                print("UPLOAD ERROR:", e)
+                flash(f"Error uploading {file.filename}", "danger")
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("PROJECT CREATE ERROR:", e)
+            flash("Error creating project.", "danger")
+            return redirect(url_for("add_project"))
+
+        flash("Project created successfully", "success")
 
         return redirect(url_for("dashboard"))
 
@@ -931,39 +1420,79 @@ def edit_project(project_id):
 
         selected_subs = request.form.getlist("subcontractors")
 
-        # 🔹 remover vínculos antigos
-        old_links = ProjectSubcontractor.query.filter_by(
+        current_links = ProjectSubcontractor.query.filter_by(
             project_id=project.id
         ).all()
 
-        for link in old_links:
-            db.session.delete(link)
+        current_sub_ids = [str(link.subcontractor_id) for link in current_links]
 
-        db.session.flush()
+        # remover subs
+        for link in current_links:
+            if str(link.subcontractor_id) not in selected_subs:
+                db.session.delete(link)
 
-        # 🔹 recriar vínculos
+        # adicionar novos subs
         for sub_id in selected_subs:
+            if sub_id not in current_sub_ids:
 
-            sub = Subcontractor.query.filter_by(
-                id=sub_id,
-                user_id=current_user.id
-            ).first()
+                sub = Subcontractor.query.filter_by(
+                    id=sub_id,
+                    user_id=current_user.id
+                ).first()
 
-            if sub:
+                if sub:
+                    new_link = ProjectSubcontractor(
+                        project_id=project.id,
+                        subcontractor_id=sub.id,
+                        coverage_limit=0
+                    )
+                    db.session.add(new_link)
 
-                new_link = ProjectSubcontractor(
-                    project_id=project.id,
-                    subcontractor_id=sub.id,
-                    coverage_limit=0
+        # ==========================
+        # UPLOAD DOCUMENT
+        # ==========================
+
+        file = request.files.get("file")
+
+        if file and file.filename != "":
+
+            if allowed_file(file.filename):
+
+                doc_type = request.form.get("doc_type") or "Document"
+
+                original_name = secure_filename(file.filename)
+
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
+
+                path = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    unique_name
                 )
 
-                db.session.add(new_link)
+                file.save(path)
+
+                last_doc = Document.query.filter_by(
+                    project_id=project.id,
+                    document_type=doc_type
+                ).order_by(Document.version.desc()).first()
+
+                version = last_doc.version + 1 if last_doc else 1
+
+                new_doc = Document(
+                    filename=unique_name,
+                    original_name=original_name,
+                    document_type=doc_type,
+                    version=version,
+                    project_id=project.id
+                )
+
+                db.session.add(new_doc)
 
         db.session.commit()
 
         flash("Project updated successfully!", "success")
 
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("view_project", project_id=project.id))
 
     return render_template(
         "edit_project.html",
@@ -982,8 +1511,83 @@ def view_project(project_id):
         user_id=current_user.id
     ).first_or_404()
 
-    return render_template("view_project.html", project=project)
+    links = (
+        ProjectSubcontractor.query
+        .options(joinedload(ProjectSubcontractor.subcontractor))
+        .filter_by(project_id=project.id)
+        .all()
+    )
 
+    documents = (
+        Document.query
+        .filter_by(project_id=project.id)
+        .order_by(
+            Document.document_type,
+            Document.version.desc()
+        )
+        .all()
+    )
+
+    return render_template(
+        "view_project.html",
+        project=project,
+        links=links,
+        documents=documents
+    )
+#==================
+# DELETE PROJECT
+#==================
+
+@app.route("/delete_project/<int:id>", methods=["POST"])
+@login_required
+def delete_project(id):
+
+    project = Project.query.filter_by(
+        id=id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    # =========================
+    # DELETE DOCUMENT FILES
+    # =========================
+
+    documents = Document.query.filter_by(
+        project_id=project.id
+    ).all()
+
+    for doc in documents:
+
+        file_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            doc.filename
+        )
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        db.session.delete(doc)
+
+    # =========================
+    # REMOVE SUB RELATIONS
+    # =========================
+
+    links = ProjectSubcontractor.query.filter_by(
+        project_id=project.id
+    ).all()
+
+    for link in links:
+        db.session.delete(link)
+
+    # =========================
+    # DELETE PROJECT
+    # =========================
+
+    db.session.delete(project)
+    db.session.commit()
+
+    flash("Project deleted successfully", "success")
+
+    return redirect(url_for("dashboard"))
 #===============
 # UP DOC PROJECT
 #===============
@@ -999,31 +1603,49 @@ def upload_project_document(project_id):
     file = request.files.get("file")
 
     if not file or file.filename == "":
-        flash("No file selected", "danger")
-        return redirect(request.referrer)
+        flash("No file selected.", "danger")
+        return redirect(url_for("view_project", project_id=project.id))
 
     if not allowed_file(file.filename):
-        flash("Invalid file type", "danger")
-        return redirect(request.referrer)
+        flash("Invalid file type.", "danger")
+        return redirect(url_for("view_project", project_id=project.id))
 
-    # 🔹 tipo do documento
     doc_type = request.form.get("doc_type") or "Document"
 
     original_name = secure_filename(file.filename)
 
     unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
-    path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    upload_folder = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        f"project_{project.id}"
+    )
 
-    file.save(path)
+    os.makedirs(upload_folder, exist_ok=True)
+
+    file_path = os.path.join(upload_folder, unique_name)
+
+    try:
+        file.save(file_path)
+    except Exception as e:
+        print("Upload error:", e)
+        flash("Error uploading file.", "danger")
+        return redirect(url_for("view_project", project_id=project.id))
+
+    last_doc = Document.query.filter_by(
+        project_id=project.id,
+        document_type=doc_type
+    ).order_by(Document.version.desc()).first()
+
+    version = last_doc.version + 1 if last_doc else 1
 
     new_doc = Document(
-        filename=unique_name,
-        original_name=original_name,
-        document_type=doc_type,
-        version=1,
-        project_id=project.id
-    )
+    filename=unique_name,
+    original_name=original_name,
+    document_type=doc_type,
+    version=version,
+    project_id=project.id
+)
 
     db.session.add(new_doc)
     db.session.commit()
@@ -1037,29 +1659,35 @@ def upload_project_document(project_id):
 # ==========================
 
 scheduler = BackgroundScheduler(
-    timezone=timezone("America/Sao_Paulo")
+    timezone=pytz.timezone("America/Sao_Paulo")
 )
 
 def start_scheduler():
-    if not scheduler.running:
-        scheduler.add_job(
-            check_and_send_auto_reminders_for_all_users,
-            trigger="cron",
-            hour=8,
-            minute=0,
-            id="daily_coi_reminder",
-            replace_existing=True
-        )
-        scheduler.start()
+
+    if scheduler.running:
+        return
+
+    scheduler.add_job(
+        func=check_and_send_auto_reminders_for_all_users,
+        trigger="cron",
+        hour=8,
+        minute=0,
+        id="daily_coi_reminder",
+        replace_existing=True
+    )
+
+    scheduler.start()
 
 # ==========================
 # RUN
 # ==========================
-
 if __name__ == "__main__":
 
     with app.app_context():
         db.create_all()
+
+    # evita iniciar 2 schedulers no modo debug
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         start_scheduler()
 
     port = int(os.environ.get("PORT", 10000))
