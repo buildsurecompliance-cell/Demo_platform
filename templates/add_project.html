@@ -26,16 +26,34 @@
 
             <!-- SUBCONTRACTORS -->
             <div class="form-group">
+
                 <label>Select Subcontractors</label>
 
-                <div class="checkbox-grid">
-                    {% for sub in subs %}
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="subcontractors" value="{{ sub.id }}">
-                            {{ sub.name }}
-                        </label>
-                    {% endfor %}
+                <input type="text"
+                    id="subSearch"
+                    placeholder="Search subcontractor..."
+                    class="search-input">
+
+                <div class="checkbox-grid" id="subsList">
+
+                {% for sub in subs %}
+
+                <label class="checkbox-item sub-item">
+
+                <input type="checkbox"
+                    name="subcontractors"
+                    value="{{ sub.id }}">
+
+                <span class="sub-name">
+                {{ sub.name }}
+                </span>
+
+                </label>
+
+                {% endfor %}
+
                 </div>
+
             </div>
 
             <!-- DOCUMENT TYPE -->
@@ -86,7 +104,7 @@
     width: 100%;
     padding: 10px;
     border-radius: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #000000;
 }
 
 .checkbox-grid {
@@ -124,6 +142,58 @@
     font-weight: 600;
 }
 
+/* DARK MODE FIX */
+
+.dark-mode .checkbox-item {
+    background: #1e293b;
+    color: white;
+    border: 1px solid #334155;
+}
+
+.dark-mode .checkbox-item input {
+    accent-color: #16a34a;
+}
+
+.dark-mode .form-group input,
+.dark-mode .form-group select {
+    background: #0f172a;
+    color: white;
+    border: 1px solid #334155;
+}
+
+.dark-mode .form-group label {
+    color: #e2e8f0;
+}
+
 </style>
+
+<script>
+
+document
+.getElementById("subSearch")
+.addEventListener("keyup", function(){
+
+let filter = this.value.toLowerCase()
+
+let subs = document.querySelectorAll(".sub-item")
+
+subs.forEach(function(item){
+
+let name = item
+.querySelector(".sub-name")
+.innerText
+.toLowerCase()
+
+if(name.includes(filter)){
+item.style.display = "flex"
+} else {
+item.style.display = "none"
+}
+
+})
+
+})
+
+</script>
 
 {% endblock %}

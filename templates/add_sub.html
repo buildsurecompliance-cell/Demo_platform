@@ -1,50 +1,219 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="row justify-content-center mt-3">
-    <div class="col-md-7">
-        <h3 class="mb-4">{{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}</h3>
-        <form method="POST" enctype="multipart/form-data">
-            
-            <div class="mb-3">
-                <label>Name</label>
-                <input type="text" class="form-control" name="name" value="{{ sub.name if sub else '' }}" required>
-            </div>
-            <div class="mb-3">
-                <label>Email</label>
-                <input type="email" class="form-control" name="email" value="{{ sub.email if sub else '' }}" required>
-            </div>
-            <div class="mb-3">
-                <label>Phone</label>
-                <input type="text" class="form-control" name="phone" value="{{ sub.phone if sub else '' }}">
-            </div>
-            <div class="mb-3">
-                <label>Role</label>
-                <input type="text" class="form-control" name="role" value="{{ sub.role if sub else '' }}">
-            </div>
-            <div class="mb-3">
-                <label>COI Expiration</label>
-                <input type="date" class="form-control" name="coi_expiration" value="{{ sub.coi_expiration if sub else '' }}" required>
+
+```
+<div class="col-md-7">
+
+    <h3 class="mb-4">
+        {{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}
+    </h3>
+
+    <form method="POST" enctype="multipart/form-data">
+        
+        <div class="mb-3">
+            <label>Name</label>
+            <input
+                type="text"
+                class="form-control"
+                name="name"
+                value="{{ sub.name if sub else '' }}"
+                required>
+        </div>
+
+        <div class="mb-3">
+            <label>Email</label>
+            <input
+                type="email"
+                class="form-control"
+                name="email"
+                value="{{ sub.email if sub else '' }}"
+                required>
+        </div>
+
+        <div class="mb-3">
+            <label>Phone</label>
+            <input
+                type="text"
+                class="form-control"
+                name="phone"
+                value="{{ sub.phone if sub else '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label>Role</label>
+            <input
+                type="text"
+                class="form-control"
+                name="role"
+                value="{{ sub.role if sub else '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label>COI Expiration</label>
+            <input
+                type="date"
+                class="form-control"
+                name="coi_expiration"
+                value="{{ sub.coi_expiration.strftime('%Y-%m-%d') if sub and sub.coi_expiration else '' }}"
+                required>
+        </div>
+
+        <!-- TIMEZONE AUTOMATICO -->
+        <input type="hidden" name="timezone" id="timezoneInputHidden">
+
+
+        <!-- UPLOAD DOCUMENTS MELHORADO -->
+
+        <div class="mb-3">
+
+            <label>Upload Documents</label>
+
+            <div id="uploadBox" class="upload-box">
+
+                <p class="upload-text">
+                    Drag & drop files here or click to upload
+                </p>
+
+                <input
+                    type="file"
+                    name="documents"
+                    id="fileInput"
+                    class="file-input"
+                    multiple>
+
             </div>
 
-            <!-- TIMEZONE AUTOMATICO -->
-            <input type="hidden" name="timezone" id="timezoneInputHidden">
+            <div id="fileList" class="file-list"></div>
 
-            <div class="mb-3">
-                <label>Upload Documents</label>
-                <input type="file" class="form-control" name="documents" multiple>
-            </div>
-            <div class="mb-3">
-                <label>Document Type</label>
-                <input type="text" class="form-control" name="doc_type" placeholder="Ex: COI, Contract">
-            </div>
-            <button type="submit" class="btn btn-success">{{ 'Update' if sub else 'Add' }}</button>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
+        </div>
+
+
+        <div class="mb-3">
+            <label>Document Type</label>
+            <input
+                type="text"
+                class="form-control"
+                name="doc_type"
+                placeholder="Ex: COI, Contract">
+        </div>
+
+
+        <button type="submit" class="btn btn-success">
+            {{ 'Update' if sub else 'Add' }}
+        </button>
+
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+```
+
 </div>
 
+<style>
+
+.upload-box{
+border:2px dashed #cbd5f5;
+border-radius:10px;
+padding:30px;
+text-align:center;
+cursor:pointer;
+background:#f8fafc;
+transition:0.2s;
+position:relative;
+}
+
+.upload-box:hover{
+background:#f1f5f9;
+border-color:#2563eb;
+}
+
+.file-input{
+opacity:0;
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+cursor:pointer;
+}
+
+.upload-text{
+margin:0;
+color:#64748b;
+}
+
+.file-list{
+margin-top:10px;
+font-size:14px;
+color:#475569;
+}
+
+.file-item{
+padding:4px 0;
+}
+
+</style>
+
 <script>
-  // Detecta automaticamente o timezone do navegador
-  document.getElementById("timezoneInputHidden").value = Intl.DateTimeFormat().resolvedOptions().timeZone || "US/Eastern";
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    // timezone automático
+
+    const tzField = document.getElementById("timezoneInputHidden");
+
+    if (tzField){
+        tzField.value =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "US/Eastern";
+    }
+
+
+    // upload preview
+
+    const uploadBox = document.getElementById("uploadBox");
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+
+    uploadBox.addEventListener("click", () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList(){
+
+        fileList.innerHTML = "";
+
+        const files = fileInput.files;
+
+        if(files.length === 0){
+            return;
+        }
+
+        const counter = document.createElement("div");
+        counter.innerHTML = "<strong>" + files.length + " file(s) selected</strong>";
+        fileList.appendChild(counter);
+
+        for(let i=0;i<files.length;i++){
+
+            const item = document.createElement("div");
+            item.className="file-item";
+            item.textContent = files[i].name;
+
+            fileList.appendChild(item);
+
+        }
+
+    }
+
+});
+
 </script>
+
 {% endblock %}

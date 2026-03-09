@@ -41,32 +41,6 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 
 <h3>Project Documents</h3>
 
-<!-- Upload Form -->
-
-<form action="{{ url_for('upload_project_document', project_id=project.id) }}"
-      method="POST"
-      enctype="multipart/form-data">
-
-<input type="file" name="file" required>
-
-<select name="doc_type" required>
-
-<option value="">Select document type</option>
-<option value="Contract">Contract</option>
-<option value="Subcontract">Subcontract</option>
-<option value="Insurance">Insurance</option>
-<option value="Permit">Permit</option>
-<option value="Safety Plan">Safety Plan</option>
-<option value="Change Order">Change Order</option>
-
-</select>
-
-<button type="submit" class="btn btn-primary">
-Upload Document
-</button>
-
-</form>
-
 <br>
 
 {% if project.documents %}
@@ -99,7 +73,7 @@ Upload Document
 </td>
 
 <td>
-{{ doc.upload_date|format_local_time(current_user.timezone) }}
+{{ doc.upload_date|format_local_time }}
 </td>
 
 <td>

@@ -3,17 +3,21 @@
 
 <h3>Edit Project</h3>
 
+<!-- FORM EDIT PROJECT -->
 <form method="POST">
+
     <div class="mb-3">
         <label>Name</label>
-        <input type="text" name="name"
+        <input type="text"
+               name="name"
                class="form-control"
                value="{{ project.name }}">
     </div>
 
     <div class="mb-3">
         <label>Contract Value</label>
-        <input type="number" step="0.01"
+        <input type="number"
+               step="0.01"
                name="contract_value"
                class="form-control"
                value="{{ project.contract_value }}">
@@ -25,25 +29,63 @@
 
         {% for sub in subs %}
 
-            <option value="{{ sub.id }}"
-            {% for link in project.subs %}
-                {% if link.subcontractor_id == sub.id %}
-                    selected
-                {% endif %}
-            {% endfor %}
-            >
+        <option value="{{ sub.id }}"
+        {% for link in project.subs %}
+            {% if link.subcontractor_id == sub.id %}
+                selected
+            {% endif %}
+        {% endfor %}
+        >
 
-            {{ sub.name }}
+        {{ sub.name }}
 
-            </option>
+        </option>
 
         {% endfor %}
 
     </select>
 
+    <br>
+
     <button type="submit" class="btn btn-success">
         Save Changes
     </button>
+
+</form>
+
+
+<br><br>
+
+
+<!-- FORM UPLOAD DOCUMENT -->
+<h4>Upload Document</h4>
+
+<form action="{{ url_for('upload_project_document', project_id=project.id) }}"
+      method="POST"
+      enctype="multipart/form-data">
+
+    <div class="mb-3">
+        <input type="file" name="file" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <select name="doc_type" class="form-control" required>
+
+            <option value="">Select document type</option>
+            <option value="Contract">Contract</option>
+            <option value="Subcontract">Subcontract</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Permit">Permit</option>
+            <option value="Safety Plan">Safety Plan</option>
+            <option value="Change Order">Change Order</option>
+
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Upload Document
+    </button>
+
 </form>
 
 {% endblock %}
