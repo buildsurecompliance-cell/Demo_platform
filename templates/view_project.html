@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div class="page-wrapper">
+
 <h2>{{ project.name }}</h2>
 
 <p>
@@ -9,32 +11,55 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 </p>
 
 <p>
-<strong>Status:</strong>
+<strong>Mobilization Status:</strong>
 {{ project.mobilization_status }}
 </p>
+
+{% if project.end_date %}
+
+<p>
+<strong>Contract Status:</strong>
+{{ project.contract_status }}
+</p>
+
+<p>
+<strong>Days Remaining:</strong>
+{{ project.days_remaining }}
+</p>
+
+{% endif %}
 
 <hr>
 
 <h3>Subcontractors</h3>
 
 <ul>
-{% for ps in project.subs %}
+
+{% for ps in links %}
+
 <li>
 
 {{ ps.subcontractor.name }}
 
 {% if ps.subcontractor.computed_status == "expired" %}
 🔴 Expired
+
 {% elif ps.subcontractor.computed_status == "at_risk" %}
 🟡 At Risk
+
 {% else %}
 🟢 Compliant
+
 {% endif %}
 
 </li>
+
 {% else %}
+
 <li>No subcontractors linked.</li>
+
 {% endfor %}
+
 </ul>
 
 <hr>
@@ -43,14 +68,18 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 
 <br>
 
-{% if project.documents %}
+{% if documents %}
+
+{% for doc_type, docs in documents.items() %}
+
+<h4>{{ doc_type }}</h4>
 
 <table class="table">
 
 <thead>
 <tr>
 <th>Document</th>
-<th>Type</th>
+<th>Version</th>
 <th>Upload Date</th>
 <th>Actions</th>
 </tr>
@@ -58,22 +87,24 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 
 <tbody>
 
-{% for doc in project.documents %}
+{% for doc in docs %}
 
 <tr>
 
 <td>
+
 <a href="{{ url_for('view_document', doc_id=doc.id) }}">
-{{ doc.original_name or doc.filename }}
+{{ doc.original_name }}
 </a>
+
 </td>
 
 <td>
-{{ doc.document_type }}
+v{{ doc.version }}
 </td>
 
 <td>
-{{ doc.upload_date|format_local_time }}
+{{ doc.uploaded_at|format_local_time }}
 </td>
 
 <td>
@@ -101,10 +132,16 @@ Delete
 
 </table>
 
+<br>
+
+{% endfor %}
+
 {% else %}
 
 <p>No documents uploaded.</p>
 
 {% endif %}
+
+</div>
 
 {% endblock %}

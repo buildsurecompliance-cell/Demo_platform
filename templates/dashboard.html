@@ -50,7 +50,11 @@
 </div>
 
 
+<div class="page-wrapper">
+
+<!-- ================================= -->
 <!-- HIGH RISK COIs -->
+<!-- ================================= -->
 
 <div class="card">
 
@@ -71,7 +75,11 @@
 
 <tbody>
 
-{% for sub in subs if sub.computed_status != "compliant" %}
+{% set risk_subs = subs | selectattr("computed_status","ne","compliant") | list %}
+
+{% if risk_subs %}
+
+{% for sub in risk_subs %}
 
 <tr class="
 {% if sub.computed_status == 'expired' %}row-danger
@@ -91,9 +99,11 @@
 
 <td>
 
-{% if sub.computed_status == "expired" %} <span class="badge badge-danger">Expired</span>
+{% if sub.computed_status == "expired" %}
+<span class="badge badge-danger">Expired</span>
 
-{% elif sub.computed_status == "at_risk" %} <span class="badge badge-warning">At Risk</span>
+{% elif sub.computed_status == "at_risk" %}
+<span class="badge badge-warning">At Risk</span>
 
 {% endif %}
 
@@ -103,17 +113,30 @@
 
 {% endfor %}
 
+{% else %}
+
+<tr>
+<td colspan="4">No high risk COIs</td>
+</tr>
+
+{% endif %}
+
 </tbody>
 
 </table>
 
 </div>
 
+
+
+<!-- ================================= -->
 <!-- PROJECTS -->
+<!-- ================================= -->
 
 <div class="card">
 
 <div class="card-header">
+
 <h2>Projects</h2>
 
 <a href="{{ url_for('add_project') }}" class="btn-add">
@@ -122,13 +145,81 @@
 
 </div>
 
+
+<!-- FILTERS -->
+
+<form method="GET" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap;">
+
+<input type="text"
+name="project_search"
+placeholder="Search project..."
+value="{{ request.args.get('project_search','') }}">
+
+<select name="contract_status">
+
+<option value="">All Contract Status</option>
+
+<option value="active"
+{% if request.args.get('contract_status') == 'active' %}selected{% endif %}>
+Active
+</option>
+
+<option value="expiring"
+{% if request.args.get('contract_status') == 'expiring' %}selected{% endif %}>
+Expiring Soon
+</option>
+
+<option value="expired"
+{% if request.args.get('contract_status') == 'expired' %}selected{% endif %}>
+Expired
+</option>
+
+</select>
+
+<select name="risk_level">
+
+<option value="">All Risk Levels</option>
+
+<option value="Low"
+{% if request.args.get('risk_level') == 'Low' %}selected{% endif %}>
+Low
+</option>
+
+<option value="Medium"
+{% if request.args.get('risk_level') == 'Medium' %}selected{% endif %}>
+Medium
+</option>
+
+<option value="High"
+{% if request.args.get('risk_level') == 'High' %}selected{% endif %}>
+High
+</option>
+
+</select>
+
+<button type="submit" class="btn-edit">
+Filter
+</button>
+
+<a href="{{ url_for('dashboard') }}" class="btn-delete">
+Reset
+</a>
+
+</form>
+
+
+
 <table class="styled-table">
 
 <thead>
+
 <tr>
 
 <th>Project</th>
 <th class="text-right">Contract Value</th>
+<th class="text-center">Start</th>
+<th class="text-center">End</th>
+<th class="text-center">Days Left</th>
 <th class="text-center">Subs</th>
 <th class="text-center">Compliance</th>
 <th class="text-center">Risk</th>
@@ -136,6 +227,7 @@
 <th class="text-center">Actions</th>
 
 </tr>
+
 </thead>
 
 <tbody>
@@ -151,28 +243,66 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 </td>
 
 <td class="text-center">
+{{ project.start_date.strftime("%m/%d/%Y") if project.start_date else "—" }}
+</td>
+
+<td class="text-center">
+{{ project.end_date.strftime("%m/%d/%Y") if project.end_date else "—" }}
+</td>
+
+<td class="text-center">
+
+{% if project.days_remaining is not none %}
+
+    {% if project.days_remaining == 0 %}
+        <span class="badge badge-danger">Expired</span>
+
+    {% elif project.days_remaining <= 30 %}
+        <span class="badge badge-warning">
+        {{ project.days_remaining }} days
+        </span>
+
+    {% else %}
+        {{ project.days_remaining }} days
+    {% endif %}
+
+{% else %}
+
+—
+
+{% endif %}
+
+</td>
+
+<td class="text-center">
 {{ project.subs|length }}
 </td>
 
 <td class="text-center">
+
 <div class="progress">
+
 <div class="progress-bar"
-style="width:{{ project.compliance_score }}%">
-{{ project.compliance_score }}%
+style="width:{{ project.compliance_score or 0 }}%">
+
+{{ project.compliance_score or 0 }}%
+
 </div>
+
 </div>
+
 </td>
 
 <td class="text-center">
 
 {% if project.risk_level == "Low" %}
-<span class="risk-low">Low</span>
+<span class="risk-low">🟢 Low</span>
 
 {% elif project.risk_level == "Medium" %}
-<span class="risk-medium">Medium</span>
+<span class="risk-medium">🟡 Medium</span>
 
 {% else %}
-<span class="risk-high">High</span>
+<span class="risk-high">🔴 High</span>
 {% endif %}
 
 </td>
@@ -209,7 +339,7 @@ View
 method="POST"
 style="display:inline;">
 
-<button class="btn btn-sm btn-danger"
+<button class="btn-delete"
 onclick="return confirm('Delete this project?')">
 Delete
 </button>
@@ -228,7 +358,11 @@ Delete
 
 </div>
 
+
+
+<!-- ================================= -->
 <!-- ALL SUBCONTRACTORS -->
+<!-- ================================= -->
 
 <div class="card">
 
@@ -241,6 +375,7 @@ Delete
 </a>
 
 </div>
+
 
 <form method="GET" style="margin-bottom:20px; display:flex; gap:10px;">
 
@@ -280,6 +415,8 @@ Reset
 
 </form>
 
+
+
 <table class="table">
 
 <thead>
@@ -318,19 +455,24 @@ Reset
 
 <td>
 
-{% if sub.computed_status == "expired" %} <span class="badge badge-danger">Expired</span>
+{% if sub.computed_status == "expired" %}
+<span class="badge badge-danger">Expired</span>
 
-{% elif sub.computed_status == "at_risk" %} <span class="badge badge-warning">At Risk</span>
+{% elif sub.computed_status == "at_risk" %}
+<span class="badge badge-warning">At Risk</span>
 
-{% else %} <span class="badge badge-success">Compliant</span>
+{% else %}
+<span class="badge badge-success">Compliant</span>
 {% endif %}
 
 </td>
 
 <td>
 
-{% if sub.documents %} <a href="{{ url_for('view_sub_documents', sub_id=sub.id) }}">
-{{ sub.documents|length }} file(s) </a>
+{% if sub.documents %}
+<a href="{{ url_for('view_sub_documents', sub_id=sub.id) }}">
+{{ sub.documents|length }} file(s)
+</a>
 {% else %}
 —
 {% endif %}
@@ -347,11 +489,13 @@ Reset
 
 <a href="{{ url_for('send_reminder', sub_id=sub.id) }}"
 class="btn-warning">
-Reminder </a>
+Reminder
+</a>
 
 <a href="{{ url_for('edit_sub', id=sub.id) }}"
 class="btn-edit">
-Edit </a>
+Edit
+</a>
 
 <form method="POST"
 action="{{ url_for('delete_sub', id=sub.id) }}"

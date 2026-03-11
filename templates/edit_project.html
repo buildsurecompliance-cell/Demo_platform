@@ -1,21 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div class="page-wrapper">
+
 <h3>Edit Project</h3>
 
-<!-- FORM EDIT PROJECT -->
+<!-- ========================= -->
+<!-- EDIT PROJECT -->
+<!-- ========================= -->
+
 <form method="POST">
 
     <div class="mb-3">
-        <label>Name</label>
+        <label>Project Name</label>
+
         <input type="text"
                name="name"
                class="form-control"
-               value="{{ project.name }}">
+               value="{{ project.name }}"
+               required>
     </div>
 
     <div class="mb-3">
         <label>Contract Value</label>
+
         <input type="number"
                step="0.01"
                name="contract_value"
@@ -23,18 +31,67 @@
                value="{{ project.contract_value }}">
     </div>
 
+    <!-- START DATE -->
+
+    <div class="mb-3">
+        <label>Start Date</label>
+
+        <input type="date"
+               name="start_date"
+               class="form-control"
+               value="{{ project.start_date }}">
+    </div>
+
+    <!-- END DATE -->
+
+    <div class="mb-3">
+        <label>End Date</label>
+
+        <input type="date"
+               name="end_date"
+               class="form-control"
+               value="{{ project.end_date }}">
+    </div>
+
+    <!-- CONTRACT STATUS INFO -->
+
+    {% if project.end_date %}
+
+    <div class="alert alert-info">
+
+        Contract Status:
+        <strong>{{ project.contract_status }}</strong>
+
+        <br>
+
+        Days Remaining:
+        <strong>{{ project.days_remaining }}</strong>
+
+    </div>
+
+    {% endif %}
+
+    <!-- ========================= -->
+    <!-- SUBCONTRACTORS -->
+    <!-- ========================= -->
+
     <label>Subcontractors</label>
 
-    <select name="subcontractors" multiple class="form-control">
+    <select name="subcontractors"
+            multiple
+            class="form-control"
+            style="height:200px">
 
         {% for sub in subs %}
 
         <option value="{{ sub.id }}"
+
         {% for link in project.subs %}
             {% if link.subcontractor_id == sub.id %}
                 selected
             {% endif %}
         {% endfor %}
+
         >
 
         {{ sub.name }}
@@ -57,7 +114,10 @@
 <br><br>
 
 
-<!-- FORM UPLOAD DOCUMENT -->
+<!-- ========================= -->
+<!-- UPLOAD DOCUMENT -->
+<!-- ========================= -->
+
 <h4>Upload Document</h4>
 
 <form action="{{ url_for('upload_project_document', project_id=project.id) }}"
@@ -65,13 +125,22 @@
       enctype="multipart/form-data">
 
     <div class="mb-3">
-        <input type="file" name="file" class="form-control" required>
+
+        <input type="file"
+               name="file"
+               class="form-control"
+               required>
+
     </div>
 
     <div class="mb-3">
-        <select name="doc_type" class="form-control" required>
+
+        <select name="doc_type"
+                class="form-control"
+                required>
 
             <option value="">Select document type</option>
+
             <option value="Contract">Contract</option>
             <option value="Subcontract">Subcontract</option>
             <option value="Insurance">Insurance</option>
@@ -80,6 +149,7 @@
             <option value="Change Order">Change Order</option>
 
         </select>
+
     </div>
 
     <button type="submit" class="btn btn-primary">
@@ -87,5 +157,7 @@
     </button>
 
 </form>
+
+</div>
 
 {% endblock %}
