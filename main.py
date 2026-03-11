@@ -298,17 +298,13 @@ class Document(db.Model):
 # ==========================
 # PROJECT MODELS (NOVO)
 # ==========================
-
 class Project(db.Model):
 
     __tablename__ = "project"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    name = db.Column(
-        db.String(200),
-        nullable=False
-    )
+    name = db.Column(db.String(255), nullable=False)
 
     contract_value = db.Column(
         db.Float,
@@ -318,22 +314,49 @@ class Project(db.Model):
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),
-        nullable=False,
-        index=True
+        nullable=False
     )
 
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+
+    # RELAÇÃO COM PROJECTSUBCONTRACTOR
     subs = db.relationship(
         "ProjectSubcontractor",
         backref="project",
-        lazy="selectin"
-    )
-
-    documents = db.relationship(
-        "Document",
-        backref="project",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan"
     )
+
+    # =========================
+    # DAYS REMAINING
+    # =========================
+    @property
+    def days_remaining(self):
+
+        if not self.end_date:
+            return None
+
+        remaining = (self.end_date - date.today()).days
+
+        return max(remaining, 0)
+
+    # =========================
+    # CONTRACT STATUS
+    # =========================
+    @property
+    def contract_status(self):
+
+        if not self.end_date:
+            return "Unknown"
+
+        if self.days_remaining == 0:
+            return "Expired"
+
+        if self.days_remaining <= 30:
+            return "Expiring Soon"
+
+        return "Active"
 
     # =========================
     # COMPLIANCE SCORE
@@ -345,17 +368,18 @@ class Project(db.Model):
             return 100
 
         total = len(self.subs)
+
         compliant = 0
 
         for ps in self.subs:
 
             sub = ps.subcontractor
 
-            if not sub:
-                continue
-
-            if sub.computed_status == "compliant":
+            if sub and sub.computed_status == "compliant":
                 compliant += 1
+
+        if total == 0:
+            return 100
 
         return int((compliant / total) * 100)
 
@@ -511,7 +535,7 @@ def send_email_reminder(to_email, subject, message):
                 "Content-Type": "application/json",
             },
             json={
-                "from": "BuildSure <notifications@buildsure.com>",
+                "from": "BuildSure <onboarding@resend.dev>",
                 "to": [to_email],
                 "subject": subject,
                 "html": f"<p>{message}</p>",
@@ -533,7 +557,7 @@ def send_email_reminder(to_email, subject, message):
 from datetime import date, datetime, timezone
 from sqlalchemy.orm import joinedload
 
-REMINDER_DAYS = {45, 30, 15, 7, 3, 1}
+REMINDER_DAYS = {90, 60, 45, 30, 15, 7, 3, 1}
 
 def check_and_send_auto_reminders_for_all_users():
 
@@ -820,8 +844,16 @@ def logout():
 @login_required
 def dashboard():
 
+    # =========================
+    # FILTERS
+    # =========================
+
     status_filter = request.args.get("status")
     search = request.args.get("search", "").strip()
+
+    project_search = request.args.get("project_search", "").strip()
+    contract_status = request.args.get("contract_status")
+    risk_level = request.args.get("risk_level")
 
     # =========================
     # SUBCONTRACTORS
@@ -856,7 +888,7 @@ def dashboard():
         else:
             compliant_count += 1
 
-    # filtro por status
+    # FILTER SUBS BY STATUS
     if status_filter:
         subs = [
             s for s in subs
@@ -886,9 +918,47 @@ def dashboard():
     # PROJECTS
     # =========================
 
-    projects = Project.query.filter_by(
+    projects_query = Project.query.filter_by(
         user_id=current_user.id
-    ).all()
+    )
+
+    # SEARCH PROJECT
+    if project_search:
+        projects_query = projects_query.filter(
+            Project.name.ilike(f"%{project_search}%")
+        )
+
+    projects = projects_query.order_by(Project.id.desc()).all()
+
+    filtered_projects = []
+
+    for project in projects:
+
+        # CONTRACT STATUS FILTER
+        if contract_status:
+
+            days = project.days_remaining
+
+            if contract_status == "active" and (days is None or days <= 30):
+                continue
+
+            if contract_status == "expiring" and (days is None or days > 30 or days <= 0):
+                continue
+
+            if contract_status == "expired" and (days is None or days > 0):
+                continue
+
+        # RISK LEVEL FILTER
+        if risk_level and project.risk_level != risk_level:
+            continue
+
+        filtered_projects.append(project)
+
+    projects = filtered_projects
+
+    # =========================
+    # PORTFOLIO METRICS
+    # =========================
 
     total_portfolio = 0
     revenue_at_risk = 0
@@ -1305,7 +1375,6 @@ def delete_sub(id):
 #================
 # ADD PROJECT 
 #================
-
 @app.route("/add_project", methods=["GET", "POST"])
 @login_required
 def add_project():
@@ -1319,9 +1388,16 @@ def add_project():
         name = request.form.get("name", "").strip()
         value_raw = request.form.get("contract_value")
 
+        start_raw = request.form.get("start_date")
+        end_raw = request.form.get("end_date")
+
         if not name:
             flash("Project name is required.", "danger")
             return redirect(url_for("add_project"))
+
+        # =========================
+        # CONTRACT VALUE
+        # =========================
 
         try:
             contract_value = float(value_raw) if value_raw else 0
@@ -1329,18 +1405,61 @@ def add_project():
             flash("Invalid contract value.", "danger")
             return redirect(url_for("add_project"))
 
+        # =========================
+        # START DATE
+        # =========================
+
+        start_date = None
+        if start_raw:
+            try:
+                start_date = datetime.strptime(
+                    start_raw,
+                    "%Y-%m-%d"
+                ).date()
+            except ValueError:
+                flash("Invalid start date.", "danger")
+                return redirect(url_for("add_project"))
+
+        # =========================
+        # END DATE
+        # =========================
+
+        end_date = None
+        if end_raw:
+            try:
+                end_date = datetime.strptime(
+                    end_raw,
+                    "%Y-%m-%d"
+                ).date()
+            except ValueError:
+                flash("Invalid end date.", "danger")
+                return redirect(url_for("add_project"))
+
+        # VALIDATE DATE ORDER
+        if start_date and end_date and end_date < start_date:
+            flash("End date cannot be before start date.", "danger")
+            return redirect(url_for("add_project"))
+
+        # =========================
+        # CREATE PROJECT
+        # =========================
+
         project = Project(
             name=name,
             contract_value=contract_value,
-            user_id=current_user.id
+            user_id=current_user.id,
+            start_date=start_date,
+            end_date=end_date
         )
 
         db.session.add(project)
         db.session.flush()
 
-        # =================
+        # =========================
         # DOCUMENT UPLOAD
-        # =================
+        # =========================
+
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
         files = request.files.getlist("documents")
 
@@ -1355,9 +1474,10 @@ def add_project():
 
             try:
 
-                filename = secure_filename(file.filename)
+                original_name = file.filename
+                safe_name = secure_filename(original_name)
 
-                unique_name = f"{uuid.uuid4().hex}_{filename}"
+                unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
                 filepath = os.path.join(
                     app.config["UPLOAD_FOLDER"],
@@ -1368,7 +1488,7 @@ def add_project():
 
                 doc = Document(
                     filename=unique_name,
-                    original_name=file.filename,
+                    original_name=original_name,
                     document_type="Project Document",
                     project_id=project.id
                 )
@@ -1378,6 +1498,10 @@ def add_project():
             except Exception as e:
                 print("UPLOAD ERROR:", e)
                 flash(f"Error uploading {file.filename}", "danger")
+
+        # =========================
+        # COMMIT
+        # =========================
 
         try:
             db.session.commit()
@@ -1398,6 +1522,8 @@ def add_project():
 #===================
 # EDIT PROJECT 
 #===================
+from datetime import datetime
+
 @app.route("/edit_project/<int:project_id>", methods=["GET", "POST"])
 @login_required
 def edit_project(project_id):
@@ -1413,10 +1539,62 @@ def edit_project(project_id):
 
     if request.method == "POST":
 
-        project.name = request.form.get("name")
+        # ==========================
+        # PROJECT NAME
+        # ==========================
 
-        contract_value = request.form.get("contract_value")
-        project.contract_value = float(contract_value) if contract_value else 0
+        project.name = request.form.get("name", "").strip()
+
+        if not project.name:
+            flash("Project name is required.", "danger")
+            return redirect(url_for("edit_project", project_id=project.id))
+
+        # ==========================
+        # CONTRACT VALUE
+        # ==========================
+
+        value_raw = request.form.get("contract_value")
+
+        try:
+            project.contract_value = float(value_raw) if value_raw else 0
+        except ValueError:
+            flash("Invalid contract value.", "danger")
+            return redirect(url_for("edit_project", project_id=project.id))
+
+        # ==========================
+        # CONTRACT DATES
+        # ==========================
+
+        start_raw = request.form.get("start_date")
+        end_raw = request.form.get("end_date")
+
+        try:
+
+            start_date = (
+                datetime.strptime(start_raw, "%Y-%m-%d").date()
+                if start_raw else None
+            )
+
+            end_date = (
+                datetime.strptime(end_raw, "%Y-%m-%d").date()
+                if end_raw else None
+            )
+
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return redirect(url_for("edit_project", project_id=project.id))
+
+        # valida ordem das datas
+        if start_date and end_date and end_date < start_date:
+            flash("End date cannot be before start date.", "danger")
+            return redirect(url_for("edit_project", project_id=project.id))
+
+        project.start_date = start_date
+        project.end_date = end_date
+
+        # ==========================
+        # SUBCONTRACTOR LINKS
+        # ==========================
 
         selected_subs = request.form.getlist("subcontractors")
 
@@ -1433,6 +1611,7 @@ def edit_project(project_id):
 
         # adicionar novos subs
         for sub_id in selected_subs:
+
             if sub_id not in current_sub_ids:
 
                 sub = Subcontractor.query.filter_by(
@@ -1441,15 +1620,17 @@ def edit_project(project_id):
                 ).first()
 
                 if sub:
+
                     new_link = ProjectSubcontractor(
                         project_id=project.id,
                         subcontractor_id=sub.id,
                         coverage_limit=0
                     )
+
                     db.session.add(new_link)
 
         # ==========================
-        # UPLOAD DOCUMENT
+        # DOCUMENT UPLOAD
         # ==========================
 
         file = request.files.get("file")
@@ -1458,11 +1639,10 @@ def edit_project(project_id):
 
             if allowed_file(file.filename):
 
-                doc_type = request.form.get("doc_type") or "Document"
+                original_name = file.filename
+                safe_name = secure_filename(original_name)
 
-                original_name = secure_filename(file.filename)
-
-                unique_name = f"{uuid.uuid4().hex}_{original_name}"
+                unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
                 path = os.path.join(
                     app.config["UPLOAD_FOLDER"],
@@ -1470,6 +1650,8 @@ def edit_project(project_id):
                 )
 
                 file.save(path)
+
+                doc_type = request.form.get("doc_type", "Document")
 
                 last_doc = Document.query.filter_by(
                     project_id=project.id,
@@ -1488,7 +1670,21 @@ def edit_project(project_id):
 
                 db.session.add(new_doc)
 
-        db.session.commit()
+        # ==========================
+        # SAVE
+        # ==========================
+
+        try:
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+            print("PROJECT UPDATE ERROR:", e)
+
+            flash("Error updating project.", "danger")
+
+            return redirect(url_for("edit_project", project_id=project.id))
 
         flash("Project updated successfully!", "success")
 
@@ -1502,14 +1698,25 @@ def edit_project(project_id):
 #==================
 # VIEW PROJECT
 #==================
+from collections import defaultdict
+from sqlalchemy.orm import joinedload
+
 @app.route("/project/<int:project_id>")
 @login_required
 def view_project(project_id):
 
-    project = Project.query.filter_by(
-        id=project_id,
-        user_id=current_user.id
-    ).first_or_404()
+    project = (
+        Project.query
+        .filter_by(
+            id=project_id,
+            user_id=current_user.id
+        )
+        .first_or_404()
+    )
+
+    # ==========================
+    # SUBCONTRACTORS
+    # ==========================
 
     links = (
         ProjectSubcontractor.query
@@ -1518,7 +1725,11 @@ def view_project(project_id):
         .all()
     )
 
-    documents = (
+    # ==========================
+    # DOCUMENTS
+    # ==========================
+
+    docs = (
         Document.query
         .filter_by(project_id=project.id)
         .order_by(
@@ -1528,11 +1739,17 @@ def view_project(project_id):
         .all()
     )
 
+    # agrupar por tipo
+    documents = defaultdict(list)
+
+    for doc in docs:
+        documents[doc.document_type].append(doc)
+
     return render_template(
         "view_project.html",
         project=project,
         links=links,
-        documents=documents
+        documents=dict(documents)  # evita comportamento estranho no template
     )
 #==================
 # DELETE PROJECT
@@ -1547,45 +1764,58 @@ def delete_project(id):
         user_id=current_user.id
     ).first_or_404()
 
-    # =========================
-    # DELETE DOCUMENT FILES
-    # =========================
+    try:
 
-    documents = Document.query.filter_by(
-        project_id=project.id
-    ).all()
+        # =========================
+        # DELETE DOCUMENT FILES
+        # =========================
 
-    for doc in documents:
+        documents = Document.query.filter_by(
+            project_id=project.id
+        ).all()
 
-        file_path = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            doc.filename
-        )
+        for doc in documents:
 
-        if os.path.exists(file_path):
-            os.remove(file_path)
+            file_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                doc.filename
+            )
 
-        db.session.delete(doc)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print("FILE DELETE ERROR:", e)
 
-    # =========================
-    # REMOVE SUB RELATIONS
-    # =========================
+            db.session.delete(doc)
 
-    links = ProjectSubcontractor.query.filter_by(
-        project_id=project.id
-    ).all()
+        # =========================
+        # REMOVE SUB RELATIONS
+        # =========================
 
-    for link in links:
-        db.session.delete(link)
+        links = ProjectSubcontractor.query.filter_by(
+            project_id=project.id
+        ).all()
 
-    # =========================
-    # DELETE PROJECT
-    # =========================
+        for link in links:
+            db.session.delete(link)
 
-    db.session.delete(project)
-    db.session.commit()
+        # =========================
+        # DELETE PROJECT
+        # =========================
 
-    flash("Project deleted successfully", "success")
+        db.session.delete(project)
+
+        db.session.commit()
+
+        flash("Project deleted successfully", "success")
+
+    except Exception as e:
+
+        db.session.rollback()
+        print("DELETE PROJECT ERROR:", e)
+
+        flash("Error deleting project.", "danger")
 
     return redirect(url_for("dashboard"))
 #===============
