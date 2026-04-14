@@ -156,7 +156,6 @@ class User(UserMixin, db.Model):
 #====================
 # CLASS SUBCONTRACTOR
 #====================
-
 class Subcontractor(db.Model):
 
     __tablename__ = "subcontractor"
@@ -169,6 +168,25 @@ class Subcontractor(db.Model):
         nullable=False,
         index=True
     )
+
+    # ==========================
+    # PROJECT RELATIONSHIP
+    # ==========================
+
+    projects = db.relationship(
+    "ProjectSubcontractor",
+    back_populates="subcontractor",
+    lazy="joined",
+    cascade="all, delete-orphan"
+    )   
+
+    @property
+    def linked_projects(self):
+        return [link.project for link in self.projects]
+
+    # ==========================
+    # BASIC INFO
+    # ==========================
 
     name = db.Column(
         db.String(150),
@@ -189,6 +207,10 @@ class Subcontractor(db.Model):
         default="US/Eastern"
     )
 
+    # ==========================
+    # COMPLIANCE
+    # ==========================
+
     coi_expiration = db.Column(
         db.Date,
         index=True
@@ -202,7 +224,7 @@ class Subcontractor(db.Model):
     )
 
     # ==========================
-    # RELATIONSHIPS
+    # DOCUMENTS
     # ==========================
 
     documents = db.relationship(
@@ -242,9 +264,10 @@ class Subcontractor(db.Model):
             return "at_risk"
 
         return "compliant"
-#====================
-#CLASS DOCUMENT
-#====================
+    
+#=================
+#class Document
+#=================
 
 class Document(db.Model):
 
@@ -252,19 +275,21 @@ class Document(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # ==========================
+    # FILE INFO
+    # ==========================
+
     filename = db.Column(
         db.String(255),
         nullable=False
     )
 
     original_name = db.Column(
-        db.String(255),
-        nullable=False
+        db.String(255)
     )
 
     document_type = db.Column(
-        db.String(50),
-        default="Document",
+        db.String(100),
         index=True
     )
 
@@ -273,6 +298,40 @@ class Document(db.Model):
         default=1
     )
 
+    # ==========================
+    # RELATIONSHIPS
+    # ==========================
+
+    # document linked to subcontractor
+    sub_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subcontractor.id"),
+        index=True
+    )
+
+    # document linked to project
+    project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project.id"),
+        index=True
+    )
+
+    # who uploaded
+    uploaded_by = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        index=True
+    )
+
+    uploader = db.relationship(
+        "User",
+        backref="uploaded_documents"
+    )
+
+    # ==========================
+    # TIMESTAMPS
+    # ==========================
+
     uploaded_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
@@ -280,21 +339,15 @@ class Document(db.Model):
     )
 
     # ==========================
-    # RELATIONSHIPS
+    # HELPERS
     # ==========================
 
-    sub_id = db.Column(
-        db.Integer,
-        db.ForeignKey("subcontractor.id"),
-        index=True
-    )
+    @property
+    def display_name(self):
+        return self.original_name or self.filename
 
-    project_id = db.Column(
-        db.Integer,
-        db.ForeignKey("project.id"),
-        index=True
-    )
-
+    def __repr__(self):
+        return f"<Document {self.id} {self.document_type} v{self.version}>"
 # ==========================
 # PROJECT MODELS (NOVO)
 # ==========================
@@ -322,10 +375,10 @@ class Project(db.Model):
 
     # RELAÇÃO COM PROJECTSUBCONTRACTOR
     subs = db.relationship(
-        "ProjectSubcontractor",
-        backref="project",
-        lazy="select",
-        cascade="all, delete-orphan"
+    "ProjectSubcontractor",
+    back_populates="project",
+    lazy="joined",
+    cascade="all, delete-orphan"
     )
 
     # =========================
@@ -367,15 +420,17 @@ class Project(db.Model):
         if not self.subs:
             return 100
 
-        total = len(self.subs)
-
+        total = 0
         compliant = 0
 
         for ps in self.subs:
 
-            sub = ps.subcontractor
+            if not ps.subcontractor:
+                continue
 
-            if sub and sub.computed_status == "compliant":
+            total += 1
+
+            if ps.subcontractor.computed_status == "compliant":
                 compliant += 1
 
         if total == 0:
@@ -426,7 +481,6 @@ class Project(db.Model):
 #=================
 # CLASS PROJECTSUB
 #=================
-
 class ProjectSubcontractor(db.Model):
 
     __tablename__ = "project_subcontractor"
@@ -462,9 +516,14 @@ class ProjectSubcontractor(db.Model):
         default=datetime.utcnow
     )
 
+    project = db.relationship(
+        "Project",
+        back_populates="subs"
+    )
+
     subcontractor = db.relationship(
         "Subcontractor",
-        lazy="joined"
+        back_populates="projects"
     )
 
     __table_args__ = (
@@ -474,7 +533,6 @@ class ProjectSubcontractor(db.Model):
             name="unique_project_sub"
         ),
     )
-
 # ==========================
 # LOGIN MANAGER
 # ==========================
@@ -1178,6 +1236,10 @@ def allowed_file(filename):
 @login_required
 def add_sub():
 
+    projects = Project.query.filter_by(
+        user_id=current_user.id
+    ).all()
+
     if request.method == "POST":
 
         name = request.form.get("name", "").strip()
@@ -1202,7 +1264,6 @@ def add_sub():
         else:
             coi_expiration = None
 
-
         new_sub = Subcontractor(
             name=name,
             email=email,
@@ -1214,7 +1275,26 @@ def add_sub():
         )
 
         db.session.add(new_sub)
-        db.session.flush()
+        db.session.flush()  # garante new_sub.id
+
+        # ==========================
+        # LINK SUB TO PROJECTS
+        # ==========================
+
+        project_ids = request.form.getlist("projects")
+
+        for pid in set(project_ids):
+
+            link = ProjectSubcontractor(
+                project_id=int(pid),
+                subcontractor_id=new_sub.id
+            )
+
+            db.session.add(link)
+
+        # ==========================
+        # DOCUMENT UPLOAD
+        # ==========================
 
         files = request.files.getlist("documents")
 
@@ -1259,7 +1339,8 @@ def add_sub():
                     original_name=original_name,
                     document_type=doc_type,
                     version=new_version,
-                    sub_id=new_sub.id
+                    sub_id=new_sub.id,
+                    uploaded_by=current_user.id
                 )
 
                 db.session.add(new_doc)
@@ -1274,7 +1355,28 @@ def add_sub():
 
         return redirect(url_for("dashboard"))
 
-    return render_template("add_sub.html", sub=None)
+    return render_template(
+        "add_sub.html",
+        sub=None,
+        projects=projects,
+        selected_projects=[]
+    )
+#======================
+# DOWNLOAD DOC
+#======================
+@app.route("/download_document/<int:doc_id>")
+@login_required
+def download_document(doc_id):
+
+    doc = Document.query.get_or_404(doc_id)
+
+    return send_from_directory(
+        app.config["UPLOAD_FOLDER"],
+        doc.filename,
+        as_attachment=True,
+        download_name=doc.original_name
+    )
+    
 # ==========================
 # EDIT SUBCONTRACTOR
 # ==========================
@@ -1286,6 +1388,11 @@ def edit_sub(id):
         id=id,
         user_id=current_user.id
     ).first_or_404()
+
+    # carregar projetos do usuário
+    projects = Project.query.filter_by(
+        user_id=current_user.id
+    ).all()
 
     if request.method == "POST":
 
@@ -1318,6 +1425,27 @@ def edit_sub(id):
         else:
             sub.coi_expiration = None
 
+        # ==========================
+        # UPDATE PROJECT LINKS
+        # ==========================
+
+        project_ids = request.form.getlist("projects")
+
+        # remover vínculos antigos
+        ProjectSubcontractor.query.filter_by(
+            subcontractor_id=sub.id
+        ).delete(synchronize_session=False)
+
+        # criar novos vínculos
+        for pid in project_ids:
+
+            link = ProjectSubcontractor(
+                project_id=int(pid),
+                subcontractor_id=sub.id
+            )
+
+            db.session.add(link)
+
         try:
             db.session.commit()
             flash("Subcontractor updated successfully.", "success")
@@ -1329,7 +1457,23 @@ def edit_sub(id):
 
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_sub.html", sub=sub)
+    # ==========================
+    # PROJECTS ALREADY LINKED
+    # ==========================
+
+    selected_projects = [
+        link.project_id
+        for link in ProjectSubcontractor.query.filter_by(
+            subcontractor_id=sub.id
+        ).all()
+    ]
+
+    return render_template(
+        "edit_sub.html",
+        sub=sub,
+        projects=projects,
+        selected_projects=selected_projects
+    )
 # ==========================
 # DELETE SUBCONTRACTOR
 # ==========================
