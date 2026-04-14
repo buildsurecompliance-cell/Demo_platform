@@ -86,6 +86,8 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 # ==========================
 
 db = SQLAlchemy(app)
+with app.app_context():
+    db.create_all()
 
 login_manager = LoginManager()
 
