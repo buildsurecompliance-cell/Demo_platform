@@ -5,64 +5,71 @@
 
 {% if documents %}
 
-<table class="table">
+<table class="table table-striped">
 
-```
 <thead>
-    <tr>
-        <th>File</th>
-        <th>Type</th>
-        <th>Version</th>
-        <th>Action</th>
-    </tr>
+<tr>
+<th>File</th>
+<th>Type</th>
+<th>Version</th>
+<th>Uploaded</th>
+<th>Uploaded By</th>
+<th>Action</th>
+</tr>
 </thead>
 
 <tbody>
 
-    {% for doc in documents %}
+{% for doc in documents %}
 
-    <tr>
+<tr>
 
-        <td>
-            {{ doc.original_name or doc.filename }}
-        </td>
+<td>
+{{ doc.original_name or doc.filename }}
+</td>
 
-        <td>
-            {{ doc.document_type }}
-        </td>
+<td>
+{{ doc.document_type }}
+</td>
 
-        <td>
-            v{{ doc.version }}
-        </td>
+<td>
+v{{ doc.version }}
+</td>
 
-        <td>
+<td>
+{{ doc.uploaded_at | format_local_time }}
+</td>
 
-            <a href="{{ url_for('view_document', doc_id=doc.id) }}"
-               target="_blank"
-               class="btn btn-sm btn-primary">
-               Open
-            </a>
+<td>
+{{ doc.uploader.name if doc.uploader else "System" }}
+</td>
 
-            <form action="{{ url_for('delete_document', doc_id=doc.id) }}"
-                  method="POST"
-                  style="display:inline;">
+<td>
 
-                <button class="btn btn-sm btn-danger"
-                        onclick="return confirm('Delete this document?')">
-                    Delete
-                </button>
+<a href="{{ url_for('view_document', doc_id=doc.id) }}"
+target="_blank"
+class="btn btn-sm btn-primary">
+Open
+</a>
 
-            </form>
+<form action="{{ url_for('delete_document', doc_id=doc.id) }}"
+method="POST"
+style="display:inline;">
 
-        </td>
+<button class="btn btn-sm btn-danger"
+onclick="return confirm('Delete this document?')">
+Delete
+</button>
 
-    </tr>
+</form>
 
-    {% endfor %}
+</td>
+
+</tr>
+
+{% endfor %}
 
 </tbody>
-```
-
 </table>
 
 {% else %}

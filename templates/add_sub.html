@@ -3,115 +3,141 @@
 
 <div class="row justify-content-center mt-3">
 
-```
 <div class="col-md-7">
 
-    <h3 class="mb-4">
-        {{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}
-    </h3>
+<h3 class="mb-4">
+{{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}
+</h3>
 
-    <form method="POST" enctype="multipart/form-data">
-        
-        <div class="mb-3">
-            <label>Name</label>
-            <input
-                type="text"
-                class="form-control"
-                name="name"
-                value="{{ sub.name if sub else '' }}"
-                required>
-        </div>
+<form method="POST" enctype="multipart/form-data">
 
-        <div class="mb-3">
-            <label>Email</label>
-            <input
-                type="email"
-                class="form-control"
-                name="email"
-                value="{{ sub.email if sub else '' }}"
-                required>
-        </div>
+<div class="mb-3">
+<label>Name</label>
+<input
+type="text"
+class="form-control"
+name="name"
+value="{{ sub.name if sub else '' }}"
+required>
+</div>
 
-        <div class="mb-3">
-            <label>Phone</label>
-            <input
-                type="text"
-                class="form-control"
-                name="phone"
-                value="{{ sub.phone if sub else '' }}">
-        </div>
+<div class="mb-3">
+<label>Email</label>
+<input
+type="email"
+class="form-control"
+name="email"
+value="{{ sub.email if sub else '' }}"
+required>
+</div>
 
-        <div class="mb-3">
-            <label>Role</label>
-            <input
-                type="text"
-                class="form-control"
-                name="role"
-                value="{{ sub.role if sub else '' }}">
-        </div>
+<div class="mb-3">
+<label>Phone</label>
+<input
+type="text"
+class="form-control"
+name="phone"
+value="{{ sub.phone if sub else '' }}">
+</div>
 
-        <div class="mb-3">
-            <label>COI Expiration</label>
-            <input
-                type="date"
-                class="form-control"
-                name="coi_expiration"
-                value="{{ sub.coi_expiration.strftime('%Y-%m-%d') if sub and sub.coi_expiration else '' }}"
-                required>
-        </div>
+<div class="mb-3">
+<label>Role</label>
+<input
+type="text"
+class="form-control"
+name="role"
+value="{{ sub.role if sub else '' }}">
+</div>
 
-        <!-- TIMEZONE AUTOMATICO -->
-        <input type="hidden" name="timezone" id="timezoneInputHidden">
+<div class="mb-3">
+<label>Projects</label>
 
+<select
+id="projects"
+class="form-control"
+name="projects"
+multiple>
 
-        <!-- UPLOAD DOCUMENTS MELHORADO -->
+{% for project in projects %}
 
-        <div class="mb-3">
+<option value="{{ project.id }}"
+{% if project.id in selected_projects %}
+selected
+{% endif %}
+>
+{{ project.name }}
+</option>
+{% endfor %}
 
-            <label>Upload Documents</label>
+</select>
 
-            <div id="uploadBox" class="upload-box">
-
-                <p class="upload-text">
-                    Drag & drop files here or click to upload
-                </p>
-
-                <input
-                    type="file"
-                    name="documents"
-                    id="fileInput"
-                    class="file-input"
-                    multiple>
-
-            </div>
-
-            <div id="fileList" class="file-list"></div>
-
-        </div>
-
-
-        <div class="mb-3">
-            <label>Document Type</label>
-            <input
-                type="text"
-                class="form-control"
-                name="doc_type"
-                placeholder="Ex: COI, Contract">
-        </div>
-
-
-        <button type="submit" class="btn btn-success">
-            {{ 'Update' if sub else 'Add' }}
-        </button>
-
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-            Cancel
-        </a>
-
-    </form>
+<small class="text-muted">
+Search or select multiple projects
+</small>
 
 </div>
-```
+
+<div class="mb-3">
+<label>COI Expiration</label>
+<input
+type="date"
+class="form-control"
+name="coi_expiration"
+value="{{ sub.coi_expiration.strftime('%Y-%m-%d') if sub and sub.coi_expiration else '' }}"
+required>
+</div>
+
+<input type="hidden" name="timezone" id="timezoneInputHidden">
+
+<div class="mb-3">
+
+<label>Upload Documents</label>
+
+<div id="uploadBox" class="upload-box">
+
+<p class="upload-text">
+Drag & drop files here or click to upload
+</p>
+
+<input
+type="file"
+name="documents"
+id="fileInput"
+class="file-input"
+multiple>
+
+</div>
+
+<div id="fileList" class="file-list"></div>
+
+</div>
+
+<div class="mb-3">
+<label>Document Type</label>
+
+<select class="form-control" name="doc_type">
+
+<option value="COI">Certificate of Insurance</option>
+<option value="Contract">Contract</option>
+<option value="License">License</option>
+<option value="W9">W9</option>
+<option value="Safety">Safety Document</option>
+
+</select>
+
+</div>
+
+<button type="submit" class="btn btn-success">
+{{ 'Update' if sub else 'Add' }}
+</button>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+Cancel
+</a>
+
+</form>
+
+</div>
 
 </div>
 
@@ -160,57 +186,61 @@ padding:4px 0;
 
 </style>
 
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+
 <script>
 
 document.addEventListener("DOMContentLoaded", function(){
 
-    // timezone automático
+const tzField = document.getElementById("timezoneInputHidden");
 
-    const tzField = document.getElementById("timezoneInputHidden");
+if (tzField){
+tzField.value =
+Intl.DateTimeFormat().resolvedOptions().timeZone || "US/Eastern";
+}
 
-    if (tzField){
-        tzField.value =
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "US/Eastern";
-    }
+const uploadBox = document.getElementById("uploadBox");
+const fileInput = document.getElementById("fileInput");
+const fileList = document.getElementById("fileList");
 
+uploadBox.addEventListener("click", () => {
+fileInput.click();
+});
 
-    // upload preview
+fileInput.addEventListener("change", updateFileList);
 
-    const uploadBox = document.getElementById("uploadBox");
-    const fileInput = document.getElementById("fileInput");
-    const fileList = document.getElementById("fileList");
+function updateFileList(){
 
-    uploadBox.addEventListener("click", () => {
-        fileInput.click();
-    });
+fileList.innerHTML = "";
 
-    fileInput.addEventListener("change", updateFileList);
+const files = fileInput.files;
 
-    function updateFileList(){
+if(files.length === 0){
+return;
+}
 
-        fileList.innerHTML = "";
+const counter = document.createElement("div");
+counter.innerHTML = "<strong>" + files.length + " file(s) selected</strong>";
+fileList.appendChild(counter);
 
-        const files = fileInput.files;
+for(let i=0;i<files.length;i++){
 
-        if(files.length === 0){
-            return;
-        }
+const item = document.createElement("div");
+item.className="file-item";
+item.textContent = files[i].name;
 
-        const counter = document.createElement("div");
-        counter.innerHTML = "<strong>" + files.length + " file(s) selected</strong>";
-        fileList.appendChild(counter);
+fileList.appendChild(item);
 
-        for(let i=0;i<files.length;i++){
+}
 
-            const item = document.createElement("div");
-            item.className="file-item";
-            item.textContent = files[i].name;
+}
 
-            fileList.appendChild(item);
-
-        }
-
-    }
+new TomSelect("#projects",{
+plugins:['remove_button'],
+placeholder:"Search projects...",
+maxOptions:200
+});
 
 });
 

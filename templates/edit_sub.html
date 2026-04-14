@@ -1,63 +1,106 @@
 {% extends "base.html" %}
+
 {% block content %}
 
 <h3 class="mb-4">{{ sub and "Edit" or "Add" }} Subcontractor</h3>
 
 <form method="POST" enctype="multipart/form-data">
-    
-    <div class="mb-3">
-        <label>Name</label>
-        <input type="text" name="name" class="form-control" value="{{ sub.name if sub else '' }}" required>
-    </div>
-    <div class="mb-3">
-        <label>Email</label>
-        <input type="email" name="email" class="form-control" value="{{ sub.email if sub else '' }}">
-    </div>
-    <div class="mb-3">
-        <label>Phone</label>
-        <input type="text" name="phone" class="form-control" value="{{ sub.phone if sub else '' }}">
-    </div>
-    <div class="mb-3">
-        <label>Role</label>
-        <input type="text" name="role" class="form-control" value="{{ sub.role if sub else '' }}">
-    </div>
-    <div class="mb-3">
-        <label>COI Expiration</label>
-        <input type="date" name="coi_expiration" class="form-control" value="{{ sub.coi_expiration if sub else '' }}" required>
-    </div>
-    <div class="mb-3">
-        <label>Time Zone</label>
-        <input type="text" id="timezone" name="timezone" class="form-control" placeholder="Type to search timezone" value="{{ sub.timezone if sub else 'America/New_York' }}">
-    </div>
-    <div class="mb-3">
-        <label>Documents</label>
-        <input type="file" name="documents" multiple class="form-control">
-        <input type="text" name="doc_type" class="form-control mt-2" placeholder="Document type">
-    </div>
-    <button class="btn btn-primary">{{ sub and "Update" or "Add" }}</button>
+
+<div class="mb-3">
+<label>Name</label>
+<input type="text" name="name" class="form-control"
+value="{{ sub.name if sub else '' }}" required>
+</div>
+
+<div class="mb-3">
+<label>Email</label>
+<input type="email" name="email" class="form-control"
+value="{{ sub.email if sub else '' }}">
+</div>
+
+<div class="mb-3">
+<label>Phone</label>
+<input type="text" name="phone" class="form-control"
+value="{{ sub.phone if sub else '' }}">
+</div>
+
+<div class="mb-3">
+<label>Role</label>
+<input type="text" name="role" class="form-control"
+value="{{ sub.role if sub else '' }}">
+</div>
+
+<div class="mb-3">
+<label>Projects</label>
+
+<select id="projects" name="projects" class="form-control" multiple>
+
+{% for project in projects %}
+
+<option value="{{ project.id }}"
+{% if project.id in selected_projects %}selected{% endif %}>
+
+{{ project.name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<div class="mb-3">
+<label>COI Expiration</label>
+
+<input type="date"
+name="coi_expiration"
+class="form-control"
+value="{{ sub.coi_expiration.strftime('%Y-%m-%d') if sub and sub.coi_expiration else '' }}"
+required>
+
+</div>
+
+<div class="mb-3">
+<label>Documents</label>
+
+<input type="file"
+name="documents"
+multiple
+class="form-control">
+
+<div class="mb-3">
+<label>Document Type</label>
+
+<select class="form-control" name="doc_type">
+
+<option value="COI">Certificate of Insurance</option>
+<option value="Contract">Contract</option>
+<option value="License">License</option>
+<option value="W9">W9</option>
+<option value="Safety">Safety Document</option>
+
+</select>
+
+</div>
+</div>
+
+<button class="btn btn-primary">
+{{ sub and "Update" or "Add" }}
+</button>
+
 </form>
 
-<script>
-// Autocomplete simples de fusos EUA
-const timezones = [
-    "America/New_York",
-    "America/Chicago",
-    "America/Denver",
-    "America/Los_Angeles",
-    "America/Phoenix",
-    "America/Anchorage",
-    "America/Adak",
-    "Pacific/Honolulu"
-];
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 
-const tzInput = document.getElementById("timezone");
-tzInput.addEventListener("input", function() {
-    const value = tzInput.value.toLowerCase();
-    const suggestions = timezones.filter(tz => tz.toLowerCase().includes(value));
-    if(suggestions.length > 0){
-        tzInput.value = suggestions[0];
-    }
+<script>
+
+new TomSelect("#projects",{
+plugins:['remove_button'],
+placeholder:"Search projects..."
 });
+
 </script>
 
 {% endblock %}
