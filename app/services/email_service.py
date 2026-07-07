@@ -1,0 +1,62 @@
+import os
+
+import requests
+
+
+# ==========================
+# EMAIL REMINDER
+# ==========================
+
+def send_email_reminder(
+    to_email,
+    subject,
+    message
+):
+
+    api_key = os.environ.get(
+        "RESEND_API_KEY"
+    )
+
+    if not api_key:
+        print(
+            "RESEND_API_KEY not configured"
+        )
+        return False
+
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "BuildSure <onboarding@resend.dev>",
+                "to": [to_email],
+                "subject": subject,
+                "html": f"<p>{message}</p>",
+            },
+            timeout=10,
+        )
+
+        print(
+            "EMAIL STATUS:",
+            response.status_code
+        )
+
+        print(
+            "EMAIL RESPONSE:",
+            response.text
+        )
+
+        return response.status_code in (
+            200,
+            202,
+        )
+
+    except requests.exceptions.RequestException as e:
+        print(
+            "EMAIL ERROR:",
+            str(e)
+        )
+        return False

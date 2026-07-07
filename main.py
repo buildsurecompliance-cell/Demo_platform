@@ -1233,7 +1233,6 @@ def allowed_file(filename):
     return "." in filename and \
            filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 @app.route("/add_sub", methods=["GET", "POST"])
 @login_required
 def add_sub():
@@ -2068,3 +2067,5 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+    format_local_time
