@@ -3,7 +3,9 @@ import uuid
 
 from collections import defaultdict
 from datetime import datetime
-
+from app.services.projects.project_ai_summary_service import (
+    get_project_ai_summary,
+)
 from flask import (
     Blueprint,
     current_app,
@@ -339,6 +341,10 @@ def view_project(project_id):
         .first_or_404()
     )
 
+    ai_summary = get_project_ai_summary(
+        project.id
+    )
+
     links = (
         ProjectSubcontractor.query
         .options(joinedload(ProjectSubcontractor.subcontractor))
@@ -366,6 +372,7 @@ def view_project(project_id):
         project=project,
         links=links,
         documents=dict(documents),
+        ai_summary=ai_summary,
     )
 
 

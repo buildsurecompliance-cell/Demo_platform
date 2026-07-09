@@ -10,6 +10,7 @@ from flask_login import (
 )
 
 from app.models import (
+    Document,
     Project,
     Subcontractor,
 )
@@ -225,6 +226,59 @@ def dashboard():
             revenue_at_risk += contract_value
 
     # =========================
+    # AI DASHBOARD
+    # =========================
+
+    documents = (
+        Document.query
+        .join(Subcontractor)
+        .filter(
+            Subcontractor.user_id == current_user.id
+        )
+        .all()
+    )
+
+    documents_analyzed = 0
+    blocked_documents = 0
+    pending_documents = 0
+    ready_documents = 0
+
+    total_score = 0
+    score_count = 0
+
+    for doc in documents:
+
+        if doc.ai_status != "analyzed":
+            continue
+
+        documents_analyzed += 1
+
+        result = doc.ai_compliance_result or {}
+
+        status = result.get("status")
+        score = result.get("score")
+
+        if status == "Blocked":
+            blocked_documents += 1
+
+        elif status == "Pending Renewal":
+            pending_documents += 1
+
+        else:
+            ready_documents += 1
+
+        if score is not None:
+            total_score += score
+            score_count += 1
+
+    average_ai_score = 0
+
+    if score_count:
+        average_ai_score = round(
+            total_score / score_count
+        )
+
+    # =========================
     # TEMPLATE
     # =========================
 
@@ -238,4 +292,9 @@ def dashboard():
         compliant_count=compliant_count,
         total_portfolio=total_portfolio,
         revenue_at_risk=revenue_at_risk,
+        documents_analyzed=documents_analyzed,
+        blocked_documents=blocked_documents,
+        pending_documents=pending_documents,
+        ready_documents=ready_documents,
+        average_ai_score=average_ai_score,
     )

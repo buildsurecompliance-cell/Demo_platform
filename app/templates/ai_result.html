@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2>AI Compliance Analysis</h2>
+
+    <hr>
+
+    <h4>Status</h4>
+    <div class="alert alert-info">
+        {{ result.compliance.get("status", "Unknown") }}
+    </div>
+
+    <h4>Risk Level</h4>
+    <p>{{ result.compliance.get("risk_level", "N/A") }}</p>
+
+    <h4>Score</h4>
+    <p>{{ result.compliance.get("score", "N/A") }}</p>
+
+    {% if result.compliance.get("renewal") %}
+    <hr>
+    <h4>Renewal</h4>
+    <pre>{{ result.compliance.get("renewal") | tojson(indent=2) }}</pre>
+    {% endif %}
+
+    <hr>
+
+    <h4>Issues</h4>
+    <pre>{{ result.compliance.get("issues", []) | tojson(indent=2) }}</pre>
+
+    <hr>
+
+    <h4>Warnings</h4>
+    <pre>{{ result.compliance.get("warnings", []) | tojson(indent=2) }}</pre>
+
+    <hr>
+
+    <h4>Extracted Data</h4>
+    <pre>{{ result.coi_data | tojson(indent=2) }}</pre>
+
+</div>
+
+{% endblock %}

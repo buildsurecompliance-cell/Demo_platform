@@ -10,6 +10,7 @@ from app.extensions import (
 )
 
 from app.routes import (
+    ai_bp,
     auth_bp,
     dashboard_bp,
     documents_bp,
@@ -44,6 +45,7 @@ def create_app():
     app.register_blueprint(notifications_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(subcontractors_bp)
+    app.register_blueprint(ai_bp)
 
     with app.app_context():
 

@@ -40,7 +40,7 @@ def home():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard.dashboard"))
 
-    return render_template("landing.html")
+    return redirect(url_for("auth.login"))
 
 
 # ==========================
@@ -284,7 +284,7 @@ def login():
 
             login_user(
                 user,
-                remember=True
+                remember=False
             )
 
             next_page = request.args.get(
@@ -319,6 +319,7 @@ def logout():
     logout_user()
 
     session.clear()
+    session.modified = True
 
     flash(
         "You have been logged out.",

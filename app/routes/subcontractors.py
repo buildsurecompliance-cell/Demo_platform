@@ -29,16 +29,16 @@ from app.models import (
     Subcontractor,
 )
 
+from app.services.document_analysis_service import (
+    analyze_and_save_document,
+)
+
 
 subcontractors_bp = Blueprint(
     "subcontractors",
     __name__,
 )
 
-
-# ==========================
-# FILE VALIDATION
-# ==========================
 
 def allowed_file(filename):
 
@@ -52,10 +52,6 @@ def allowed_file(filename):
         and filename.rsplit(".", 1)[1].lower() in allowed_extensions
     )
 
-
-# ==========================
-# VIEW SUB DOCUMENTS
-# ==========================
 
 @subcontractors_bp.route("/sub/<int:sub_id>/documents")
 @login_required
@@ -80,14 +76,7 @@ def view_sub_documents(sub_id):
     )
 
 
-# ==========================
-# ADD SUBCONTRACTOR
-# ==========================
-
-@subcontractors_bp.route(
-    "/add_sub",
-    methods=["GET", "POST"]
-)
+@subcontractors_bp.route("/add_sub", methods=["GET", "POST"])
 @login_required
 def add_sub():
 
@@ -103,33 +92,20 @@ def add_sub():
         role = request.form.get("role")
 
         if not name:
-            flash(
-                "Subcontractor name is required.",
-                "danger"
-            )
-            return redirect(
-                url_for("subcontractors.add_sub")
-            )
+            flash("Subcontractor name is required.", "danger")
+            return redirect(url_for("subcontractors.add_sub"))
 
         coi_raw = request.form.get("coi_expiration")
 
         if coi_raw:
-
             try:
                 coi_expiration = datetime.strptime(
                     coi_raw,
                     "%Y-%m-%d"
                 ).date()
-
             except ValueError:
-                flash(
-                    "Invalid date format.",
-                    "danger"
-                )
-                return redirect(
-                    url_for("subcontractors.add_sub")
-                )
-
+                flash("Invalid date format.", "danger")
+                return redirect(url_for("subcontractors.add_sub"))
         else:
             coi_expiration = None
 
@@ -146,24 +122,16 @@ def add_sub():
         db.session.add(new_sub)
         db.session.flush()
 
-        # ==========================
-        # LINK SUB TO PROJECTS
-        # ==========================
-
         project_ids = request.form.getlist("projects")
 
         for pid in set(project_ids):
-
             link = ProjectSubcontractor(
                 project_id=int(pid),
                 subcontractor_id=new_sub.id,
             )
-
             db.session.add(link)
 
-        # ==========================
-        # DOCUMENT UPLOAD
-        # ==========================
+        uploaded_docs = []
 
         files = request.files.getlist("documents")
 
@@ -173,17 +141,11 @@ def add_sub():
                 continue
 
             if not allowed_file(file.filename):
-                flash(
-                    f"Invalid file type: {file.filename}",
-                    "danger"
-                )
+                flash(f"Invalid file type: {file.filename}", "danger")
                 continue
 
             try:
-
-                original_name = secure_filename(
-                    file.filename
-                )
+                original_name = secure_filename(file.filename)
 
                 doc_type = (
                     request.form.get("doc_type")
@@ -206,9 +168,7 @@ def add_sub():
                     else 1
                 )
 
-                unique_name = (
-                    f"{uuid.uuid4().hex}_{original_name}"
-                )
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
                 path = os.path.join(
                     current_app.config["UPLOAD_FOLDER"],
@@ -227,24 +187,26 @@ def add_sub():
                 )
 
                 db.session.add(new_doc)
+                uploaded_docs.append(new_doc)
 
             except Exception as e:
                 print("UPLOAD ERROR:", e)
-                flash(
-                    f"Error uploading {file.filename}",
-                    "danger"
-                )
+                flash(f"Error uploading {file.filename}", "danger")
 
-        db.session.commit()
+        try:
+            db.session.commit()
 
-        flash(
-            "Subcontractor added successfully!",
-            "success"
-        )
+            for doc in uploaded_docs:
+                analyze_and_save_document(doc.id)
 
-        return redirect(
-            url_for("dashboard.dashboard")
-        )
+            flash("Subcontractor added successfully!", "success")
+
+        except Exception as e:
+            db.session.rollback()
+            print("ADD SUB ERROR:", e)
+            flash("Error adding subcontractor.", "danger")
+
+        return redirect(url_for("dashboard.dashboard"))
 
     return render_template(
         "add_sub.html",
@@ -254,14 +216,7 @@ def add_sub():
     )
 
 
-# ==========================
-# EDIT SUBCONTRACTOR
-# ==========================
-
-@subcontractors_bp.route(
-    "/edit_sub/<int:id>",
-    methods=["GET", "POST"]
-)
+@subcontractors_bp.route("/edit_sub/<int:id>", methods=["GET", "POST"])
 @login_required
 def edit_sub(id):
 
@@ -282,10 +237,7 @@ def edit_sub(id):
         role = request.form.get("role")
 
         if not name:
-            flash(
-                "Subcontractor name is required.",
-                "danger"
-            )
+            flash("Subcontractor name is required.", "danger")
             return redirect(
                 url_for(
                     "subcontractors.edit_sub",
@@ -302,31 +254,21 @@ def edit_sub(id):
         expiration_raw = request.form.get("coi_expiration")
 
         if expiration_raw:
-
             try:
                 sub.coi_expiration = datetime.strptime(
                     expiration_raw,
                     "%Y-%m-%d"
                 ).date()
-
             except ValueError:
-                flash(
-                    "Invalid date format.",
-                    "danger"
-                )
+                flash("Invalid date format.", "danger")
                 return redirect(
                     url_for(
                         "subcontractors.edit_sub",
                         id=sub.id
                     )
                 )
-
         else:
             sub.coi_expiration = None
-
-        # ==========================
-        # UPDATE PROJECT LINKS
-        # ==========================
 
         project_ids = request.form.getlist("projects")
 
@@ -337,35 +279,88 @@ def edit_sub(id):
         )
 
         for pid in project_ids:
-
             link = ProjectSubcontractor(
                 project_id=int(pid),
                 subcontractor_id=sub.id,
             )
-
             db.session.add(link)
+
+        uploaded_docs = []
+
+        files = request.files.getlist("documents")
+
+        for file in files:
+
+            if not file or file.filename == "":
+                continue
+
+            if not allowed_file(file.filename):
+                flash(f"Invalid file type: {file.filename}", "danger")
+                continue
+
+            try:
+                original_name = secure_filename(file.filename)
+
+                doc_type = (
+                    request.form.get("doc_type")
+                    or "Document"
+                )
+
+                existing_doc = (
+                    Document.query
+                    .filter_by(
+                        sub_id=sub.id,
+                        document_type=doc_type,
+                    )
+                    .order_by(Document.version.desc())
+                    .first()
+                )
+
+                new_version = (
+                    existing_doc.version + 1
+                    if existing_doc
+                    else 1
+                )
+
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
+
+                path = os.path.join(
+                    current_app.config["UPLOAD_FOLDER"],
+                    unique_name,
+                )
+
+                file.save(path)
+
+                new_doc = Document(
+                    filename=unique_name,
+                    original_name=original_name,
+                    document_type=doc_type,
+                    version=new_version,
+                    sub_id=sub.id,
+                    uploaded_by=current_user.id,
+                )
+
+                db.session.add(new_doc)
+                uploaded_docs.append(new_doc)
+
+            except Exception as e:
+                print("EDIT SUB UPLOAD ERROR:", e)
+                flash(f"Error uploading {file.filename}", "danger")
 
         try:
             db.session.commit()
 
-            flash(
-                "Subcontractor updated successfully.",
-                "success"
-            )
+            for doc in uploaded_docs:
+                analyze_and_save_document(doc.id)
+
+            flash("Subcontractor updated successfully.", "success")
 
         except Exception as e:
             db.session.rollback()
-
             print("EDIT SUB ERROR:", e)
+            flash("Error updating subcontractor.", "danger")
 
-            flash(
-                "Error updating subcontractor.",
-                "danger"
-            )
-
-        return redirect(
-            url_for("dashboard.dashboard")
-        )
+        return redirect(url_for("dashboard.dashboard"))
 
     selected_projects = [
         link.project_id
@@ -382,14 +377,7 @@ def edit_sub(id):
     )
 
 
-# ==========================
-# DELETE SUBCONTRACTOR
-# ==========================
-
-@subcontractors_bp.route(
-    "/delete_sub/<int:id>",
-    methods=["POST"]
-)
+@subcontractors_bp.route("/delete_sub/<int:id>", methods=["POST"])
 @login_required
 def delete_sub(id):
 
@@ -399,7 +387,6 @@ def delete_sub(id):
     ).first_or_404()
 
     try:
-
         for doc in sub.documents:
 
             file_path = os.path.join(
@@ -408,32 +395,19 @@ def delete_sub(id):
             )
 
             if os.path.exists(file_path):
-
                 try:
                     os.remove(file_path)
-
                 except Exception as e:
                     print("FILE DELETE ERROR:", e)
 
         db.session.delete(sub)
         db.session.commit()
 
-        flash(
-            "Subcontractor deleted successfully.",
-            "success"
-        )
+        flash("Subcontractor deleted successfully.", "success")
 
     except Exception as e:
-
         db.session.rollback()
-
         print("DELETE SUB ERROR:", e)
+        flash("Error deleting subcontractor.", "danger")
 
-        flash(
-            "Error deleting subcontractor.",
-            "danger"
-        )
-
-    return redirect(
-        url_for("dashboard.dashboard")
-    )
+    return redirect(url_for("dashboard.dashboard"))

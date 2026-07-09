@@ -67,25 +67,84 @@
 
             </div>
 
-            <!-- DOCUMENT TYPE -->
-            <div class="form-group">
-                <label>Document Type</label>
+            <!-- PROJECT DOCUMENT TYPE -->
 
-                <select name="doc_type">
-                    <option value="Contract">Contract</option>
-                    <option value="Subcontract">Subcontract</option>
-                    <option value="Insurance">Insurance</option>
-                    <option value="Permit">Permit</option>
-                    <option value="Safety Plan">Safety Plan</option>
-                    <option value="Change Order">Change Order</option>
+            <div class="form-group">
+
+                <label>Project Document Type</label>
+
+                <select
+                    name="doc_type"
+                    class="form-control">
+
+                    <optgroup label="Contracts">
+
+                        <option value="Prime Contract">
+                            Prime Contract
+                        </option>
+
+                        <option value="Subcontract Agreement">
+                            Subcontract Agreement
+                        </option>
+
+                        <option value="Change Order">
+                            Change Order
+                        </option>
+
+                    </optgroup>
+
+                    <optgroup label="Project Information">
+
+                        <option value="Scope of Work">
+                            Scope of Work
+                        </option>
+
+                        <option value="Owner Requirements">
+                            Owner Requirements
+                        </option>
+
+                        <option value="Specifications">
+                            Specifications
+                        </option>
+
+                        <option value="Drawings">
+                            Drawings
+                        </option>
+
+                        <option value="Project Schedule">
+                            Project Schedule
+                        </option>
+
+                    </optgroup>
+
+                    <optgroup label="Permits">
+
+                        <option value="Permit">
+                            Permit
+                        </option>
+
+                        <option value="Inspection Report">
+                            Inspection Report
+                        </option>
+
+                    </optgroup>
+
                 </select>
+
             </div>
 
             <!-- FILE UPLOAD -->
+
             <div class="form-group">
+
                 <label>Upload Project Documents</label>
 
-                <input type="file" name="documents" multiple>
+                <input
+                    type="file"
+                    name="documents"
+                    class="form-control"
+                    multiple>
+
             </div>
 
             <button type="submit" class="btn-save">

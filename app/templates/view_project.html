@@ -16,57 +16,118 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 </p>
 
 {% if project.end_date %}
+<p><strong>Contract Status:</strong> {{ project.contract_status }}</p>
+<p><strong>Days Remaining:</strong> {{ project.days_remaining }}</p>
+{% endif %}
 
-<p>
-<strong>Contract Status:</strong>
-{{ project.contract_status }}
-</p>
+<hr>
 
-<p>
-<strong>Days Remaining:</strong>
-{{ project.days_remaining }}
-</p>
+{% if ai_summary %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
 
+        <h4>🧠 AI Project Summary</h4>
+
+        <div class="row text-center mt-3">
+
+            <div class="col">
+                <h2>{{ ai_summary.score }}%</h2>
+                <small>AI Score</small>
+            </div>
+
+            <div class="col">
+                <h2 class="text-success">{{ ai_summary.ready }}</h2>
+                <small>Ready</small>
+            </div>
+
+            <div class="col">
+                <h2 class="text-warning">{{ ai_summary.pending }}</h2>
+                <small>Pending</small>
+            </div>
+
+            <div class="col">
+                <h2 class="text-danger">{{ ai_summary.blocked }}</h2>
+                <small>Blocked</small>
+            </div>
+
+        </div>
+
+        <hr>
+
+        <p><strong>Risk:</strong> {{ ai_summary.risk }}</p>
+        <p><strong>AI Mobilization:</strong> {{ ai_summary.mobilization }}</p>
+        <p>
+            <strong>Revenue at Risk:</strong>
+            ${{ "{:,.0f}".format(ai_summary.revenue_at_risk or 0) }}
+        </p>
+
+        {% if ai_summary.critical_issues %}
+            <hr>
+            <h5>Critical Issues</h5>
+
+            {% for item in ai_summary.critical_issues %}
+                <div class="alert alert-danger">
+                    <strong>{{ item.subcontractor }}</strong>
+                    — {{ item.document_type }}
+
+                    <ul class="mb-0 mt-2">
+                        {% for issue in item.issues %}
+                            <li>{{ issue.message if issue.message else issue.get("message") }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+    </div>
+</div>
 {% endif %}
 
 <hr>
 
 <h3>Subcontractors</h3>
 
-<ul>
+<table class="table">
+<thead>
+<tr>
+<th>Name</th>
+<th>Trade</th>
+<th>Status</th>
+<th>Documents</th>
+</tr>
+</thead>
 
+<tbody>
 {% for ps in links %}
-
-<li>
-
-{{ ps.subcontractor.name }}
-
+<tr>
+<td>{{ ps.subcontractor.name }}</td>
+<td>{{ ps.subcontractor.role or "—" }}</td>
+<td>
 {% if ps.subcontractor.computed_status == "expired" %}
-🔴 Expired
-
+<span class="badge bg-danger">Expired</span>
 {% elif ps.subcontractor.computed_status == "at_risk" %}
-🟡 At Risk
-
+<span class="badge bg-warning text-dark">At Risk</span>
 {% else %}
-🟢 Compliant
-
+<span class="badge bg-success">Compliant</span>
 {% endif %}
-
-</li>
-
+</td>
+<td>
+<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=ps.subcontractor.id) }}">
+View Documents
+</a>
+</td>
+</tr>
 {% else %}
-
-<li>No subcontractors linked.</li>
-
+<tr>
+<td colspan="4">No subcontractors linked.</td>
+</tr>
 {% endfor %}
-
-</ul>
+</tbody>
+</table>
 
 <hr>
 
 <h3>Project Documents</h3>
-
-<br>
 
 {% if documents %}
 
@@ -81,6 +142,7 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 <th>Document</th>
 <th>Version</th>
 <th>Upload Date</th>
+<th>AI</th>
 <th>Actions</th>
 </tr>
 </thead>
@@ -92,22 +154,31 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 <tr>
 
 <td>
-
 <a href="{{ url_for('documents.view_document', doc_id=doc.id) }}">
 {{ doc.original_name }}
 </a>
+</td>
 
+<td>v{{ doc.version }}</td>
+
+<td>{{ doc.uploaded_at|format_local_time }}</td>
+
+<td>
+{% if doc.ai_status == "analyzed" %}
+<span class="badge bg-success">Analyzed</span>
+{% elif doc.ai_status == "failed" %}
+<span class="badge bg-danger">Failed</span>
+{% else %}
+<span class="badge bg-secondary">Not Analyzed</span>
+{% endif %}
 </td>
 
 <td>
-v{{ doc.version }}
-</td>
 
-<td>
-{{ doc.uploaded_at|format_local_time }}
-</td>
-
-<td>
+<a href="{{ url_for('ai.analyze_document', doc_id=doc.id) }}"
+class="btn btn-sm btn-outline-success">
+Analyze
+</a>
 
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}"
       method="POST"
@@ -115,9 +186,7 @@ v{{ doc.version }}
 
 <button class="btn btn-danger btn-sm"
 onclick="return confirm('Delete this document?')">
-
 Delete
-
 </button>
 
 </form>
@@ -131,8 +200,6 @@ Delete
 </tbody>
 
 </table>
-
-<br>
 
 {% endfor %}
 

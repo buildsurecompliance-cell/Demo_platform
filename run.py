@@ -2,7 +2,7 @@ from app import create_app
 
 from app.extensions import scheduler
 
-from app.services.reminder_service import (
+from app.services.notifications.reminder_service import (
     check_and_send_auto_reminders_for_all_users,
 )
 

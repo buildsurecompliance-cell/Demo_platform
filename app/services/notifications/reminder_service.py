@@ -10,7 +10,7 @@ from app.extensions import db
 
 from app.models import Subcontractor
 
-from app.services.email_service import (
+from app.services.notifications.email_service import (
     send_email_reminder,
 )
 

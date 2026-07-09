@@ -5,7 +5,7 @@
 
 {% if documents %}
 
-<table class="table table-striped">
+<table class="table table-striped align-middle">
 
 <thead>
 <tr>
@@ -13,7 +13,9 @@
 <th>Type</th>
 <th>Version</th>
 <th>Uploaded</th>
-<th>Uploaded By</th>
+<th>AI Status</th>
+<th>Risk</th>
+<th>Score</th>
 <th>Action</th>
 </tr>
 </thead>
@@ -24,24 +26,48 @@
 
 <tr>
 
+<td>{{ doc.original_name or doc.filename }}</td>
+
+<td>{{ doc.document_type }}</td>
+
+<td>v{{ doc.version }}</td>
+
+<td>{{ doc.uploaded_at | format_local_time }}</td>
+
 <td>
-{{ doc.original_name or doc.filename }}
+    {% if doc.ai_status == "analyzed" %}
+        <span class="badge bg-success">Analyzed</span>
+    {% elif doc.ai_status == "failed" %}
+        <span class="badge bg-danger">Failed</span>
+    {% else %}
+        <span class="badge bg-secondary">Not Analyzed</span>
+    {% endif %}
 </td>
 
 <td>
-{{ doc.document_type }}
+    {% if doc.ai_compliance_result %}
+        {% set risk = doc.ai_compliance_result.get("risk_level") %}
+
+        {% if risk == "High" %}
+            <span class="badge bg-danger">High</span>
+        {% elif risk == "Medium" %}
+            <span class="badge bg-warning text-dark">Medium</span>
+        {% elif risk == "Low" %}
+            <span class="badge bg-success">Low</span>
+        {% else %}
+            —
+        {% endif %}
+    {% else %}
+        —
+    {% endif %}
 </td>
 
 <td>
-v{{ doc.version }}
-</td>
-
-<td>
-{{ doc.uploaded_at | format_local_time }}
-</td>
-
-<td>
-{{ doc.uploader.name if doc.uploader else "System" }}
+    {% if doc.ai_compliance_result %}
+        {{ doc.ai_compliance_result.get("score") }}
+    {% else %}
+        —
+    {% endif %}
 </td>
 
 <td>
@@ -50,6 +76,11 @@ v{{ doc.version }}
 target="_blank"
 class="btn btn-sm btn-primary">
 Open
+</a>
+
+<a href="{{ url_for('ai.analyze_document', doc_id=doc.id) }}"
+class="btn btn-sm btn-outline-success">
+Analyze
 </a>
 
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}"
@@ -66,6 +97,53 @@ Delete
 </td>
 
 </tr>
+
+{% if doc.ai_compliance_result %}
+
+<tr>
+<td colspan="8">
+
+    <div class="border rounded p-3 bg-light">
+
+        <strong>Status:</strong>
+        {{ doc.ai_compliance_result.get("status") }}
+
+        <br>
+
+        <strong>Summary:</strong>
+        {{ doc.ai_compliance_result.get("risk_summary") }}
+
+        {% set issues = doc.ai_compliance_result.get("issues", []) %}
+        {% set warnings = doc.ai_compliance_result.get("warnings", []) %}
+
+        {% if issues %}
+            <div class="mt-2">
+                <strong>Issues:</strong>
+                <ul class="mb-0">
+                    {% for issue in issues %}
+                        <li>{{ issue.get("message") }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% if warnings %}
+            <div class="mt-2">
+                <strong>Warnings:</strong>
+                <ul class="mb-0">
+                    {% for warning in warnings %}
+                        <li>{{ warning.get("message") }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+    </div>
+
+</td>
+</tr>
+
+{% endif %}
 
 {% endfor %}
 
