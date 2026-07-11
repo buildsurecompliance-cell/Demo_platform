@@ -55,6 +55,16 @@ class ProjectSubcontractor(db.Model):
         back_populates="projects"
     )
 
+    @property
+    def readiness(self):
+        from app.services.readiness_service import calculate_readiness
+
+        return calculate_readiness(self)
+
+    @property
+    def readiness_status(self):
+        return self.readiness["status"]
+
     # ==========================
     # CONSTRAINTS
     # ==========================

@@ -103,9 +103,9 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 <td>{{ ps.subcontractor.name }}</td>
 <td>{{ ps.subcontractor.role or "—" }}</td>
 <td>
-{% if ps.subcontractor.computed_status == "expired" %}
+{% if ps.readiness_status == "BLOCKED" %}
 <span class="badge bg-danger">Expired</span>
-{% elif ps.subcontractor.computed_status == "at_risk" %}
+{% elif ps.readiness_status == "PENDING" %}
 <span class="badge bg-warning text-dark">At Risk</span>
 {% else %}
 <span class="badge bg-success">Compliant</span>

@@ -83,6 +83,10 @@ class Project(db.Model):
 
     @property
     def compliance_score(self):
+        from app.services.readiness_service import (
+            READY,
+            calculate_readiness,
+        )
 
         if not self.subs:
             return 100
@@ -97,7 +101,7 @@ class Project(db.Model):
 
             total += 1
 
-            if ps.subcontractor.computed_status == "compliant":
+            if calculate_readiness(ps)["status"] == READY:
                 compliant += 1
 
         if total == 0:
@@ -130,6 +134,14 @@ class Project(db.Model):
 
     @property
     def mobilization_status(self):
+        from app.services.readiness_service import (
+            BLOCKED,
+            PENDING,
+            calculate_readiness,
+        )
+
+        if not self.subs:
+            return "Ready to Mobilize"
 
         statuses = []
 
@@ -141,13 +153,13 @@ class Project(db.Model):
                 continue
 
             statuses.append(
-                sub.computed_status
+                calculate_readiness(ps)["status"]
             )
 
-        if "expired" in statuses:
+        if BLOCKED in statuses:
             return "Blocked"
 
-        if "at_risk" in statuses:
+        if PENDING in statuses:
             return "Pending Compliance"
 
         return "Ready to Mobilize"
