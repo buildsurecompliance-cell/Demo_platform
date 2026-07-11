@@ -1,0 +1,325 @@
+from dataclasses import dataclass
+from datetime import date, datetime
+from typing import Any
+import re
+
+from app.services.document_intelligence.document_router import (
+    normalize_document_type,
+)
+
+
+MIN_AI_CONFIDENCE = 0.8
+
+EVIDENCE_SOURCE_AI = "document_intelligence"
+EVIDENCE_TYPE_COI = "coi"
+
+
+@dataclass(frozen=True)
+class ComplianceEvidence:
+    evidence_type: str
+    source: str
+    value: dict[str, Any]
+    confidence: float | None = None
+    validated: bool = False
+    document_id: int | None = None
+    rejection_code: str | None = None
+    rejection_message: str | None = None
+
+
+def collect_coi_evidence(subcontractor):
+    documents = list(
+        getattr(
+            subcontractor,
+            "documents",
+            [],
+        )
+        or []
+    )
+
+    coi_documents = [
+        document
+        for document in documents
+        if _belongs_to_subcontractor(document, subcontractor)
+        if normalize_document_type(
+            getattr(
+                document,
+                "document_type",
+                None,
+            )
+        ) == "coi"
+    ]
+
+    if not coi_documents:
+        return []
+
+    evidence = [
+        _coi_evidence_from_document(document)
+        for document in coi_documents
+    ]
+
+    return sorted(
+        evidence,
+        key=lambda item: (
+            item.validated,
+            item.value.get("version", 0),
+            item.value.get("uploaded_at") or datetime.min,
+            item.document_id or 0,
+        ),
+        reverse=True,
+    )
+
+
+def _belongs_to_subcontractor(document, subcontractor):
+    if getattr(
+        document,
+        "project_id",
+        None,
+    ) and not getattr(
+        document,
+        "sub_id",
+        None,
+    ):
+        return False
+
+    subcontractor_id = getattr(
+        subcontractor,
+        "id",
+        None,
+    )
+    document_sub_id = getattr(
+        document,
+        "sub_id",
+        None,
+    )
+
+    if subcontractor_id and document_sub_id:
+        return subcontractor_id == document_sub_id
+
+    return True
+
+
+def _coi_evidence_from_document(document):
+    ai_status = getattr(
+        document,
+        "ai_status",
+        None,
+    )
+
+    if ai_status == "failed":
+        return _rejected_evidence(
+            document,
+            "COI_DOCUMENT_UNREADABLE",
+            "COI document could not be read by Document Intelligence.",
+        )
+
+    if ai_status != "analyzed":
+        return _rejected_evidence(
+            document,
+            "COI_DOCUMENT_PARTIAL",
+            "COI document has not completed Document Intelligence processing.",
+        )
+
+    compliance = _safe_dict(
+        getattr(
+            document,
+            "ai_compliance_result",
+            None,
+        )
+    )
+
+    if not compliance:
+        return _rejected_evidence(
+            document,
+            "AI_VALIDATION_FAILED",
+            "COI validator result is missing.",
+        )
+
+    extracted_data = _safe_dict(
+        getattr(
+            document,
+            "ai_extracted_data",
+            None,
+        )
+    )
+
+    confidence = _usable_number(
+        getattr(
+            document,
+            "ai_confidence",
+            None,
+        )
+    )
+
+    if confidence is None:
+        confidence = _usable_number(
+            compliance.get("confidence")
+        )
+
+    if confidence is None:
+        confidence = _usable_number(
+            extracted_data.get("confidence")
+        )
+
+    if confidence is None or confidence < MIN_AI_CONFIDENCE:
+        return _rejected_evidence(
+            document,
+            "AI_CONFIDENCE_LOW",
+            "COI evidence confidence is below the required threshold.",
+            confidence=confidence,
+        )
+
+    issues = compliance.get(
+        "issues",
+        [],
+    )
+
+    if issues or compliance.get("status") == "Blocked":
+        return _rejected_evidence(
+            document,
+            "AI_VALIDATION_FAILED",
+            "COI validator reported blocking issues.",
+            confidence=confidence,
+        )
+
+    expiration_date = _parse_date(
+        extracted_data.get("expiration_date")
+    )
+
+    coverage = _usable_number(
+        extracted_data.get("general_liability_limit")
+    )
+
+    if not expiration_date or coverage is None:
+        return _rejected_evidence(
+            document,
+            "AI_VALIDATION_FAILED",
+            "COI evidence is missing validated expiration or coverage data.",
+            confidence=confidence,
+        )
+
+    return ComplianceEvidence(
+        evidence_type=EVIDENCE_TYPE_COI,
+        source=EVIDENCE_SOURCE_AI,
+        value={
+            "expiration_date": expiration_date,
+            "coverage": coverage,
+            "carrier": extracted_data.get("insurance_carrier"),
+            "policy_number": extracted_data.get("policy_number"),
+            "version": _version(document),
+            "uploaded_at": _uploaded_at(document),
+        },
+        confidence=confidence,
+        validated=True,
+        document_id=getattr(
+            document,
+            "id",
+            None,
+        ),
+    )
+
+
+def _rejected_evidence(
+    document,
+    code,
+    message,
+    confidence=None,
+):
+    return ComplianceEvidence(
+        evidence_type=EVIDENCE_TYPE_COI,
+        source=EVIDENCE_SOURCE_AI,
+        value={
+            "version": _version(document),
+            "uploaded_at": _uploaded_at(document),
+        },
+        confidence=confidence,
+        validated=False,
+        document_id=getattr(
+            document,
+            "id",
+            None,
+        ),
+        rejection_code=code,
+        rejection_message=message,
+    )
+
+
+def _parse_date(value):
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(str(value)).date()
+    except ValueError:
+        return None
+
+
+def _safe_dict(value):
+    if isinstance(value, dict):
+        return value
+
+    return {}
+
+
+def _version(document):
+    value = getattr(
+        document,
+        "version",
+        0,
+    )
+
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _uploaded_at(document):
+    value = getattr(
+        document,
+        "uploaded_at",
+        None,
+    )
+
+    if isinstance(value, datetime):
+        return value
+
+    return None
+
+
+def _usable_number(value):
+    if value is None:
+        return None
+
+    try:
+        normalized = (
+            str(value)
+            .replace("$", "")
+            .replace(",", "")
+            .strip()
+        )
+        if not normalized.replace(".", "", 1).isdigit():
+            match = re.search(
+                r"\d[\d,]*(?:\.\d+)?",
+                str(value),
+            )
+            if not match:
+                return None
+
+            normalized = match.group(0).replace(",", "")
+
+        number = float(
+            normalized
+        )
+    except (TypeError, ValueError):
+        return None
+
+    if number <= 0:
+        return None
+
+    return number
