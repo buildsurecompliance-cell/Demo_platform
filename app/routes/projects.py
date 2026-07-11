@@ -1,4 +1,3 @@
-import os
 import uuid
 
 from collections import defaultdict
@@ -8,7 +7,6 @@ from app.services.projects.project_ai_summary_service import (
 )
 from flask import (
     Blueprint,
-    current_app,
     flash,
     redirect,
     render_template,
@@ -36,11 +34,69 @@ from app.models import (
 
 from app.routes.subcontractors import allowed_file
 
+from app.services.documents.storage import (
+    delete_document_file,
+    save_document_file,
+)
+
+from app.services.documents.types import (
+    PROJECT_DOCUMENT_TYPES,
+    normalize_project_document_type,
+)
+
 
 projects_bp = Blueprint(
     "projects",
     __name__,
 )
+
+
+def _selected_owned_subcontractor_ids():
+    selected_ids = []
+
+    for raw_id in request.form.getlist("subcontractors"):
+        try:
+            selected_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+
+    if not selected_ids:
+        return set()
+
+    owned_subs = (
+        Subcontractor.query
+        .filter(
+            Subcontractor.user_id == current_user.id,
+            Subcontractor.id.in_(selected_ids),
+        )
+        .all()
+    )
+
+    return {
+        sub.id
+        for sub in owned_subs
+    }
+
+
+def _add_missing_project_links(project, subcontractor_ids):
+    existing_ids = {
+        link.subcontractor_id
+        for link in ProjectSubcontractor.query.filter_by(
+            project_id=project.id
+        ).all()
+    }
+
+    for subcontractor_id in subcontractor_ids:
+        if subcontractor_id in existing_ids:
+            continue
+
+        db.session.add(
+            ProjectSubcontractor(
+                project_id=project.id,
+                subcontractor_id=subcontractor_id,
+                coverage_limit=0,
+            )
+        )
 
 
 @projects_bp.route("/add_project", methods=["GET", "POST"])
@@ -97,9 +153,16 @@ def add_project():
         db.session.add(project)
         db.session.flush()
 
-        os.makedirs(current_app.config["UPLOAD_FOLDER"], exist_ok=True)
+        _add_missing_project_links(
+            project,
+            _selected_owned_subcontractor_ids(),
+        )
 
         files = request.files.getlist("documents")
+        doc_type = normalize_project_document_type(
+            request.form.get("doc_type")
+        )
+        next_versions = defaultdict(lambda: 1)
 
         for file in files:
 
@@ -115,21 +178,22 @@ def add_project():
                 safe_name = secure_filename(original_name)
                 unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
-                filepath = os.path.join(
-                    current_app.config["UPLOAD_FOLDER"],
+                save_document_file(
+                    file,
                     unique_name,
+                    project_id=project.id,
                 )
-
-                file.save(filepath)
 
                 doc = Document(
                     filename=unique_name,
                     original_name=original_name,
-                    document_type="Project Document",
+                    document_type=doc_type,
+                    version=next_versions[doc_type],
                     project_id=project.id,
                 )
 
                 db.session.add(doc)
+                next_versions[doc_type] += 1
 
             except Exception as e:
                 print("UPLOAD ERROR:", e)
@@ -149,6 +213,7 @@ def add_project():
     return render_template(
         "add_project.html",
         subs=subs,
+        project_document_types=PROJECT_DOCUMENT_TYPES,
     )
 
 
@@ -226,35 +291,29 @@ def edit_project(project_id):
         project.start_date = start_date
         project.end_date = end_date
 
-        selected_subs = request.form.getlist("subcontractors")
+        selected_sub_ids = _selected_owned_subcontractor_ids()
 
         current_links = ProjectSubcontractor.query.filter_by(
             project_id=project.id
         ).all()
 
         current_sub_ids = [
-            str(link.subcontractor_id)
+            link.subcontractor_id
             for link in current_links
         ]
 
         for link in current_links:
-            if str(link.subcontractor_id) not in selected_subs:
+            if link.subcontractor_id not in selected_sub_ids:
                 db.session.delete(link)
 
-        for sub_id in selected_subs:
+        for sub_id in selected_sub_ids:
             if sub_id not in current_sub_ids:
-                sub = Subcontractor.query.filter_by(
-                    id=sub_id,
-                    user_id=current_user.id,
-                ).first()
-
-                if sub:
-                    new_link = ProjectSubcontractor(
-                        project_id=project.id,
-                        subcontractor_id=sub.id,
-                        coverage_limit=0,
-                    )
-                    db.session.add(new_link)
+                new_link = ProjectSubcontractor(
+                    project_id=project.id,
+                    subcontractor_id=sub_id,
+                    coverage_limit=0,
+                )
+                db.session.add(new_link)
 
         file = request.files.get("file")
 
@@ -266,14 +325,15 @@ def edit_project(project_id):
                 safe_name = secure_filename(original_name)
                 unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
-                path = os.path.join(
-                    current_app.config["UPLOAD_FOLDER"],
+                save_document_file(
+                    file,
                     unique_name,
+                    project_id=project.id,
                 )
 
-                file.save(path)
-
-                doc_type = request.form.get("doc_type", "Document")
+                doc_type = normalize_project_document_type(
+                    request.form.get("doc_type")
+                )
 
                 last_doc = (
                     Document.query
@@ -325,6 +385,7 @@ def edit_project(project_id):
         "edit_project.html",
         project=project,
         subs=subs,
+        project_document_types=PROJECT_DOCUMENT_TYPES,
     )
 
 
@@ -390,16 +451,10 @@ def delete_project(id):
 
         for doc in documents:
 
-            file_path = os.path.join(
-                current_app.config["UPLOAD_FOLDER"],
-                doc.filename,
-            )
-
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print("FILE DELETE ERROR:", e)
+            try:
+                delete_document_file(doc)
+            except Exception as e:
+                print("FILE DELETE ERROR:", e)
 
             db.session.delete(doc)
 
@@ -452,22 +507,20 @@ def upload_project_document(project_id):
             )
         )
 
-    doc_type = request.form.get("doc_type") or "Document"
-
-    original_name = secure_filename(file.filename)
-    unique_name = f"{uuid.uuid4().hex}_{original_name}"
-
-    upload_folder = os.path.join(
-        current_app.config["UPLOAD_FOLDER"],
-        f"project_{project.id}",
+    doc_type = normalize_project_document_type(
+        request.form.get("doc_type")
     )
 
-    os.makedirs(upload_folder, exist_ok=True)
-
-    file_path = os.path.join(upload_folder, unique_name)
+    original_name = file.filename
+    safe_name = secure_filename(original_name)
+    unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
     try:
-        file.save(file_path)
+        save_document_file(
+            file,
+            unique_name,
+            project_id=project.id,
+        )
     except Exception as e:
         print("Upload error:", e)
         flash("Error uploading file.", "danger")

@@ -1,4 +1,3 @@
-import os
 import uuid
 
 from datetime import datetime
@@ -33,6 +32,11 @@ from app.services.document_analysis_service import (
     analyze_and_save_document,
 )
 
+from app.services.documents.storage import (
+    delete_document_file,
+    save_document_file,
+)
+
 
 subcontractors_bp = Blueprint(
     "subcontractors",
@@ -51,6 +55,33 @@ def allowed_file(filename):
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in allowed_extensions
     )
+
+
+def _selected_owned_project_ids():
+    selected_ids = []
+
+    for raw_id in request.form.getlist("projects"):
+        try:
+            selected_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+
+    if not selected_ids:
+        return set()
+
+    owned_projects = (
+        Project.query
+        .filter(
+            Project.user_id == current_user.id,
+            Project.id.in_(selected_ids),
+        )
+        .all()
+    )
+
+    return {
+        project.id
+        for project in owned_projects
+    }
 
 
 @subcontractors_bp.route("/sub/<int:sub_id>/documents")
@@ -122,11 +153,11 @@ def add_sub():
         db.session.add(new_sub)
         db.session.flush()
 
-        project_ids = request.form.getlist("projects")
+        project_ids = _selected_owned_project_ids()
 
-        for pid in set(project_ids):
+        for pid in project_ids:
             link = ProjectSubcontractor(
-                project_id=int(pid),
+                project_id=pid,
                 subcontractor_id=new_sub.id,
             )
             db.session.add(link)
@@ -170,12 +201,10 @@ def add_sub():
 
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
-                path = os.path.join(
-                    current_app.config["UPLOAD_FOLDER"],
+                save_document_file(
+                    file,
                     unique_name,
                 )
-
-                file.save(path)
 
                 new_doc = Document(
                     filename=unique_name,
@@ -270,17 +299,27 @@ def edit_sub(id):
         else:
             sub.coi_expiration = None
 
-        project_ids = request.form.getlist("projects")
+        project_ids = _selected_owned_project_ids()
 
-        ProjectSubcontractor.query.filter_by(
+        current_links = ProjectSubcontractor.query.filter_by(
             subcontractor_id=sub.id
-        ).delete(
-            synchronize_session=False
-        )
+        ).all()
+
+        current_project_ids = [
+            link.project_id
+            for link in current_links
+        ]
+
+        for link in current_links:
+            if link.project_id not in project_ids:
+                db.session.delete(link)
 
         for pid in project_ids:
+            if pid in current_project_ids:
+                continue
+
             link = ProjectSubcontractor(
-                project_id=int(pid),
+                project_id=pid,
                 subcontractor_id=sub.id,
             )
             db.session.add(link)
@@ -324,12 +363,10 @@ def edit_sub(id):
 
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
-                path = os.path.join(
-                    current_app.config["UPLOAD_FOLDER"],
+                save_document_file(
+                    file,
                     unique_name,
                 )
-
-                file.save(path)
 
                 new_doc = Document(
                     filename=unique_name,
@@ -389,16 +426,10 @@ def delete_sub(id):
     try:
         for doc in sub.documents:
 
-            file_path = os.path.join(
-                current_app.config["UPLOAD_FOLDER"],
-                doc.filename,
-            )
-
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print("FILE DELETE ERROR:", e)
+            try:
+                delete_document_file(doc)
+            except Exception as e:
+                print("FILE DELETE ERROR:", e)
 
         db.session.delete(sub)
         db.session.commit()

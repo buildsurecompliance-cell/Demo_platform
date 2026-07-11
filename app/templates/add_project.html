@@ -77,57 +77,11 @@
                     name="doc_type"
                     class="form-control">
 
-                    <optgroup label="Contracts">
-
-                        <option value="Prime Contract">
-                            Prime Contract
+                    {% for document_type in project_document_types %}
+                        <option value="{{ document_type }}">
+                            {{ document_type }}
                         </option>
-
-                        <option value="Subcontract Agreement">
-                            Subcontract Agreement
-                        </option>
-
-                        <option value="Change Order">
-                            Change Order
-                        </option>
-
-                    </optgroup>
-
-                    <optgroup label="Project Information">
-
-                        <option value="Scope of Work">
-                            Scope of Work
-                        </option>
-
-                        <option value="Owner Requirements">
-                            Owner Requirements
-                        </option>
-
-                        <option value="Specifications">
-                            Specifications
-                        </option>
-
-                        <option value="Drawings">
-                            Drawings
-                        </option>
-
-                        <option value="Project Schedule">
-                            Project Schedule
-                        </option>
-
-                    </optgroup>
-
-                    <optgroup label="Permits">
-
-                        <option value="Permit">
-                            Permit
-                        </option>
-
-                        <option value="Inspection Report">
-                            Inspection Report
-                        </option>
-
-                    </optgroup>
+                    {% endfor %}
 
                 </select>
 

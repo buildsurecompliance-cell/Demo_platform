@@ -141,12 +141,11 @@
 
             <option value="">Select document type</option>
 
-            <option value="Contract">Contract</option>
-            <option value="Subcontract">Subcontract</option>
-            <option value="Insurance">Insurance</option>
-            <option value="Permit">Permit</option>
-            <option value="Safety Plan">Safety Plan</option>
-            <option value="Change Order">Change Order</option>
+            {% for document_type in project_document_types %}
+                <option value="{{ document_type }}">
+                    {{ document_type }}
+                </option>
+            {% endfor %}
 
         </select>
 

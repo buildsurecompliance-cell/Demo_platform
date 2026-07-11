@@ -2,7 +2,6 @@ import os
 
 from flask import (
     Blueprint,
-    current_app,
     flash,
     redirect,
     request,
@@ -21,6 +20,12 @@ from app.models import (
     Document,
     Project,
     Subcontractor,
+)
+
+from app.services.documents.storage import (
+    delete_document_file,
+    document_send_directory,
+    resolve_document_path,
 )
 
 
@@ -100,12 +105,9 @@ def view_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    filepath = os.path.join(
-        current_app.config["UPLOAD_FOLDER"],
-        doc.filename
-    )
+    filepath = resolve_document_path(doc)
 
-    if not os.path.exists(filepath):
+    if not filepath or not os.path.exists(filepath):
 
         flash(
             "File not found.",
@@ -116,9 +118,11 @@ def view_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
+    directory, filename = document_send_directory(doc)
+
     return send_from_directory(
-        current_app.config["UPLOAD_FOLDER"],
-        doc.filename,
+        directory,
+        filename,
         as_attachment=False
     )
 
@@ -161,15 +165,9 @@ def delete_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    file_path = os.path.join(
-        current_app.config["UPLOAD_FOLDER"],
-        doc.filename
-    )
-
     try:
 
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        delete_document_file(doc)
 
         db.session.delete(doc)
         db.session.commit()
@@ -222,9 +220,24 @@ def download_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
+    filepath = resolve_document_path(doc)
+
+    if not filepath or not os.path.exists(filepath):
+
+        flash(
+            "File not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard")
+        )
+
+    directory, filename = document_send_directory(doc)
+
     return send_from_directory(
-        current_app.config["UPLOAD_FOLDER"],
-        doc.filename,
+        directory,
+        filename,
         as_attachment=True,
         download_name=doc.original_name
     )

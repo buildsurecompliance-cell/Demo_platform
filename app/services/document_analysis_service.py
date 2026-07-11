@@ -1,12 +1,12 @@
-import os
-
 from datetime import datetime
 
-from flask import current_app
+import os
 
 from app.extensions import db
 
 from app.models import Document
+
+from app.services.documents.storage import resolve_document_path
 
 from app.services.document_intelligence import (
     analyze_document_intelligence,
@@ -15,30 +15,6 @@ from app.services.document_intelligence import (
 from app.services.subcontractor_compliance_service import (
     update_subcontractor_compliance,
 )
-
-
-def resolve_document_path(doc):
-
-    root_path = os.path.join(
-        current_app.config["UPLOAD_FOLDER"],
-        doc.filename,
-    )
-
-    if os.path.exists(root_path):
-        return root_path
-
-    if doc.project_id:
-
-        project_path = os.path.join(
-            current_app.config["UPLOAD_FOLDER"],
-            f"project_{doc.project_id}",
-            doc.filename,
-        )
-
-        if os.path.exists(project_path):
-            return project_path
-
-    return root_path
 
 
 def analyze_and_save_document(doc_id):
@@ -58,7 +34,7 @@ def analyze_and_save_document(doc_id):
 
     file_path = resolve_document_path(doc)
 
-    if not os.path.exists(file_path):
+    if not file_path or not os.path.exists(file_path):
         return {
             "success": False,
             "error": "Document file not found.",
