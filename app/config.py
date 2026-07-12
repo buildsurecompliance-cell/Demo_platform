@@ -129,7 +129,7 @@ class TestingConfig(Config):
     DEBUG = False
     SECRET_KEY = os.getenv("SECRET_KEY", "test-secret")
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
+        "TEST_DATABASE_URL",
         "sqlite:///:memory:",
     )
 
@@ -149,6 +149,11 @@ def get_config():
         if not ProductionConfig.SQLALCHEMY_DATABASE_URI:
             raise RuntimeError(
                 "DATABASE_URL not set in environment variables"
+            )
+
+        if ProductionConfig.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+            raise RuntimeError(
+                "Production DATABASE_URL must use PostgreSQL"
             )
 
         return ProductionConfig
