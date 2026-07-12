@@ -1,8 +1,19 @@
 import unittest
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app.models import Document, Project, ProjectSubcontractor, Subcontractor
+from app.services.compliance_profiles import (
+    ComplianceProfile,
+    ComplianceRequirement,
+    DEFAULT_SUBCONTRACTOR_PROFILE_KEY,
+    INVALID,
+    MISSING,
+    PENDING as REQUIREMENT_PENDING,
+    SATISFIED,
+    evaluate_profile_requirements,
+    get_compliance_profile,
+)
 from app.services.readiness_service import (
     BLOCKED,
     PENDING,
@@ -140,6 +151,361 @@ class ReadinessServiceTest(unittest.TestCase):
 
         self.assertEqual(result["status"], READY)
         self.assertEqual(result["reasons"], [])
+
+    def test_every_link_uses_default_subcontractor_profile(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+
+        profile = get_compliance_profile(link)
+
+        self.assertEqual(
+            profile.key,
+            DEFAULT_SUBCONTRACTOR_PROFILE_KEY,
+        )
+
+    def test_every_role_uses_default_subcontractor_profile(self):
+        roles = [
+            None,
+            "Electrical",
+            "Concrete",
+            "Any Future Trade",
+        ]
+
+        for role in roles:
+            link = self.make_link(
+                date.today() + timedelta(days=60),
+            )
+            link.subcontractor.role = role
+
+            with self.subTest(role=role):
+                self.assertEqual(
+                    get_compliance_profile(link).key,
+                    DEFAULT_SUBCONTRACTOR_PROFILE_KEY,
+                )
+
+    def test_default_profile_requires_only_coi(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+        profile = get_compliance_profile(link)
+
+        self.assertEqual(
+            [
+                requirement.document_type
+                for requirement in profile.requirements
+            ],
+            ["COI"],
+        )
+
+    def test_default_profile_has_exactly_one_requirement(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+        profile = get_compliance_profile(link)
+
+        self.assertEqual(len(profile.requirements), 1)
+
+    def test_profile_requirements_are_immutable(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+        profile = get_compliance_profile(link)
+
+        self.assertIsInstance(profile.requirements, tuple)
+        with self.assertRaises(AttributeError):
+            profile.requirements.append("W9")
+
+    def test_missing_coi_requirement_is_missing_and_readiness_blocked(self):
+        link = self.make_link(None)
+        today = date.today()
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=today,
+        )
+        result = calculate_readiness(
+            link,
+            today=today,
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            MISSING,
+        )
+        self.assertEqual(result["status"], BLOCKED)
+        self.assertIn("COI_MISSING", self.reason_codes(result))
+
+    def test_missing_coi_generates_only_one_reason(self):
+        link = self.make_link(None)
+
+        result = calculate_readiness(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(len(result["reasons"]), 1)
+        self.assertEqual(result["reasons"][0]["code"], "COI_MISSING")
+
+    def test_valid_coi_requirement_is_satisfied(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            SATISFIED,
+        )
+
+    def test_expired_coi_requirement_is_invalid_and_blocked(self):
+        link = self.make_link(
+            date.today() - timedelta(days=1),
+        )
+        today = date.today()
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=today,
+        )
+        result = calculate_readiness(
+            link,
+            today=today,
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            INVALID,
+        )
+        self.assertEqual(result["status"], BLOCKED)
+        self.assertIn("COI_EXPIRED", self.reason_codes(result))
+
+    def test_expired_coi_generates_only_one_reason(self):
+        link = self.make_link(
+            date.today() - timedelta(days=1),
+        )
+
+        result = calculate_readiness(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(len(result["reasons"]), 1)
+        self.assertEqual(result["reasons"][0]["code"], "COI_EXPIRED")
+
+    def test_expiring_coi_requirement_is_pending(self):
+        link = self.make_link(
+            date.today() + timedelta(days=30),
+        )
+        today = date.today()
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=today,
+        )
+        result = calculate_readiness(
+            link,
+            today=today,
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            REQUIREMENT_PENDING,
+        )
+        self.assertEqual(result["status"], PENDING)
+
+    def test_pending_coi_generates_only_one_reason(self):
+        link = self.make_link(
+            date.today() + timedelta(days=30),
+        )
+
+        result = calculate_readiness(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(len(result["reasons"]), 1)
+        self.assertEqual(result["reasons"][0]["code"], "COI_EXPIRING_SOON")
+
+    def test_processing_coi_requirement_is_pending(self):
+        document = self.make_coi_document(ai_status="not_analyzed")
+        link = self.make_link(
+            None,
+            documents=[document],
+        )
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            REQUIREMENT_PENDING,
+        )
+        self.assertEqual(
+            evaluation["requirements"][0]["reason_code"],
+            "COI_DOCUMENT_PARTIAL",
+        )
+
+    def test_unreadable_coi_requirement_is_pending(self):
+        document = self.make_coi_document(ai_status="failed")
+        link = self.make_link(
+            None,
+            documents=[document],
+        )
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            REQUIREMENT_PENDING,
+        )
+        self.assertEqual(
+            evaluation["requirements"][0]["reason_code"],
+            "COI_DOCUMENT_UNREADABLE",
+        )
+
+    def test_validated_evidence_satisfies_coi_requirement(self):
+        document = self.make_coi_document(
+            expiration_date=(
+                date.today() + timedelta(days=60)
+            ).isoformat(),
+        )
+        link = self.make_link(
+            None,
+            documents=[document],
+        )
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(
+            evaluation["requirements"][0]["status"],
+            SATISFIED,
+        )
+
+    def test_subcontractor_role_does_not_create_fictitious_requirements(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+        link.subcontractor.role = "Electrical"
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(
+            [
+                requirement["document_type"]
+                for requirement in evaluation["requirements"]
+            ],
+            ["COI"],
+        )
+
+    def test_profile_metadata_is_added_to_readiness_reason(self):
+        link = self.make_link(None)
+
+        result = calculate_readiness(
+            link,
+            today=date.today(),
+        )
+        coi_reason = result["reasons"][0]
+
+        self.assertEqual(
+            coi_reason["profile_key"],
+            DEFAULT_SUBCONTRACTOR_PROFILE_KEY,
+        )
+        self.assertEqual(coi_reason["document_type"], "COI")
+        self.assertEqual(coi_reason["requirement_status"], MISSING)
+
+    def test_profile_evaluation_does_not_make_final_readiness_decision(self):
+        link = self.make_link(None)
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertNotIn("status", evaluation)
+        self.assertIn("requirements", evaluation)
+
+    def test_unknown_requirement_is_not_satisfied(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+        )
+        profile = ComplianceProfile(
+            key="CUSTOM_TEST",
+            name="Custom Test",
+            description="Test profile.",
+            requirements=(
+                ComplianceRequirement(
+                    document_type="W9",
+                    required=True,
+                    blocking=True,
+                    description="Unsupported requirement.",
+                ),
+            ),
+        )
+
+        evaluation = evaluate_profile_requirements(
+            link,
+            profile=profile,
+            today=date.today(),
+        )
+        requirement = evaluation["requirements"][0]
+
+        self.assertEqual(requirement["status"], INVALID)
+        self.assertEqual(
+            requirement["reason_code"],
+            "REQUIREMENT_UNSUPPORTED",
+        )
+        self.assertNotEqual(requirement["status"], SATISFIED)
+
+    def test_requirement_status_values_are_known(self):
+        link = self.make_link(None)
+        evaluation = evaluate_profile_requirements(
+            link,
+            today=date.today(),
+        )
+
+        self.assertIn(
+            evaluation["requirements"][0]["status"],
+            {
+                SATISFIED,
+                MISSING,
+                REQUIREMENT_PENDING,
+                INVALID,
+            },
+        )
+
+    def test_coverage_insufficient_still_blocks_with_profile(self):
+        link = self.make_link(
+            date.today() + timedelta(days=60),
+            coverage_limit=500000,
+            required_coverage=1000000,
+        )
+
+        result = calculate_readiness(
+            link,
+            today=date.today(),
+        )
+
+        self.assertEqual(result["status"], BLOCKED)
+        self.assertEqual(
+            self.reason_codes(result),
+            {"COVERAGE_INSUFFICIENT"},
+        )
 
     def test_valid_ai_coi_evidence_can_make_ready_without_manual_date(self):
         document = self.make_coi_document()

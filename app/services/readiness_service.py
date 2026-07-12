@@ -3,6 +3,11 @@ import logging
 from datetime import UTC, date, datetime
 
 from app.services.compliance_evidence_service import collect_coi_evidence
+from app.services.compliance_profiles import (
+    SATISFIED,
+    evaluate_profile_requirements,
+    get_compliance_profile,
+)
 
 
 READY = "READY"
@@ -47,11 +52,28 @@ def calculate_readiness(project_subcontractor, today=None):
 
     if subcontractor:
         coi_evidence = collect_coi_evidence(subcontractor)
-        _append_coi_reasons(
-            reasons,
-            subcontractor,
-            today,
+
+    profile = get_compliance_profile(project_subcontractor)
+    profile_evaluation = evaluate_profile_requirements(
+        project_subcontractor,
+        profile=profile,
+        today=today,
+        coi_evidence=coi_evidence,
+    )
+
+    _append_profile_requirement_reasons(
+        reasons,
+        profile_evaluation,
+    )
+
+    if subcontractor:
+        _log_coi_evidence_selection(
             coi_evidence,
+            getattr(
+                subcontractor,
+                "coi_expiration",
+                None,
+            ),
         )
 
     _append_coverage_reasons(
@@ -68,26 +90,40 @@ def calculate_readiness(project_subcontractor, today=None):
         "reasons": reasons,
         "summary": _summary_for_status(status),
         "checked_at": checked_at.isoformat(),
+        "profile_key": profile_evaluation["profile_key"],
+        "requirements": profile_evaluation["requirements"],
     }
 
 
-def _append_coi_reasons(reasons, subcontractor, today, evidence):
+def _append_profile_requirement_reasons(reasons, profile_evaluation):
+    for requirement in profile_evaluation["requirements"]:
+        if requirement["status"] == SATISFIED:
+            continue
+
+        _add_reason(
+            reasons,
+            _reason(
+                requirement["reason_code"],
+                requirement["message"],
+                requirement["severity"],
+                profile_key=requirement["profile_key"],
+                document_type=requirement["document_type"],
+                requirement_status=requirement["status"],
+            )
+        )
+
+
+def _log_coi_evidence_selection(coi_evidence, manual_expiration):
     validated_evidence = [
         item
-        for item in evidence
+        for item in coi_evidence
         if item.validated
     ]
     rejected_evidence = [
         item
-        for item in evidence
+        for item in coi_evidence
         if not item.validated
     ]
-
-    manual_expiration = getattr(
-        subcontractor,
-        "coi_expiration",
-        None,
-    )
 
     if validated_evidence:
         logger.debug(
@@ -95,119 +131,25 @@ def _append_coi_reasons(reasons, subcontractor, today, evidence):
             validated_evidence[0].document_id,
         )
 
-        expiration = _resolve_coi_expiration(
-            validated_evidence[0],
-            manual_expiration,
-        )
+        if manual_expiration:
+            logger.debug("Manual value used")
 
-        _append_coi_expiration_reasons(
-            reasons,
-            expiration,
-            today,
-        )
         return
 
     if rejected_evidence:
-        evidence_item = rejected_evidence[0]
         logger.debug(
             "AI evidence rejected document_id=%s reason=%s",
-            evidence_item.document_id,
-            evidence_item.rejection_code,
-        )
-        _add_reason(
-            reasons,
-            _reason(
-                evidence_item.rejection_code,
-                evidence_item.rejection_message,
-                WARNING,
-            )
+            rejected_evidence[0].document_id,
+            rejected_evidence[0].rejection_code,
         )
 
         if manual_expiration:
             logger.debug("Manual value used")
-            _append_coi_expiration_reasons(
-                reasons,
-                manual_expiration,
-                today,
-            )
 
         return
 
     if manual_expiration:
         logger.debug("Readiness falling back to manual COI")
-        _append_coi_expiration_reasons(
-            reasons,
-            manual_expiration,
-            today,
-        )
-        return
-
-    _add_reason(
-        reasons,
-        _reason(
-            "COI_MISSING",
-            "Certificate of Insurance information is missing.",
-            BLOCKING,
-        )
-    )
-
-
-def _resolve_coi_expiration(evidence, manual_expiration):
-    evidence_expiration = evidence.value.get("expiration_date")
-
-    if not manual_expiration:
-        return evidence_expiration
-
-    manual_date = _as_date(manual_expiration)
-
-    if manual_date != evidence_expiration:
-        logger.debug("Readiness detected conflicting COI values")
-        return min(
-            manual_date,
-            evidence_expiration,
-        )
-
-    return evidence_expiration
-
-
-def _append_coi_expiration_reasons(reasons, expiration, today):
-    if not expiration:
-        _add_reason(
-            reasons,
-            _reason(
-                "COI_MISSING",
-                "Certificate of Insurance information is missing.",
-                BLOCKING,
-            )
-        )
-        return
-
-    expiration = _as_date(expiration)
-
-    days_left = (
-        expiration - today
-    ).days
-
-    if days_left < 0:
-        _add_reason(
-            reasons,
-            _reason(
-                "COI_EXPIRED",
-                "Certificate of Insurance expired.",
-                BLOCKING,
-            )
-        )
-        return
-
-    if days_left <= 30:
-        _add_reason(
-            reasons,
-            _reason(
-                "COI_EXPIRING_SOON",
-                "Certificate of Insurance expires within 30 days.",
-                WARNING,
-            )
-        )
 
 
 def _append_coverage_reasons(
@@ -307,12 +249,22 @@ def _summary_for_status(status):
     return "Subcontractor is ready for mobilization."
 
 
-def _reason(code, message, severity):
-    return {
+def _reason(code, message, severity, **metadata):
+    reason = {
         "code": code,
         "message": message,
         "severity": severity,
     }
+
+    reason.update(
+        {
+            key: value
+            for key, value in metadata.items()
+            if value is not None
+        }
+    )
+
+    return reason
 
 
 def _add_reason(reasons, reason):
