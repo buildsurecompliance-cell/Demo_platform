@@ -26,7 +26,7 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 <div class="card shadow-sm mb-4">
     <div class="card-body">
 
-        <h4>🧠 AI Project Summary</h4>
+        <h4>AI Project Summary</h4>
 
         <div class="row text-center mt-3">
 
@@ -68,7 +68,7 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
             {% for item in ai_summary.critical_issues %}
                 <div class="alert alert-danger">
                     <strong>{{ item.subcontractor }}</strong>
-                    — {{ item.document_type }}
+                    - {{ item.document_type }}
 
                     <ul class="mb-0 mt-2">
                         {% for issue in item.issues %}
@@ -105,7 +105,7 @@ ${{ "{:,.2f}".format(project.contract_value or 0) }}
 {% set advice_available = row.advice_available %}
 <tr>
 <td>{{ ps.subcontractor.name }}</td>
-<td>{{ ps.subcontractor.role or "—" }}</td>
+<td>{{ ps.subcontractor.role or "-" }}</td>
 <td>
 {% if advice.status == "BLOCKED" %}
 <span class="badge bg-danger">BLOCKED</span>
