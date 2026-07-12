@@ -3,6 +3,7 @@ from datetime import (
     datetime,
     timezone,
 )
+import logging
 
 from sqlalchemy.orm import joinedload
 
@@ -14,6 +15,8 @@ from app.services.notifications.email_service import (
     send_email_reminder,
 )
 
+
+logger = logging.getLogger(__name__)
 
 REMINDER_DAYS = {
     90,
@@ -99,8 +102,10 @@ BuildSure Compliance
 
             reminders_sent += 1
 
-            print(
-                f"[REMINDER SENT] {sub.email} | {days_left} days left"
+            logger.info(
+                "Reminder sent for subcontractor_id=%s days_left=%s",
+                sub.id,
+                days_left,
             )
 
     if reminders_sent > 0:
@@ -108,10 +113,11 @@ BuildSure Compliance
         try:
             db.session.commit()
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            print("DB ERROR:", e)
+            logger.exception("Failed to commit reminder updates")
 
-    print(
-        f"Total reminders sent: {reminders_sent}"
+    logger.info(
+        "Total reminders sent: %s",
+        reminders_sent,
     )

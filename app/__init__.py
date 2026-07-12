@@ -1,12 +1,14 @@
 import os
+import logging
 
 from flask import Flask
 
-from app.config import Config
+from app.config import get_config
 
 from app.extensions import (
     db,
     login_manager,
+    migrate,
 )
 
 from app.routes import (
@@ -14,6 +16,7 @@ from app.routes import (
     auth_bp,
     dashboard_bp,
     documents_bp,
+    health_bp,
     notifications_bp,
     projects_bp,
     subcontractors_bp,
@@ -22,11 +25,19 @@ from app.routes import (
 from app.utils import register_template_filters
 
 
-def create_app():
+def create_app(config_object=None):
 
     app = Flask(__name__)
 
-    app.config.from_object(Config)
+    app.config.from_object(
+        config_object
+        or get_config()
+    )
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
 
     os.makedirs(
         app.config["UPLOAD_FOLDER"],
@@ -35,6 +46,8 @@ def create_app():
 
     db.init_app(app)
 
+    migrate.init_app(app, db)
+
     login_manager.init_app(app)
 
     register_template_filters(app)
@@ -42,15 +55,12 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(documents_bp)
+    app.register_blueprint(health_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(subcontractors_bp)
     app.register_blueprint(ai_bp)
 
-    with app.app_context():
-
-        from app import models
-
-        db.create_all()
+    from app import models
 
     return app
