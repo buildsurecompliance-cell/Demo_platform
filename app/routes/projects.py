@@ -2,6 +2,9 @@ import uuid
 
 from collections import defaultdict
 from datetime import datetime
+import logging
+from types import SimpleNamespace
+
 from app.services.projects.project_ai_summary_service import (
     get_project_ai_summary,
 )
@@ -43,12 +46,17 @@ from app.services.documents.types import (
     PROJECT_DOCUMENT_TYPES,
     normalize_project_document_type,
 )
+from app.services.compliance_officer import (
+    generate_compliance_advice,
+)
 
 
 projects_bp = Blueprint(
     "projects",
     __name__,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _selected_owned_subcontractor_ids():
@@ -97,6 +105,38 @@ def _add_missing_project_links(project, subcontractor_ids):
                 coverage_limit=0,
             )
         )
+
+
+def _project_subcontractor_view_model(project_subcontractor):
+    advice_available = True
+
+    try:
+        advice = generate_compliance_advice(project_subcontractor)
+    except Exception:
+        logger.error(
+            "Compliance advice unavailable for project_subcontractor_id=%s",
+            getattr(
+                project_subcontractor,
+                "id",
+                None,
+            ),
+        )
+        advice_available = False
+        advice = _fallback_compliance_advice(project_subcontractor)
+
+    return {
+        "project_subcontractor": project_subcontractor,
+        "advice": advice,
+        "advice_available": advice_available,
+    }
+
+
+def _fallback_compliance_advice(project_subcontractor):
+    return SimpleNamespace(
+        status=project_subcontractor.readiness_status,
+        summary="Compliance advice unavailable.",
+        actions=(),
+    )
 
 
 @projects_bp.route("/add_project", methods=["GET", "POST"])
@@ -413,6 +453,11 @@ def view_project(project_id):
         .all()
     )
 
+    subcontractor_rows = [
+        _project_subcontractor_view_model(link)
+        for link in links
+    ]
+
     docs = (
         Document.query
         .filter_by(project_id=project.id)
@@ -431,7 +476,7 @@ def view_project(project_id):
     return render_template(
         "view_project.html",
         project=project,
-        links=links,
+        subcontractor_rows=subcontractor_rows,
         documents=dict(documents),
         ai_summary=ai_summary,
     )
