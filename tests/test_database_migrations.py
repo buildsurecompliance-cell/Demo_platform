@@ -62,7 +62,7 @@ class DatabaseMigrationTest(unittest.TestCase):
 
         self.assertEqual(
             config.SQLALCHEMY_DATABASE_URI,
-            "postgresql://user:pass@example.com/db",
+            "postgresql+psycopg://user:pass@example.com/db",
         )
 
     def test_production_accepts_postgresql_database_url(self):
@@ -81,7 +81,7 @@ class DatabaseMigrationTest(unittest.TestCase):
 
         self.assertEqual(
             config.SQLALCHEMY_DATABASE_URI,
-            "postgresql://user:pass@example.com/db",
+            "postgresql+psycopg://user:pass@example.com/db",
         )
         self.assertFalse(config.DEBUG)
 

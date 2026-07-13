@@ -13,7 +13,9 @@ postgresql://user:password@host:5432/database
 postgres://user:password@host:5432/database
 ```
 
-`postgres://` is normalized to `postgresql://` by application config for platform compatibility.
+`postgres://` and `postgresql://` are normalized to SQLAlchemy's
+`postgresql+psycopg://` driver URL by application config for platform
+compatibility with the installed `psycopg` driver.
 
 Do not commit real credentials.
 
@@ -194,3 +196,136 @@ Monitor security events in application logs:
 
 Logs must not include passwords, CSRF tokens, session cookies, API keys, or full
 document contents.
+
+## Railway Staging
+
+Railway staging uses the official WSGI entrypoint:
+
+```text
+main:app
+```
+
+The web process must not depend on `run.py`. `run.py` remains a local
+development runner and the only place that may start the reminder scheduler
+when explicitly enabled.
+
+The Railway start command is:
+
+```text
+gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - main:app
+```
+
+This binds to the Railway-provided `PORT`, keeps worker count conservative for a
+small staging instance, uses threads for light concurrency, gives document
+operations a 120 second timeout, and sends access/error logs to stdout/stderr so
+they appear in the Railway logs panel.
+
+`railway.json` defines:
+
+- Nixpacks build;
+- `flask db upgrade` as the pre-deploy migration command;
+- the Gunicorn start command above;
+- `/health` as the healthcheck path;
+- restart on failure with limited retries.
+
+Do not move migrations into `main.py` or `create_app()`. For first staging, run
+migrations through the Railway pre-deploy command or manually with the same
+environment before opening traffic if pre-deploy commands are unavailable.
+`flask db upgrade` loads the Flask app through `main:app`; set `FLASK_APP=main`
+in the Railway environment if the platform command environment does not infer it
+from the repository.
+
+### Railway Environment Variables
+
+Use separate staging values. Do not reuse production data, production buckets,
+production credentials, or local development data. Use a dedicated staging
+branch such as `codex-review` until a permanent staging branch is chosen.
+
+```text
+APP_ENV=production
+SECRET_KEY=<railway-generated-secret>
+DATABASE_URL=<railway-postgres-url>
+OPENAI_API_KEY=<staging-or-empty-while-mocked>
+RESEND_API_KEY=<staging-or-empty-while-email-disabled>
+AI_MOCK_MODE=true
+SCHEDULER_ENABLED=false
+STORAGE_BACKEND=s3
+S3_BUCKET=<staging-private-bucket>
+S3_REGION=<bucket-region>
+S3_ENDPOINT_URL=<r2-or-s3-compatible-endpoint-if-needed>
+S3_ACCESS_KEY_ID=<staging-access-key>
+S3_SECRET_ACCESS_KEY=<staging-secret-key>
+S3_PRESIGNED_URL_TTL=300
+RATELIMIT_ENABLED=true
+LOGIN_RATE_LIMIT=5 per minute
+REGISTER_RATE_LIMIT=3 per minute
+```
+
+Railway PostgreSQL should provide `DATABASE_URL`. `postgres://` and
+`postgresql://` URLs are normalized to `postgresql+psycopg://` by application
+config and query parameters are preserved. Staging must not use local SQLite.
+Local production-mode checks intentionally do not connect to a real PostgreSQL
+database. SQLite is blocked when `APP_ENV=production`; the real PostgreSQL
+migration will be validated in the first Railway staging environment.
+`requirements.txt` includes `psycopg[binary]` so the Railway build installs the
+PostgreSQL driver.
+
+S3/R2 storage is lazy: `create_app()` does not contact the bucket. The first
+document operation will validate S3 configuration and fail with a storage error
+if required values are missing. Buckets should stay private; use signed URLs for
+view/download.
+
+Automatic reminders are disabled for first staging with
+`SCHEDULER_ENABLED=false`. Manual reminders still work from the web app. A
+separate worker service can be added in a future sprint.
+
+Railway terminates HTTPS before the app. Production config keeps secure session
+and remember cookies enabled. Do not enable unrestricted proxy trust unless a
+specific proxy chain is reviewed and tested. Current redirects are relative and
+do not depend on `request.is_secure`. The lightweight rate limiter uses
+`request.remote_addr`; behind Railway's proxy this may represent the proxy
+rather than the original client. Do not trust `X-Forwarded-For` until proxy
+configuration is reviewed and tested.
+
+The `/health` endpoint is a liveness check. It intentionally does not validate
+PostgreSQL, S3/R2, OpenAI, or Resend availability, so dependency smoke tests
+must run separately after deployment.
+
+Railway health checks will appear in Gunicorn access logs because access logs
+are intentionally sent to stdout. This is expected for first staging; do not
+disable access logs globally.
+
+### Railway Staging Checklist
+
+1. Create a Railway project.
+2. Connect the GitHub repository.
+3. Select a dedicated staging branch, initially `codex-review` or a permanent
+   staging branch.
+4. Create a Railway PostgreSQL service.
+5. Reference the PostgreSQL `DATABASE_URL` in the web service.
+6. Configure environment variables from `.env.example` with staging values.
+7. Configure a private S3/R2 bucket and staging-only credentials.
+8. Confirm the healthcheck path is `/health`.
+9. Confirm `flask db upgrade` runs before the web process serves traffic.
+10. Deploy the staging branch.
+11. Validate logs in Railway.
+12. Run staging smoke tests.
+13. Do not promote to production yet.
+
+### Railway Staging Smoke Tests
+
+- `GET /health`;
+- `GET /login`;
+- register with fictitious data;
+- create a project;
+- create a subcontractor;
+- link the subcontractor to the project;
+- upload a document to the staging bucket;
+- view and download the document;
+- run document analysis with `AI_MOCK_MODE=true`;
+- verify readiness;
+- verify Compliance Officer advice;
+- delete the test document;
+- verify ownership isolation with a second test user;
+- verify 404, 500, CSRF, and rate-limit behavior;
+- confirm migrations were applied.

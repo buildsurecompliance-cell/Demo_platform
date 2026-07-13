@@ -56,7 +56,14 @@ class ProductionBootstrapTest(unittest.TestCase):
         self.assertEqual(main.app.import_name, "app")
 
         with open("Procfile", encoding="utf-8") as procfile:
-            self.assertEqual(procfile.read().strip(), "web: gunicorn main:app")
+            self.assertEqual(
+                procfile.read().strip(),
+                (
+                    "web: gunicorn --bind 0.0.0.0:$PORT --workers 2 "
+                    "--threads 4 --timeout 120 --access-logfile - "
+                    "--error-logfile - main:app"
+                ),
+            )
 
     def test_main_import_does_not_require_external_service_keys(self):
         with patch.dict(
@@ -207,7 +214,7 @@ class ProductionBootstrapTest(unittest.TestCase):
         self.assertIn("default-src", config.CONTENT_SECURITY_POLICY)
         self.assertEqual(
             config.SQLALCHEMY_DATABASE_URI,
-            "postgresql://example",
+            "postgresql+psycopg://example",
         )
 
     def test_production_config_rejects_local_document_storage_by_default(self):

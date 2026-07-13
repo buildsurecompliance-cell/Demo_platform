@@ -41,7 +41,14 @@ def _database_url(default_sqlite=True):
     if database_url and database_url.startswith("postgres://"):
         database_url = database_url.replace(
             "postgres://",
+            "postgresql+psycopg://",
+            1,
+        )
+
+    if database_url and database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
             "postgresql://",
+            "postgresql+psycopg://",
             1,
         )
 
@@ -90,6 +97,7 @@ class Config:
 
     DEBUG = _bool_env("DEBUG", False)
     TESTING = False
+    PORT = _int_env("PORT", 8000)
 
     SECRET_KEY = _secret_key(required=False)
 
