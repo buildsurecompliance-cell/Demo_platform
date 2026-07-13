@@ -65,6 +65,7 @@ class DocumentStorageTest(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
         self.ctx.pop()
         self.uploads.cleanup()
 

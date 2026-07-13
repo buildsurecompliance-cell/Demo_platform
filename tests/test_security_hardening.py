@@ -66,6 +66,7 @@ class SecurityHardeningTest(unittest.TestCase):
         with self.app.app_context():
             db.session.remove()
             db.drop_all()
+            db.engine.dispose()
 
         reset_rate_limits()
 
@@ -91,6 +92,44 @@ class SecurityHardeningTest(unittest.TestCase):
         with self.client.session_transaction() as session:
             session["_user_id"] = str(user_id)
             session["_fresh"] = True
+
+    def test_logout_requires_post_and_csrf(self):
+        self.login_session(self.user_id)
+
+        get_response = self.client.get("/logout")
+        missing_csrf = self.client.post("/logout")
+
+        self.assertEqual(get_response.status_code, 405)
+        self.assertEqual(missing_csrf.status_code, 403)
+
+    def test_logout_with_csrf_clears_session_and_organization(self):
+        self.login_session(self.user_id)
+
+        with self.client.session_transaction() as session:
+            session["organization_id"] = self.organization_id
+
+        token = self.csrf_token()
+        response = self.client.post(
+            "/logout",
+            data={"csrf_token": token},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.location)
+
+        with self.client.session_transaction() as session:
+            self.assertNotIn("_user_id", session)
+            self.assertNotIn("organization_id", session)
+
+    def test_anonymous_logout_post_has_safe_behavior(self):
+        token = self.csrf_token()
+        response = self.client.post(
+            "/logout",
+            data={"csrf_token": token},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.location)
 
     def test_post_without_csrf_token_fails(self):
         response = self.client.post(
@@ -592,6 +631,7 @@ class SecurityHardeningTest(unittest.TestCase):
             "/delete_sub/1",
             "/delete_document/1",
             "/send_reminder/1",
+            "/logout",
         ]:
             response = self.client.get(path)
             self.assertEqual(response.status_code, 405)

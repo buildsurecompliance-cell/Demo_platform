@@ -177,9 +177,9 @@ PERMANENT_SESSION_DAYS=7
 ```
 
 The current rate limiter is intentionally lightweight and in-memory. It is
-suitable for single-process staging checks, but production with multiple web
-workers should move rate-limit state to shared storage such as Redis in a future
-sprint.
+suitable only for development and single-worker staging checks. It is not a
+distributed production protection. Production with multiple web workers must
+move rate-limit state to shared storage such as Redis in a future sprint.
 
 Upload hardening blocks obviously dangerous file extensions, empty filenames,
 HTML/SVG, and dangerous double extensions. The current version does not perform
@@ -212,11 +212,11 @@ when explicitly enabled.
 The Railway start command is:
 
 ```text
-gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - main:app
+gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --access-logfile - --error-logfile - main:app
 ```
 
-This binds to the Railway-provided `PORT`, keeps worker count conservative for a
-small staging instance, uses threads for light concurrency, gives document
+This binds to the Railway-provided `PORT`, keeps worker count at one while the
+rate limiter is in-memory, uses threads for light concurrency, gives document
 operations a 120 second timeout, and sends access/error logs to stdout/stderr so
 they appear in the Railway logs panel.
 
@@ -284,8 +284,10 @@ and remember cookies enabled. Do not enable unrestricted proxy trust unless a
 specific proxy chain is reviewed and tested. Current redirects are relative and
 do not depend on `request.is_secure`. The lightweight rate limiter uses
 `request.remote_addr`; behind Railway's proxy this may represent the proxy
-rather than the original client. Do not trust `X-Forwarded-For` until proxy
-configuration is reviewed and tested.
+rather than the original client. First staging intentionally uses one Gunicorn
+worker because the limiter is in-memory. Do not treat it as distributed
+protection, and do not trust `X-Forwarded-For` until proxy configuration is
+reviewed and tested.
 
 The `/health` endpoint is a liveness check. It intentionally does not validate
 PostgreSQL, S3/R2, OpenAI, or Resend availability, so dependency smoke tests

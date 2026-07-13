@@ -56,6 +56,28 @@ color:white;
 transform:translateX(5px);
 }
 
+.sidebar .logout-form{
+margin:6px 15px;
+}
+
+.sidebar .logout-button{
+background:transparent;
+border:0;
+color:#94a3b8;
+display:block;
+padding:12px 20px;
+text-align:left;
+width:100%;
+border-radius:10px;
+transition:.2s ease;
+}
+
+.sidebar .logout-button:hover{
+background:#334155;
+color:white;
+transform:translateX(5px);
+}
+
 /* MOBILE */
 
 @media (max-width:991px){
@@ -184,7 +206,10 @@ background:rgba(0,0,0,.6);
 
 <a href="#" id="toggleDark">Dark Mode</a>
 
-<a href="{{ url_for('auth.logout') }}">Logout</a>
+<form method="POST" action="{{ url_for('auth.logout') }}" class="logout-form">
+{{ csrf_input() }}
+<button type="submit" class="logout-button">Logout</button>
+</form>
 
 </div>
 

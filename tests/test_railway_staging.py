@@ -18,7 +18,7 @@ from app.extensions import db
 
 ROOT = Path(__file__).resolve().parents[1]
 START_COMMAND = (
-    "gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 "
+    "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 "
     "--timeout 120 --access-logfile - --error-logfile - main:app"
 )
 
@@ -39,6 +39,7 @@ class RailwayStagingTest(unittest.TestCase):
         )
         self.assertEqual(config["build"]["builder"], "NIXPACKS")
         self.assertEqual(config["deploy"]["startCommand"], START_COMMAND)
+        self.assertIn("--workers 1", config["deploy"]["startCommand"])
         self.assertEqual(config["deploy"]["preDeployCommand"], "flask db upgrade")
         self.assertEqual(config["deploy"]["healthcheckPath"], "/health")
         self.assertEqual(config["deploy"]["restartPolicyType"], "ON_FAILURE")
@@ -68,6 +69,13 @@ class RailwayStagingTest(unittest.TestCase):
         procfile = (ROOT / "Procfile").read_text(encoding="utf-8").strip()
 
         self.assertEqual(procfile, f"web: {START_COMMAND}")
+
+    def test_rate_limit_documentation_matches_single_worker_staging(self):
+        deployment_notes = (ROOT / "DEPLOYMENT.md").read_text(encoding="utf-8")
+
+        self.assertIn("--workers 1", deployment_notes)
+        self.assertIn("single-worker staging", deployment_notes)
+        self.assertIn("distributed production protection", deployment_notes)
 
     def test_procfile_has_canonical_casing_in_git(self):
         import subprocess

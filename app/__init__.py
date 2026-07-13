@@ -42,10 +42,11 @@ def create_app(config_object=None):
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
-    os.makedirs(
-        app.config["UPLOAD_FOLDER"],
-        exist_ok=True
-    )
+    if app.config.get("STORAGE_BACKEND", "local").lower() == "local":
+        os.makedirs(
+            app.config["UPLOAD_FOLDER"],
+            exist_ok=True
+        )
 
     db.init_app(app)
 

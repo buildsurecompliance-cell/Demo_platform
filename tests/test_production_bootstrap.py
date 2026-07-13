@@ -1,8 +1,9 @@
 import importlib
 import os
+import tempfile
 import unittest
 
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -49,6 +50,42 @@ class ProductionBootstrapTest(unittest.TestCase):
 
         self.assertIn("migrate", app.extensions)
 
+    def test_local_storage_creates_upload_folder_on_boot(self):
+        class LocalStorageConfig(TestingConfig):
+            STORAGE_BACKEND = "local"
+            UPLOAD_FOLDER = os.path.join(
+                tempfile.gettempdir(),
+                "buildsure-local-uploads-test",
+            )
+
+        with patch("app.os.makedirs") as makedirs_mock:
+            create_app(LocalStorageConfig)
+
+        makedirs_mock.assert_called_once_with(
+            LocalStorageConfig.UPLOAD_FOLDER,
+            exist_ok=True,
+        )
+
+    def test_s3_storage_does_not_create_upload_folder_on_boot(self):
+        class S3StorageConfig(TestingConfig):
+            STORAGE_BACKEND = "s3"
+            UPLOAD_FOLDER = os.path.join(
+                tempfile.gettempdir(),
+                "buildsure-s3-uploads-should-not-be-created",
+            )
+
+        with patch("app.os.makedirs") as makedirs_mock, patch(
+            "app.services.documents.storage.S3Storage.client",
+            new_callable=PropertyMock,
+        ) as storage_client:
+            app = create_app(S3StorageConfig)
+            response = app.test_client().get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"status": "ok"})
+        makedirs_mock.assert_not_called()
+        storage_client.assert_not_called()
+
     def test_main_is_official_wsgi_entrypoint(self):
         main = importlib.import_module("main")
 
@@ -59,7 +96,7 @@ class ProductionBootstrapTest(unittest.TestCase):
             self.assertEqual(
                 procfile.read().strip(),
                 (
-                    "web: gunicorn --bind 0.0.0.0:$PORT --workers 2 "
+                    "web: gunicorn --bind 0.0.0.0:$PORT --workers 1 "
                     "--threads 4 --timeout 120 --access-logfile - "
                     "--error-logfile - main:app"
                 ),

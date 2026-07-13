@@ -62,6 +62,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
         with self.app.app_context():
             db.session.remove()
             db.drop_all()
+            db.engine.dispose()
 
     def login(self, user_id):
         with self.client.session_transaction() as session:
