@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from flask import (
@@ -27,6 +28,7 @@ notifications_bp = Blueprint(
     "notifications",
     __name__,
 )
+logger = logging.getLogger(__name__)
 
 
 # ==========================
@@ -35,7 +37,7 @@ notifications_bp = Blueprint(
 
 @notifications_bp.route(
     "/send_reminder/<int:sub_id>",
-    methods=["GET", "POST"]
+    methods=["POST"]
 )
 @login_required
 def send_reminder(sub_id):
@@ -93,13 +95,13 @@ BuildSure Compliance
                 "success"
             )
 
-        except Exception as e:
+        except Exception:
 
             db.session.rollback()
 
-            print(
-                "REMINDER DB ERROR:",
-                e
+            logger.exception(
+                "Reminder timestamp update failed sub_id=%s",
+                sub.id,
             )
 
             flash(

@@ -5,6 +5,7 @@
 <h3 class="mb-4">{{ sub and "Edit" or "Add" }} Subcontractor</h3>
 
 <form method="POST" enctype="multipart/form-data">
+{{ csrf_input() }}
 
 <div class="mb-3">
 <label>Name</label>

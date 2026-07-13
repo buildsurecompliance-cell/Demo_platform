@@ -49,16 +49,54 @@ logger = logging.getLogger(__name__)
 
 
 def allowed_file(filename):
+    safe_name = secure_filename(filename or "")
+
+    if not safe_name or "." not in safe_name:
+        logger.warning("Upload rejected for invalid filename")
+        return False
 
     allowed_extensions = current_app.config.get(
         "ALLOWED_EXTENSIONS",
         {"pdf", "jpg", "jpeg", "png"}
     )
-
-    return (
-        "." in filename
-        and filename.rsplit(".", 1)[1].lower() in allowed_extensions
+    dangerous_extensions = current_app.config.get(
+        "DANGEROUS_UPLOAD_EXTENSIONS",
+        {
+            "bat",
+            "cmd",
+            "com",
+            "exe",
+            "html",
+            "htm",
+            "js",
+            "php",
+            "ps1",
+            "sh",
+            "svg",
+            "vbs",
+        },
     )
+    parts = [
+        part.lower()
+        for part in safe_name.rsplit(".", maxsplit=10)
+    ]
+    extension = parts[-1]
+
+    if extension not in allowed_extensions:
+        logger.warning(
+            "Upload rejected for extension extension=%s",
+            extension,
+        )
+        return False
+
+    if any(part in dangerous_extensions for part in parts[:-1]):
+        logger.warning(
+            "Upload rejected for dangerous double extension extension=%s",
+            extension,
+        )
+        return False
+
+    return True
 
 
 def _selected_owned_project_ids():

@@ -17,6 +17,7 @@
         {% endwith %}
 
         <form method="POST">
+            {{ csrf_input() }}
           
             <div class="mb-3">
                 <label>Email</label>

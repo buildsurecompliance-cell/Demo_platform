@@ -1,4 +1,5 @@
 import re
+import logging
 
 from flask import (
     Blueprint,
@@ -21,6 +22,10 @@ from werkzeug.security import check_password_hash
 
 from app.extensions import db
 from app.models import User
+from app.security import (
+    rate_limited,
+    safe_redirect_target,
+)
 
 auth_bp = Blueprint(
     "auth",
@@ -28,6 +33,7 @@ auth_bp = Blueprint(
 )
 
 EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
+logger = logging.getLogger(__name__)
 
 
 # ==========================
@@ -110,6 +116,7 @@ def subscribe():
     "/register",
     methods=["GET", "POST"]
 )
+@rate_limited("REGISTER_RATE_LIMIT")
 def register():
 
     email_prefill = request.args.get(
@@ -194,13 +201,14 @@ def register():
 
             db.session.commit()
 
-        except Exception as e:
+        except Exception:
 
             db.session.rollback()
 
-            print(
-                "REGISTER ERROR:",
-                e
+            logger.exception(
+                "Registration failed email=%s remote_addr=%s",
+                email,
+                request.remote_addr,
             )
 
             flash(
@@ -236,6 +244,7 @@ def register():
     "/login",
     methods=["GET", "POST"]
 )
+@rate_limited("LOGIN_RATE_LIMIT")
 def login():
 
     if request.method == "POST":
@@ -291,12 +300,15 @@ def login():
                 "next"
             )
 
-            if next_page:
-                return redirect(next_page)
-
             return redirect(
-                url_for("dashboard.dashboard")
+                safe_redirect_target(next_page)
             )
+
+        logger.warning(
+            "Failed login attempt email=%s remote_addr=%s",
+            email,
+            request.remote_addr,
+        )
 
         flash(
             "Invalid credentials",

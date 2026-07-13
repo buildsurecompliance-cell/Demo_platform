@@ -6,10 +6,12 @@ from flask import Flask
 from app.config import get_config
 
 from app.extensions import (
+    csrf,
     db,
     login_manager,
     migrate,
 )
+from app.security import register_security
 
 from app.routes import (
     ai_bp,
@@ -48,9 +50,12 @@ def create_app(config_object=None):
 
     migrate.init_app(app, db)
 
+    csrf.init_app(app)
+
     login_manager.init_app(app)
 
     register_template_filters(app)
+    register_security(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)

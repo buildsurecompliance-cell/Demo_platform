@@ -130,3 +130,62 @@ Recommended bucket policy:
 Existing local files are not migrated automatically. A future migration should
 copy files from local `uploads/` keys to object storage after verifying document
 ownership, checksums, and rollback behavior.
+
+## Security Hardening
+
+Production must run behind HTTPS. On platforms such as Render or Railway, make
+sure the public service URL terminates TLS before traffic reaches the Flask app.
+Keep `SESSION_COOKIE_SECURE=true` and `REMEMBER_COOKIE_SECURE=true` in
+production.
+
+CSRF protection is enabled globally through Flask-WTF. Server-rendered forms
+must include the hidden `csrf_token` input. `/health` remains a public GET
+endpoint and does not require CSRF. Do not disable `WTF_CSRF_ENABLED` in
+production.
+
+Security headers are applied centrally:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: SAMEORIGIN`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Content-Security-Policy`
+
+The default CSP is intentionally compatible with the current server-rendered
+templates, Bootstrap/Tom Select assets from `cdn.jsdelivr.net`, and Google
+Fonts. It still allows inline scripts/styles because the current templates use
+inline JavaScript and CSS. A future frontend cleanup should move inline assets
+to static files and tighten CSP further. `object-src 'none'`, `base-uri 'self'`,
+and `frame-ancestors 'self'` are set by default.
+
+Optional environment variables:
+
+```text
+CONTENT_SECURITY_POLICY=default-src 'self'; ...
+RATELIMIT_ENABLED=true
+RATELIMIT_STORAGE_URI=memory://
+LOGIN_RATE_LIMIT=5 per minute
+REGISTER_RATE_LIMIT=3 per minute
+PERMANENT_SESSION_DAYS=7
+```
+
+The current rate limiter is intentionally lightweight and in-memory. It is
+suitable for single-process staging checks, but production with multiple web
+workers should move rate-limit state to shared storage such as Redis in a future
+sprint.
+
+Upload hardening blocks obviously dangerous file extensions, empty filenames,
+HTML/SVG, and dangerous double extensions. The current version does not perform
+antivirus scanning or deep content inspection. Add document content scanning and
+malware monitoring before accepting high-risk customer uploads at scale.
+
+Monitor security events in application logs:
+
+- repeated login failures;
+- CSRF failures;
+- 403 responses;
+- 500 responses;
+- upload rejection by type or size.
+
+Logs must not include passwords, CSRF tokens, session cookies, API keys, or full
+document contents.

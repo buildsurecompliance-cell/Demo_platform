@@ -200,6 +200,11 @@ class ProductionBootstrapTest(unittest.TestCase):
         self.assertTrue(config.SESSION_COOKIE_SECURE)
         self.assertTrue(config.SESSION_COOKIE_HTTPONLY)
         self.assertEqual(config.SESSION_COOKIE_SAMESITE, "Lax")
+        self.assertTrue(config.REMEMBER_COOKIE_SECURE)
+        self.assertTrue(config.REMEMBER_COOKIE_HTTPONLY)
+        self.assertEqual(config.REMEMBER_COOKIE_SAMESITE, "Lax")
+        self.assertTrue(config.RATELIMIT_ENABLED)
+        self.assertIn("default-src", config.CONTENT_SECURITY_POLICY)
         self.assertEqual(
             config.SQLALCHEMY_DATABASE_URI,
             "postgresql://example",

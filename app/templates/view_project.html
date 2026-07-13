@@ -203,6 +203,7 @@ Analyze
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}"
       method="POST"
       style="display:inline;">
+{{ csrf_input() }}
 
 <button class="btn btn-danger btn-sm"
 onclick="return confirm('Delete this document?')">

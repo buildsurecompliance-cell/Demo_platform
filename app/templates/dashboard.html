@@ -372,6 +372,7 @@ View
 <form action="{{ url_for('projects.delete_project', id=project.id) }}"
 method="POST"
 style="display:inline;">
+{{ csrf_input() }}
 
 <button class="btn-delete"
 onclick="return confirm('Delete this project?')">
@@ -521,10 +522,16 @@ Reset
 
 <td style="text-align:right; white-space:nowrap;">
 
-<a href="{{ url_for('notifications.send_reminder', sub_id=sub.id) }}"
-class="btn-warning">
+<form method="POST"
+action="{{ url_for('notifications.send_reminder', sub_id=sub.id) }}"
+style="display:inline;">
+{{ csrf_input() }}
+
+<button type="submit" class="btn-warning">
 Reminder
-</a>
+</button>
+
+</form>
 
 <a href="{{ url_for('subcontractors.edit_sub', id=sub.id) }}"
 class="btn-edit">
@@ -535,6 +542,7 @@ Edit
 action="{{ url_for('subcontractors.delete_sub', id=sub.id) }}"
 style="display:inline;"
 onsubmit="return confirm('Delete this subcontractor?');">
+{{ csrf_input() }}
 
 <button type="submit" class="btn-delete">
 Delete

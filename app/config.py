@@ -1,5 +1,7 @@
 import os
 
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 
@@ -126,12 +128,67 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        days=_int_env("PERMANENT_SESSION_DAYS", 7)
+    )
+    WTF_CSRF_ENABLED = _bool_env("WTF_CSRF_ENABLED", True)
+
+    CONTENT_SECURITY_POLICY = os.getenv(
+        "CONTENT_SECURITY_POLICY",
+        (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+            "https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "object-src 'none'; "
+            "frame-ancestors 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        ),
+    )
+    X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "SAMEORIGIN")
+    REFERRER_POLICY = os.getenv(
+        "REFERRER_POLICY",
+        "strict-origin-when-cross-origin",
+    )
+    PERMISSIONS_POLICY = os.getenv(
+        "PERMISSIONS_POLICY",
+        "camera=(), microphone=(), geolocation=()",
+    )
+
+    RATELIMIT_ENABLED = _bool_env(
+        "RATELIMIT_ENABLED",
+        APP_ENV == "production",
+    )
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+    LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "5 per minute")
+    REGISTER_RATE_LIMIT = os.getenv("REGISTER_RATE_LIMIT", "3 per minute")
 
     ALLOWED_EXTENSIONS = {
         "pdf",
         "jpg",
         "jpeg",
         "png",
+    }
+    DANGEROUS_UPLOAD_EXTENSIONS = {
+        "bat",
+        "cmd",
+        "com",
+        "exe",
+        "html",
+        "htm",
+        "js",
+        "php",
+        "ps1",
+        "sh",
+        "svg",
+        "vbs",
     }
 
 
@@ -147,6 +204,7 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = _database_url(default_sqlite=False)
     SESSION_COOKIE_SECURE = True
     STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "s3").lower()
+    REMEMBER_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):
