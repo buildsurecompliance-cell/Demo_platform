@@ -56,14 +56,19 @@ class User(UserMixin, db.Model):
         "Project",
         backref="owner",
         lazy=True,
-        cascade="all, delete-orphan"
     )
 
     subs = db.relationship(
         "Subcontractor",
         backref="owner",
         lazy=True,
-        cascade="all, delete-orphan"
+    )
+
+    organization_memberships = db.relationship(
+        "OrganizationMembership",
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
     )
 
     uploaded_documents = db.relationship(

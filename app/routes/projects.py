@@ -50,6 +50,13 @@ from app.services.documents.types import (
 from app.services.compliance_officer import (
     generate_compliance_advice,
 )
+from app.services.organizations import (
+    get_current_organization,
+    project_scope_filter,
+    scoped_project_query,
+    scoped_subcontractor_query,
+    subcontractor_scope_filter,
+)
 
 
 projects_bp = Blueprint(
@@ -75,7 +82,7 @@ def _selected_owned_subcontractor_ids():
     owned_subs = (
         Subcontractor.query
         .filter(
-            Subcontractor.user_id == current_user.id,
+            subcontractor_scope_filter(Subcontractor),
             Subcontractor.id.in_(selected_ids),
         )
         .all()
@@ -149,7 +156,8 @@ def _cleanup_saved_documents(storage_keys):
 @login_required
 def add_project():
 
-    subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
+    organization = get_current_organization()
+    subs = scoped_subcontractor_query().all()
 
     if request.method == "POST":
 
@@ -192,6 +200,7 @@ def add_project():
             name=name,
             contract_value=contract_value,
             user_id=current_user.id,
+            organization_id=organization.id,
             start_date=start_date,
             end_date=end_date,
         )
@@ -238,6 +247,7 @@ def add_project():
                     document_type=doc_type,
                     version=next_versions[doc_type],
                     project_id=project.id,
+                    uploaded_by=current_user.id,
                 )
 
                 db.session.add(doc)
@@ -274,10 +284,11 @@ def edit_project(project_id):
 
     project = Project.query.filter_by(
         id=project_id,
-        user_id=current_user.id,
+    ).filter(
+        project_scope_filter(Project)
     ).first_or_404()
 
-    subs = Subcontractor.query.filter_by(user_id=current_user.id).all()
+    subs = scoped_subcontractor_query().all()
 
     if request.method == "POST":
 
@@ -406,6 +417,7 @@ def edit_project(project_id):
                     document_type=doc_type,
                     version=version,
                     project_id=project.id,
+                    uploaded_by=current_user.id,
                 )
 
                 db.session.add(new_doc)
@@ -451,11 +463,8 @@ def edit_project(project_id):
 def view_project(project_id):
 
     project = (
-        Project.query
-        .filter_by(
-            id=project_id,
-            user_id=current_user.id,
-        )
+        scoped_project_query()
+        .filter(Project.id == project_id)
         .first_or_404()
     )
 
@@ -505,7 +514,8 @@ def delete_project(id):
 
     project = Project.query.filter_by(
         id=id,
-        user_id=current_user.id,
+    ).filter(
+        project_scope_filter(Project)
     ).first_or_404()
 
     try:
@@ -544,7 +554,8 @@ def upload_project_document(project_id):
 
     project = Project.query.filter_by(
         id=project_id,
-        user_id=current_user.id,
+    ).filter(
+        project_scope_filter(Project)
     ).first_or_404()
 
     file = request.files.get("file")
@@ -612,6 +623,7 @@ def upload_project_document(project_id):
         document_type=doc_type,
         version=version,
         project_id=project.id,
+        uploaded_by=current_user.id,
     )
 
     db.session.add(new_doc)

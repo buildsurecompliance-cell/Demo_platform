@@ -38,6 +38,13 @@ from app.services.documents.storage import (
     delete_document_file,
     save_document_file,
 )
+from app.services.organizations import (
+    get_current_organization,
+    project_scope_filter,
+    scoped_project_query,
+    scoped_subcontractor_query,
+    subcontractor_scope_filter,
+)
 
 
 subcontractors_bp = Blueprint(
@@ -114,7 +121,7 @@ def _selected_owned_project_ids():
     owned_projects = (
         Project.query
         .filter(
-            Project.user_id == current_user.id,
+            project_scope_filter(Project),
             Project.id.in_(selected_ids),
         )
         .all()
@@ -137,7 +144,8 @@ def view_sub_documents(sub_id):
 
     sub = Subcontractor.query.filter_by(
         id=sub_id,
-        user_id=current_user.id
+    ).filter(
+        subcontractor_scope_filter(Subcontractor)
     ).first_or_404()
 
     documents = (
@@ -158,9 +166,8 @@ def view_sub_documents(sub_id):
 @login_required
 def add_sub():
 
-    projects = Project.query.filter_by(
-        user_id=current_user.id
-    ).all()
+    organization = get_current_organization()
+    projects = scoped_project_query().all()
 
     if request.method == "POST":
 
@@ -195,6 +202,7 @@ def add_sub():
             timezone=current_user.timezone,
             coi_expiration=coi_expiration,
             user_id=current_user.id,
+            organization_id=organization.id,
         )
 
         db.session.add(new_sub)
@@ -304,12 +312,11 @@ def edit_sub(id):
 
     sub = Subcontractor.query.filter_by(
         id=id,
-        user_id=current_user.id
+    ).filter(
+        subcontractor_scope_filter(Subcontractor)
     ).first_or_404()
 
-    projects = Project.query.filter_by(
-        user_id=current_user.id
-    ).all()
+    projects = scoped_project_query().all()
 
     if request.method == "POST":
 
@@ -482,7 +489,8 @@ def delete_sub(id):
 
     sub = Subcontractor.query.filter_by(
         id=id,
-        user_id=current_user.id
+    ).filter(
+        subcontractor_scope_filter(Subcontractor)
     ).first_or_404()
 
     try:

@@ -26,6 +26,9 @@ from app.security import (
     rate_limited,
     safe_redirect_target,
 )
+from app.services.organizations import (
+    create_default_organization_for_user,
+)
 
 auth_bp = Blueprint(
     "auth",
@@ -198,6 +201,9 @@ def register():
             new_user.set_password(password)
 
             db.session.add(new_user)
+            db.session.flush()
+
+            create_default_organization_for_user(new_user)
 
             db.session.commit()
 

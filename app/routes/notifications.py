@@ -22,6 +22,9 @@ from app.models import (
 from app.services.notifications.email_service import (
     send_email_reminder,
 )
+from app.services.organizations import (
+    subcontractor_scope_filter,
+)
 
 
 notifications_bp = Blueprint(
@@ -44,7 +47,8 @@ def send_reminder(sub_id):
 
     sub = Subcontractor.query.filter_by(
         id=sub_id,
-        user_id=current_user.id
+    ).filter(
+        subcontractor_scope_filter(Subcontractor)
     ).first_or_404()
 
     if not sub.email:

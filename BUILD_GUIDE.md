@@ -38,6 +38,9 @@ If a feature does not improve the ability to determine whether a subcontractor c
 ## 3. Architecture
 
 ```text
+Organization
+  |
+  v
 Upload
   |
   v
@@ -115,11 +118,35 @@ The product should make the answer clear, explainable, and actionable.
 
 The account owner or authenticated actor using the platform.
 
-Users own projects, subcontractors, documents, and the compliance data associated with them. All access control must respect user ownership.
+Users belong to one or more Organizations through memberships.
+
+Users do not own projects, subcontractors, or documents directly in the product domain. User identity is still important for authentication and audit trails, such as who uploaded a document or sent an invitation.
+
+### Organization
+
+The customer company using BuildSure Compliance.
+
+Organization is the tenant boundary. Projects, subcontractors, document access, dashboards, and compliance workflows are scoped to the active Organization.
+
+Commercial plans may allow multiple users in the same Organization, but the data belongs to the company, not to an individual user account.
+
+### OrganizationMembership
+
+The relationship between a User and an Organization.
+
+Membership defines whether a user can access the Organization and which simple role they have.
+
+V1 roles are:
+
+- OWNER
+- ADMIN
+- MEMBER
+
+Roles must be centralized in code and not repeated as free-form strings across routes or templates.
 
 ### Project
 
-A construction project owned by a user.
+A construction project owned by an Organization.
 
 Projects define the context in which subcontractors are evaluated. Project-specific requirements can affect readiness, including required coverage or future Compliance Profiles.
 
@@ -127,7 +154,7 @@ Projects define the context in which subcontractors are evaluated. Project-speci
 
 A company or trade partner that may work on projects.
 
-Subcontractors hold general compliance information and documents, but readiness is always evaluated in the context of a project.
+Subcontractors belong to an Organization. They hold general compliance information and documents, but readiness is always evaluated in the context of a project.
 
 ### ProjectSubcontractor
 
@@ -140,6 +167,8 @@ This is the central operational link for readiness. The product question is answ
 A stored uploaded file with metadata, ownership, entity association, versioning, and optional AI analysis output.
 
 Documents are evidence sources. They are not compliance decisions.
+
+The `uploaded_by` user reference is an audit field. It should not be used as the ownership boundary.
 
 ### ComplianceEvidence
 
@@ -224,6 +253,45 @@ Rejected AI output can still become evidence of uncertainty, causing PENDING rat
 AI never releases a subcontractor to work.
 
 The Readiness Engine releases, pauses, or blocks based on evidence and rules.
+
+## 6.5 Organization and Team Access
+
+BuildSure uses Organization-level tenancy.
+
+The active Organization determines which projects, subcontractors, documents, dashboard metrics, reminders, analysis actions, and team records a user can access.
+
+Users in the same Organization share the same compliance workspace. Users in different Organizations must not see each other's projects, subcontractors, documents, or membership records.
+
+Role semantics:
+
+- OWNER has full access to the Organization and can manage members.
+- ADMIN can manage operational data and invite members.
+- MEMBER can use normal compliance workflows but cannot manage team access.
+
+V1 does not include project-level permissions, departments, crews, billing seats, or complex access policies.
+
+Team invitations are token-based:
+
+- store only a hash of the token;
+- expire invitations;
+- use invitations once;
+- require the accepting user's email to match the invitation;
+- do not reveal whether an email has an account outside the Organization.
+
+Organization access must be checked before storage access, AI analysis, document download, delete, reminders, or any mutable action.
+
+In V1, the active Organization is resolved from the session only after
+verifying that the current user has a membership in that Organization. Invalid
+or cross-Organization session values are ignored and replaced with the first
+membership in deterministic order. There is no visual multi-Organization
+selector in this sprint.
+
+`Project.user_id` and `Subcontractor.user_id` may remain temporarily for
+legacy compatibility and audit context during the migration window, but they
+must not be treated as the primary ownership boundary. New domain queries
+should use Organization scope. The legacy fallback can be removed after all
+environments have applied the Organization migration and legacy fixtures have
+been updated.
 
 ## 7. Compliance Profiles
 

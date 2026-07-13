@@ -24,6 +24,10 @@ from app.extensions import db
 from app.services.document_analysis_service import (
     analyze_and_save_document,
 )
+from app.services.organizations import (
+    project_scope_filter,
+    subcontractor_scope_filter,
+)
 
 
 ai_bp = Blueprint(
@@ -45,7 +49,15 @@ def user_can_access_document(doc):
             doc.sub_id,
         )
 
-        if not sub or sub.user_id != current_user.id:
+        if (
+            not sub
+            or not Subcontractor.query
+            .filter(
+                Subcontractor.id == sub.id,
+                subcontractor_scope_filter(Subcontractor),
+            )
+            .first()
+        ):
             return False
 
     if doc.project_id:
@@ -55,7 +67,15 @@ def user_can_access_document(doc):
             doc.project_id,
         )
 
-        if not project or project.user_id != current_user.id:
+        if (
+            not project
+            or not Project.query
+            .filter(
+                Project.id == project.id,
+                project_scope_filter(Project),
+            )
+            .first()
+        ):
             return False
 
     return True

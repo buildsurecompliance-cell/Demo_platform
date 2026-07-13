@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+<div class="card">
+<h2>Accept Invitation</h2>
+<p class="text-muted">
+Join this BuildSure organization with your current account.
+</p>
+
+<form method="POST">
+{{ csrf_input() }}
+<button class="btn btn-primary" type="submit">Accept Invitation</button>
+</form>
+</div>
+</div>
+
+{% endblock %}

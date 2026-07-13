@@ -6,6 +6,7 @@ from .health import health_bp
 from .notifications import notifications_bp
 from .projects import projects_bp
 from .subcontractors import subcontractors_bp
+from .team import team_bp
 
 __all__ = [
     "ai_bp",
@@ -16,4 +17,5 @@ __all__ = [
     "notifications_bp",
     "projects_bp",
     "subcontractors_bp",
+    "team_bp",
 ]

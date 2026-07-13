@@ -19,6 +19,13 @@ class Subcontractor(db.Model):
         index=True
     )
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organization.id"),
+        nullable=True,
+        index=True,
+    )
+
     # ==========================
     # BASIC INFO
     # ==========================
@@ -73,6 +80,11 @@ class Subcontractor(db.Model):
         backref="sub",
         lazy="selectin",
         cascade="all, delete-orphan"
+    )
+
+    organization = db.relationship(
+        "Organization",
+        back_populates="subcontractors",
     )
 
     projects = db.relationship(

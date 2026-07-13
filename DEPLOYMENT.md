@@ -329,3 +329,41 @@ disable access logs globally.
 - verify ownership isolation with a second test user;
 - verify 404, 500, CSRF, and rate-limit behavior;
 - confirm migrations were applied.
+
+## Organization Tenancy
+
+BuildSure production data is scoped by Organization.
+
+For existing databases, the Organization migration creates one default
+Organization for each existing User, creates an OWNER membership for that User,
+and assigns existing Projects and Subcontractors to that Organization. Documents
+remain associated through their existing project/subcontractor links.
+`Document.uploaded_by` is preserved as an audit field for who uploaded a file.
+
+The Organization migration is required before using team access in staging or
+production. During the transition, `Project.user_id` and `Subcontractor.user_id`
+remain as legacy compatibility/audit fields, but Organization is the ownership
+boundary for application access.
+
+V1 has no visual Organization selector. If a user belongs to multiple
+Organizations, the session value is accepted only when it matches one of that
+user's memberships; otherwise the app falls back to the first membership in
+deterministic order.
+
+Downgrading this migration removes Organization, Membership, and Invitation
+tables and returns the schema to direct user ownership. Project and
+Subcontractor IDs are preserved, but team-access records and pending invitations
+are not represented in the older schema. Treat downgrade as a staging rollback
+tool, not a production data-portability path.
+
+After deploying the Organization migration, smoke test with at least:
+
+- one OWNER user;
+- one invited user in the same Organization;
+- one user in a different Organization;
+- project and subcontractor visibility for same-Organization users;
+- 404/403 behavior for cross-Organization access;
+- invitation creation, expiration, acceptance, and single-use behavior.
+
+Do not use local production data or real customer data for staging team-access
+tests.

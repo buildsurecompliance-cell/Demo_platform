@@ -14,6 +14,12 @@ from app.models import (
     Project,
     Subcontractor,
 )
+from app.services.organizations import (
+    project_scope_filter,
+    scoped_project_query,
+    scoped_subcontractor_query,
+    subcontractor_scope_filter,
+)
 
 dashboard_bp = Blueprint(
     "dashboard",
@@ -57,9 +63,7 @@ def dashboard():
     # SUBCONTRACTORS
     # =========================
 
-    query = Subcontractor.query.filter_by(
-        user_id=current_user.id
-    )
+    query = scoped_subcontractor_query()
 
     if search:
 
@@ -138,9 +142,7 @@ def dashboard():
     # PROJECTS
     # =========================
 
-    projects_query = Project.query.filter_by(
-        user_id=current_user.id
-    )
+    projects_query = scoped_project_query()
 
     if project_search:
 
@@ -233,7 +235,7 @@ def dashboard():
         Document.query
         .join(Subcontractor)
         .filter(
-            Subcontractor.user_id == current_user.id
+            subcontractor_scope_filter(Subcontractor)
         )
         .all()
     )

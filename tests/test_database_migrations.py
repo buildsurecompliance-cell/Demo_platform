@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from flask_migrate import downgrade, upgrade
 from sqlalchemy import inspect
+from sqlalchemy import text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
@@ -18,12 +19,24 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Document, Project, ProjectSubcontractor, Subcontractor, User
+from app.models import (
+    Document,
+    Organization,
+    OrganizationInvitation,
+    OrganizationMembership,
+    Project,
+    ProjectSubcontractor,
+    Subcontractor,
+    User,
+)
 
 
 EXPECTED_TABLES = {
     "alembic_version",
     "document",
+    "organization",
+    "organization_invitation",
+    "organization_membership",
     "project",
     "project_subcontractor",
     "subcontractor",
@@ -32,6 +45,9 @@ EXPECTED_TABLES = {
 
 MODEL_TABLES = {
     "document",
+    "organization",
+    "organization_invitation",
+    "organization_membership",
     "project",
     "project_subcontractor",
     "subcontractor",
@@ -163,6 +179,32 @@ class DatabaseMigrationTest(unittest.TestCase):
                 self.assertIn("ix_document_ai_status", document_indexes)
                 self.assertIn("ix_document_uploaded_at", document_indexes)
 
+                membership_constraints = inspector.get_unique_constraints(
+                    "organization_membership"
+                )
+                self.assertIn(
+                    "unique_organization_user_membership",
+                    {
+                        constraint["name"]
+                        for constraint in membership_constraints
+                    },
+                )
+
+                invitation_indexes = {
+                    index["name"]
+                    for index in inspector.get_indexes(
+                        "organization_invitation"
+                    )
+                }
+                self.assertIn(
+                    "ix_organization_invitation_token_hash",
+                    invitation_indexes,
+                )
+                self.assertIn(
+                    "unique_pending_organization_invitation",
+                    invitation_indexes,
+                )
+
     def test_migrated_schema_columns_match_metadata(self):
         with self.temporary_migrated_app() as app:
             with app.app_context():
@@ -207,6 +249,10 @@ class DatabaseMigrationTest(unittest.TestCase):
             "CONSTRAINT unique_project_sub",
             compiled_tables["project_subcontractor"],
         )
+        self.assertIn(
+            "CONSTRAINT unique_organization_user_membership",
+            compiled_tables["organization_membership"],
+        )
 
     def test_app_can_use_schema_after_migration_upgrade(self):
         with self.temporary_migrated_app() as app:
@@ -245,6 +291,155 @@ class DatabaseMigrationTest(unittest.TestCase):
                 self.assertEqual(ProjectSubcontractor.query.count(), 1)
                 self.assertEqual(Document.query.count(), 1)
 
+    def test_migration_upgrade_assigns_existing_data_to_organizations(self):
+        with self.temporary_migrated_app_from_revision(
+            "ebe17429fa03"
+        ) as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (email, password_hash, paid, timezone)
+                        VALUES
+                            ('legacy@example.com', 'hash', 1, 'US/Eastern')
+                        """
+                    )
+                )
+                user_id = db.session.execute(
+                    text("SELECT id FROM user WHERE email = 'legacy@example.com'")
+                ).scalar_one()
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO project (name, contract_value, user_id)
+                        VALUES ('Legacy Project', 0, :user_id)
+                        """
+                    ),
+                    {"user_id": user_id},
+                )
+                project_id = db.session.execute(
+                    text("SELECT id FROM project WHERE name = 'Legacy Project'")
+                ).scalar_one()
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO subcontractor (name, user_id)
+                        VALUES ('Legacy Sub', :user_id)
+                        """
+                    ),
+                    {"user_id": user_id},
+                )
+                subcontractor_id = db.session.execute(
+                    text(
+                        "SELECT id FROM subcontractor WHERE name = 'Legacy Sub'"
+                    )
+                ).scalar_one()
+                db.session.commit()
+
+                upgrade(directory="migrations")
+
+                self.assertEqual(Organization.query.count(), 1)
+                self.assertEqual(OrganizationMembership.query.count(), 1)
+
+                membership = OrganizationMembership.query.one()
+                self.assertEqual(membership.user_id, user_id)
+                self.assertEqual(membership.role, "OWNER")
+
+                migrated_project = Project.query.get(project_id)
+                migrated_sub = Subcontractor.query.get(subcontractor_id)
+                self.assertEqual(
+                    migrated_project.organization_id,
+                    membership.organization_id,
+                )
+                self.assertEqual(
+                    migrated_sub.organization_id,
+                    membership.organization_id,
+                )
+
+    def test_migration_upgrade_keeps_tenant_data_distinct(self):
+        with self.temporary_migrated_app_from_revision(
+            "ebe17429fa03"
+        ) as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (email, password_hash, paid, timezone)
+                        VALUES
+                            ('one@example.com', 'hash', 1, 'US/Eastern'),
+                            ('two@example.com', 'hash', 1, 'US/Eastern')
+                        """
+                    )
+                )
+                user_rows = db.session.execute(
+                    text("SELECT id, email FROM user ORDER BY id")
+                ).fetchall()
+
+                for user in user_rows:
+                    db.session.execute(
+                        text(
+                            """
+                            INSERT INTO project
+                                (name, contract_value, user_id)
+                            VALUES
+                                (:name, 0, :user_id)
+                            """
+                        ),
+                        {
+                            "name": f"Project {user.email}",
+                            "user_id": user.id,
+                        },
+                    )
+                    db.session.execute(
+                        text(
+                            """
+                            INSERT INTO subcontractor (name, user_id)
+                            VALUES (:name, :user_id)
+                            """
+                        ),
+                        {
+                            "name": f"Sub {user.email}",
+                            "user_id": user.id,
+                        },
+                    )
+
+                db.session.commit()
+
+                upgrade(directory="migrations")
+
+                self.assertEqual(Organization.query.count(), 2)
+                self.assertEqual(OrganizationMembership.query.count(), 2)
+                self.assertEqual(
+                    Project.query.filter(
+                        Project.organization_id.is_(None)
+                    ).count(),
+                    0,
+                )
+                self.assertEqual(
+                    Subcontractor.query.filter(
+                        Subcontractor.organization_id.is_(None)
+                    ).count(),
+                    0,
+                )
+
+                for membership in OrganizationMembership.query.all():
+                    self.assertEqual(
+                        Project.query.filter_by(
+                            user_id=membership.user_id,
+                            organization_id=membership.organization_id,
+                        ).count(),
+                        1,
+                    )
+                    self.assertEqual(
+                        Subcontractor.query.filter_by(
+                            user_id=membership.user_id,
+                            organization_id=membership.organization_id,
+                        ).count(),
+                        1,
+                    )
+
     def test_migration_downgrade_base_removes_schema(self):
         with self.temporary_migrated_app() as app:
             with app.app_context():
@@ -258,8 +453,14 @@ class DatabaseMigrationTest(unittest.TestCase):
     def temporary_migrated_app(self):
         return TemporaryMigratedApp()
 
+    def temporary_migrated_app_from_revision(self, revision):
+        return TemporaryMigratedApp(revision=revision)
+
 
 class TemporaryMigratedApp:
+
+    def __init__(self, revision=None):
+        self.revision = revision
 
     def __enter__(self):
         self.database = tempfile.NamedTemporaryFile(
@@ -276,7 +477,10 @@ class TemporaryMigratedApp:
         self.app = create_app(TempMigrationConfig)
 
         with self.app.app_context():
-            upgrade(directory="migrations")
+            upgrade(
+                directory="migrations",
+                revision=self.revision or "head",
+            )
 
         return self.app
 

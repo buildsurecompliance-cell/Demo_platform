@@ -28,6 +28,13 @@ class Project(db.Model):
         nullable=False
     )
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organization.id"),
+        nullable=True,
+        index=True,
+    )
+
     start_date = db.Column(db.Date)
 
     end_date = db.Column(db.Date)
@@ -41,6 +48,11 @@ class Project(db.Model):
         back_populates="project",
         lazy="joined",
         cascade="all, delete-orphan"
+    )
+
+    organization = db.relationship(
+        "Organization",
+        back_populates="projects",
     )
 
     # ==========================

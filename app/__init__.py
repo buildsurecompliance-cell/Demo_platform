@@ -22,6 +22,7 @@ from app.routes import (
     notifications_bp,
     projects_bp,
     subcontractors_bp,
+    team_bp,
 )
 
 from app.utils import register_template_filters
@@ -64,6 +65,7 @@ def create_app(config_object=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(subcontractors_bp)
+    app.register_blueprint(team_bp)
     app.register_blueprint(ai_bp)
 
     from app import models

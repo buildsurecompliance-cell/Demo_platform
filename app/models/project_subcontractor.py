@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy import event, select
+
 from app.extensions import db
 
 
@@ -88,3 +90,42 @@ class ProjectSubcontractor(db.Model):
             f"Project={self.project_id} "
             f"Sub={self.subcontractor_id}>"
         )
+
+
+def _validate_same_organization(mapper, connection, target):
+    from app.models.project import Project
+    from app.models.subcontractor import Subcontractor
+
+    if not target.project_id or not target.subcontractor_id:
+        return
+
+    project_org_id = connection.execute(
+        select(Project.organization_id)
+        .where(Project.id == target.project_id)
+    ).scalar_one_or_none()
+
+    subcontractor_org_id = connection.execute(
+        select(Subcontractor.organization_id)
+        .where(Subcontractor.id == target.subcontractor_id)
+    ).scalar_one_or_none()
+
+    if (
+        project_org_id is not None
+        and subcontractor_org_id is not None
+        and project_org_id != subcontractor_org_id
+    ):
+        raise ValueError(
+            "Project and subcontractor must belong to the same organization."
+        )
+
+
+event.listen(
+    ProjectSubcontractor,
+    "before_insert",
+    _validate_same_organization,
+)
+event.listen(
+    ProjectSubcontractor,
+    "before_update",
+    _validate_same_organization,
+)
