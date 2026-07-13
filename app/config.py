@@ -70,6 +70,18 @@ def _secret_key(required=False):
     return "dev-only-secret-key"
 
 
+def _int_env(name, default):
+    value = os.getenv(name)
+
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 class Config:
 
     ENV = APP_ENV
@@ -89,6 +101,19 @@ class Config:
             BASE_DIR,
             "uploads"
         )
+    )
+
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").lower()
+    S3_BUCKET = os.getenv("S3_BUCKET")
+    S3_REGION = os.getenv("S3_REGION")
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+    S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
+    S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+    S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL")
+    S3_PRESIGNED_URL_TTL = _int_env("S3_PRESIGNED_URL_TTL", 300)
+    ALLOW_LOCAL_STORAGE_IN_PRODUCTION = _bool_env(
+        "ALLOW_LOCAL_STORAGE_IN_PRODUCTION",
+        False,
     )
 
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
@@ -121,6 +146,7 @@ class ProductionConfig(Config):
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = _database_url(default_sqlite=False)
     SESSION_COOKIE_SECURE = True
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "s3").lower()
 
 
 class TestingConfig(Config):
@@ -154,6 +180,14 @@ def get_config():
         if ProductionConfig.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
             raise RuntimeError(
                 "Production DATABASE_URL must use PostgreSQL"
+            )
+
+        if (
+            ProductionConfig.STORAGE_BACKEND == "local"
+            and not ProductionConfig.ALLOW_LOCAL_STORAGE_IN_PRODUCTION
+        ):
+            raise RuntimeError(
+                "Production document storage must use persistent storage"
             )
 
         return ProductionConfig

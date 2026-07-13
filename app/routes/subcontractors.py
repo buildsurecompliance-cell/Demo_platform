@@ -1,6 +1,7 @@
 import uuid
 
 from datetime import datetime
+import logging
 
 from flask import (
     Blueprint,
@@ -33,6 +34,7 @@ from app.services.document_analysis_service import (
 )
 
 from app.services.documents.storage import (
+    cleanup_saved_document,
     delete_document_file,
     save_document_file,
 )
@@ -42,6 +44,8 @@ subcontractors_bp = Blueprint(
     "subcontractors",
     __name__,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def allowed_file(filename):
@@ -82,6 +86,11 @@ def _selected_owned_project_ids():
         project.id
         for project in owned_projects
     }
+
+
+def _cleanup_saved_documents(storage_keys):
+    for storage_key in storage_keys:
+        cleanup_saved_document(storage_key)
 
 
 @subcontractors_bp.route("/sub/<int:sub_id>/documents")
@@ -163,6 +172,7 @@ def add_sub():
             db.session.add(link)
 
         uploaded_docs = []
+        saved_storage_keys = []
 
         files = request.files.getlist("documents")
 
@@ -201,13 +211,15 @@ def add_sub():
 
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
-                save_document_file(
+                storage_key = save_document_file(
                     file,
                     unique_name,
+                    sub_id=new_sub.id,
                 )
+                saved_storage_keys.append(storage_key)
 
                 new_doc = Document(
-                    filename=unique_name,
+                    filename=storage_key,
                     original_name=original_name,
                     document_type=doc_type,
                     version=new_version,
@@ -219,7 +231,9 @@ def add_sub():
                 uploaded_docs.append(new_doc)
 
             except Exception as e:
-                print("UPLOAD ERROR:", e)
+                logger.exception(
+                    "Subcontractor document upload failed during add_sub"
+                )
                 flash(f"Error uploading {file.filename}", "danger")
 
         try:
@@ -232,7 +246,8 @@ def add_sub():
 
         except Exception as e:
             db.session.rollback()
-            print("ADD SUB ERROR:", e)
+            _cleanup_saved_documents(saved_storage_keys)
+            logger.exception("Subcontractor create failed")
             flash("Error adding subcontractor.", "danger")
 
         return redirect(url_for("dashboard.dashboard"))
@@ -325,6 +340,7 @@ def edit_sub(id):
             db.session.add(link)
 
         uploaded_docs = []
+        saved_storage_keys = []
 
         files = request.files.getlist("documents")
 
@@ -363,13 +379,15 @@ def edit_sub(id):
 
                 unique_name = f"{uuid.uuid4().hex}_{original_name}"
 
-                save_document_file(
+                storage_key = save_document_file(
                     file,
                     unique_name,
+                    sub_id=sub.id,
                 )
+                saved_storage_keys.append(storage_key)
 
                 new_doc = Document(
-                    filename=unique_name,
+                    filename=storage_key,
                     original_name=original_name,
                     document_type=doc_type,
                     version=new_version,
@@ -381,7 +399,9 @@ def edit_sub(id):
                 uploaded_docs.append(new_doc)
 
             except Exception as e:
-                print("EDIT SUB UPLOAD ERROR:", e)
+                logger.exception(
+                    "Subcontractor document upload failed during edit_sub"
+                )
                 flash(f"Error uploading {file.filename}", "danger")
 
         try:
@@ -394,7 +414,11 @@ def edit_sub(id):
 
         except Exception as e:
             db.session.rollback()
-            print("EDIT SUB ERROR:", e)
+            _cleanup_saved_documents(saved_storage_keys)
+            logger.exception(
+                "Subcontractor update failed for subcontractor_id=%s",
+                sub.id,
+            )
             flash("Error updating subcontractor.", "danger")
 
         return redirect(url_for("dashboard.dashboard"))
@@ -425,11 +449,7 @@ def delete_sub(id):
 
     try:
         for doc in sub.documents:
-
-            try:
-                delete_document_file(doc)
-            except Exception as e:
-                print("FILE DELETE ERROR:", e)
+            delete_document_file(doc)
 
         db.session.delete(sub)
         db.session.commit()
@@ -438,7 +458,10 @@ def delete_sub(id):
 
     except Exception as e:
         db.session.rollback()
-        print("DELETE SUB ERROR:", e)
+        logger.exception(
+            "Subcontractor delete failed for subcontractor_id=%s",
+            sub.id,
+        )
         flash("Error deleting subcontractor.", "danger")
 
     return redirect(url_for("dashboard.dashboard"))

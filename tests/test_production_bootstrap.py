@@ -205,6 +205,43 @@ class ProductionBootstrapTest(unittest.TestCase):
             "postgresql://example",
         )
 
+    def test_production_config_rejects_local_document_storage_by_default(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "SECRET_KEY": "prod-secret",
+                "DATABASE_URL": "postgres://example",
+                "STORAGE_BACKEND": "local",
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            reloaded = importlib.reload(config_module)
+
+            with self.assertRaisesRegex(RuntimeError, "persistent storage"):
+                reloaded.get_config()
+
+    def test_production_config_allows_local_storage_only_with_override(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "SECRET_KEY": "prod-secret",
+                "DATABASE_URL": "postgres://example",
+                "STORAGE_BACKEND": "local",
+                "ALLOW_LOCAL_STORAGE_IN_PRODUCTION": "true",
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            reloaded = importlib.reload(config_module)
+            config = reloaded.get_config()
+
+        self.assertEqual(config.STORAGE_BACKEND, "local")
+
     def test_openai_module_import_does_not_require_api_key(self):
         with patch.dict(os.environ, {}, clear=True):
             import app.services.ai.ai_service as ai_service

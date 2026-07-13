@@ -38,6 +38,7 @@ from app.models import (
 from app.routes.subcontractors import allowed_file
 
 from app.services.documents.storage import (
+    cleanup_saved_document,
     delete_document_file,
     save_document_file,
 )
@@ -139,6 +140,11 @@ def _fallback_compliance_advice(project_subcontractor):
     )
 
 
+def _cleanup_saved_documents(storage_keys):
+    for storage_key in storage_keys:
+        cleanup_saved_document(storage_key)
+
+
 @projects_bp.route("/add_project", methods=["GET", "POST"])
 @login_required
 def add_project():
@@ -203,6 +209,7 @@ def add_project():
             request.form.get("doc_type")
         )
         next_versions = defaultdict(lambda: 1)
+        saved_storage_keys = []
 
         for file in files:
 
@@ -218,14 +225,15 @@ def add_project():
                 safe_name = secure_filename(original_name)
                 unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
-                save_document_file(
+                storage_key = save_document_file(
                     file,
                     unique_name,
                     project_id=project.id,
                 )
+                saved_storage_keys.append(storage_key)
 
                 doc = Document(
-                    filename=unique_name,
+                    filename=storage_key,
                     original_name=original_name,
                     document_type=doc_type,
                     version=next_versions[doc_type],
@@ -236,14 +244,17 @@ def add_project():
                 next_versions[doc_type] += 1
 
             except Exception as e:
-                print("UPLOAD ERROR:", e)
+                logger.exception(
+                    "Project document upload failed during project create"
+                )
                 flash(f"Error uploading {file.filename}", "danger")
 
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print("PROJECT CREATE ERROR:", e)
+            _cleanup_saved_documents(saved_storage_keys)
+            logger.exception("Project create failed")
             flash("Error creating project.", "danger")
             return redirect(url_for("projects.add_project"))
 
@@ -355,6 +366,7 @@ def edit_project(project_id):
                 )
                 db.session.add(new_link)
 
+        saved_storage_keys = []
         file = request.files.get("file")
 
         if file and file.filename != "":
@@ -365,11 +377,12 @@ def edit_project(project_id):
                 safe_name = secure_filename(original_name)
                 unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
-                save_document_file(
+                storage_key = save_document_file(
                     file,
                     unique_name,
                     project_id=project.id,
                 )
+                saved_storage_keys.append(storage_key)
 
                 doc_type = normalize_project_document_type(
                     request.form.get("doc_type")
@@ -388,7 +401,7 @@ def edit_project(project_id):
                 version = last_doc.version + 1 if last_doc else 1
 
                 new_doc = Document(
-                    filename=unique_name,
+                    filename=storage_key,
                     original_name=original_name,
                     document_type=doc_type,
                     version=version,
@@ -401,7 +414,11 @@ def edit_project(project_id):
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print("PROJECT UPDATE ERROR:", e)
+            _cleanup_saved_documents(saved_storage_keys)
+            logger.exception(
+                "Project update failed for project_id=%s",
+                project.id,
+            )
 
             flash("Error updating project.", "danger")
 
@@ -495,12 +512,7 @@ def delete_project(id):
         documents = Document.query.filter_by(project_id=project.id).all()
 
         for doc in documents:
-
-            try:
-                delete_document_file(doc)
-            except Exception as e:
-                print("FILE DELETE ERROR:", e)
-
+            delete_document_file(doc)
             db.session.delete(doc)
 
         links = ProjectSubcontractor.query.filter_by(
@@ -517,7 +529,10 @@ def delete_project(id):
 
     except Exception as e:
         db.session.rollback()
-        print("DELETE PROJECT ERROR:", e)
+        logger.exception(
+            "Project delete failed for project_id=%s",
+            project.id,
+        )
         flash("Error deleting project.", "danger")
 
     return redirect(url_for("dashboard.dashboard"))
@@ -561,13 +576,16 @@ def upload_project_document(project_id):
     unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
     try:
-        save_document_file(
+        storage_key = save_document_file(
             file,
             unique_name,
             project_id=project.id,
         )
     except Exception as e:
-        print("Upload error:", e)
+        logger.exception(
+            "Project document storage save failed for project_id=%s",
+            project.id,
+        )
         flash("Error uploading file.", "danger")
         return redirect(
             url_for(
@@ -589,7 +607,7 @@ def upload_project_document(project_id):
     version = last_doc.version + 1 if last_doc else 1
 
     new_doc = Document(
-        filename=unique_name,
+        filename=storage_key,
         original_name=original_name,
         document_type=doc_type,
         version=version,
@@ -597,7 +615,23 @@ def upload_project_document(project_id):
     )
 
     db.session.add(new_doc)
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        cleanup_saved_document(storage_key)
+        logger.exception(
+            "Project document commit failed for project_id=%s",
+            project.id,
+        )
+        flash("Error uploading file.", "danger")
+        return redirect(
+            url_for(
+                "projects.view_project",
+                project_id=project.id,
+            )
+        )
 
     flash("Document uploaded successfully!", "success")
 

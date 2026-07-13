@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from io import BytesIO
 from unittest.mock import patch
 
+from flask import Response
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ.setdefault("SECRET_KEY", "test-secret")
@@ -16,6 +17,7 @@ from app.models import Document, Project, ProjectSubcontractor, Subcontractor, U
 from app.services.compliance_officer import generate_compliance_advice
 from app.services.compliance_profiles import evaluate_profile_requirements
 from app.services.readiness_service import BLOCKED, PENDING, READY, calculate_readiness
+from app.services.documents.storage import StorageError
 
 
 class EndToEndComplianceFlowTest(unittest.TestCase):
@@ -471,8 +473,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
             ).one()
             new_path = os.path.join(
                 self.uploads.name,
-                f"project_{project_id}",
-                newest_contract.filename,
+                *newest_contract.filename.split("/"),
             )
             self.assertTrue(os.path.exists(new_path))
             newest_contract_id = newest_contract.id
@@ -563,6 +564,168 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
         with self.app.app_context():
             self.assertIsNotNone(db.session.get(Document, document_id))
             self.assertTrue(os.path.exists(document_path))
+
+    def test_project_upload_storage_failure_does_not_create_document(self):
+        with self.app.app_context():
+            project = self.create_project()
+            db.session.commit()
+            project_id = project.id
+
+        self.login(self.user_id)
+
+        with patch(
+            "app.routes.projects.save_document_file",
+            side_effect=StorageError("storage unavailable"),
+        ):
+            response = self.client.post(
+                f"/project/{project_id}/upload",
+                data={
+                    "doc_type": "Contract",
+                    "file": (BytesIO(b"%PDF-1.4\ncontract"), "contract.pdf"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            self.assertEqual(
+                Document.query.filter_by(project_id=project_id).count(),
+                0,
+            )
+
+    def test_project_upload_db_failure_cleans_saved_document(self):
+        with self.app.app_context():
+            project = self.create_project()
+            db.session.commit()
+            project_id = project.id
+
+        self.login(self.user_id)
+
+        with patch(
+            "app.routes.projects.db.session.commit",
+            side_effect=Exception("database unavailable"),
+        ):
+            response = self.client.post(
+                f"/project/{project_id}/upload",
+                data={
+                    "doc_type": "Contract",
+                    "file": (BytesIO(b"%PDF-1.4\ncontract"), "contract.pdf"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            self.assertEqual(
+                Document.query.filter_by(project_id=project_id).count(),
+                0,
+            )
+            uploaded_path = os.path.join(
+                self.uploads.name,
+                "projects",
+                str(project_id),
+            )
+            uploaded_files = (
+                os.listdir(uploaded_path)
+                if os.path.exists(uploaded_path)
+                else []
+            )
+            self.assertEqual(uploaded_files, [])
+
+    def test_project_upload_same_filename_generates_distinct_storage_keys(self):
+        with self.app.app_context():
+            project = self.create_project()
+            db.session.commit()
+            project_id = project.id
+
+        self.login(self.user_id)
+
+        for content in [b"%PDF-1.4\nfirst", b"%PDF-1.4\nsecond"]:
+            response = self.client.post(
+                f"/project/{project_id}/upload",
+                data={
+                    "doc_type": "Contract",
+                    "file": (BytesIO(content), "same_name.pdf"),
+                },
+                content_type="multipart/form-data",
+            )
+            self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            docs = (
+                Document.query
+                .filter_by(project_id=project_id, document_type="Contract")
+                .order_by(Document.version)
+                .all()
+            )
+
+            self.assertEqual([doc.version for doc in docs], [1, 2])
+            self.assertNotEqual(docs[0].filename, docs[1].filename)
+            self.assertTrue(docs[0].filename.startswith(f"projects/{project_id}/"))
+            self.assertTrue(docs[1].filename.startswith(f"projects/{project_id}/"))
+
+    def test_view_and_download_use_document_storage_backend(self):
+        with self.app.app_context():
+            project = self.create_project()
+            document = Document(
+                filename="projects/1/stored.pdf",
+                original_name="stored.pdf",
+                document_type="Contract",
+                project_id=project.id,
+            )
+            db.session.add(document)
+            db.session.commit()
+            document_id = document.id
+
+        self.login(self.user_id)
+
+        with patch(
+            "app.routes.documents.document_exists",
+            return_value=True,
+        ) as exists_mock, patch(
+            "app.routes.documents.get_document_response",
+            side_effect=[
+                Response("view"),
+                Response("download"),
+            ],
+        ) as response_mock:
+            view_response = self.client.get(f"/document/{document_id}")
+            download_response = self.client.get(
+                f"/download_document/{document_id}"
+            )
+
+        self.assertEqual(view_response.status_code, 200)
+        self.assertEqual(download_response.status_code, 200)
+        self.assertEqual(exists_mock.call_count, 2)
+        self.assertEqual(response_mock.call_count, 2)
+        self.assertFalse(response_mock.call_args_list[0].kwargs)
+        self.assertTrue(response_mock.call_args_list[1].kwargs["as_attachment"])
+
+    def test_unauthorized_delete_does_not_call_storage_backend(self):
+        with self.app.app_context():
+            other_project = self.create_project(
+                name="Other Project",
+                user_id=self.other_user_id,
+            )
+            document = Document(
+                filename="projects/22/other.pdf",
+                original_name="other.pdf",
+                document_type="Contract",
+                project_id=other_project.id,
+            )
+            db.session.add(document)
+            db.session.commit()
+            document_id = document.id
+
+        self.login(self.user_id)
+
+        with patch("app.routes.documents.delete_document_file") as delete_mock:
+            response = self.client.post(f"/delete_document/{document_id}")
+
+        self.assertEqual(response.status_code, 302)
+        delete_mock.assert_not_called()
 
     def test_document_analysis_route_persists_ai_fields_without_real_ai(self):
         with self.app.app_context():

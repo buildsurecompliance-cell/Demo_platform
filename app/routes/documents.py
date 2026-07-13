@@ -1,11 +1,10 @@
-import os
+import logging
 
 from flask import (
     Blueprint,
     flash,
     redirect,
     request,
-    send_from_directory,
     url_for,
 )
 
@@ -24,8 +23,8 @@ from app.models import (
 
 from app.services.documents.storage import (
     delete_document_file,
-    document_send_directory,
-    resolve_document_path,
+    document_exists,
+    get_document_response,
 )
 
 
@@ -33,6 +32,8 @@ documents_bp = Blueprint(
     "documents",
     __name__,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ==========================
@@ -77,7 +78,6 @@ def user_can_access_document(doc):
 @documents_bp.route("/document/<int:doc_id>")
 @login_required
 def view_document(doc_id):
-
     doc = db.session.get(
         Document,
         doc_id
@@ -105,9 +105,7 @@ def view_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    filepath = resolve_document_path(doc)
-
-    if not filepath or not os.path.exists(filepath):
+    if not document_exists(doc):
 
         flash(
             "File not found.",
@@ -118,13 +116,19 @@ def view_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    directory, filename = document_send_directory(doc)
+    response = get_document_response(doc)
 
-    return send_from_directory(
-        directory,
-        filename,
-        as_attachment=False
-    )
+    if response is None:
+        flash(
+            "File not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard")
+        )
+
+    return response
 
 
 # ==========================
@@ -177,13 +181,13 @@ def delete_document(doc_id):
             "success"
         )
 
-    except Exception as e:
+    except Exception:
 
         db.session.rollback()
 
-        print(
-            "DELETE DOCUMENT ERROR:",
-            e
+        logger.exception(
+            "Document delete failed for document_id=%s",
+            doc.id,
         )
 
         flash(
@@ -220,9 +224,7 @@ def download_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    filepath = resolve_document_path(doc)
-
-    if not filepath or not os.path.exists(filepath):
+    if not document_exists(doc):
 
         flash(
             "File not found.",
@@ -233,11 +235,19 @@ def download_document(doc_id):
             url_for("dashboard.dashboard")
         )
 
-    directory, filename = document_send_directory(doc)
-
-    return send_from_directory(
-        directory,
-        filename,
+    response = get_document_response(
+        doc,
         as_attachment=True,
-        download_name=doc.original_name
     )
+
+    if response is None:
+        flash(
+            "File not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard")
+        )
+
+    return response

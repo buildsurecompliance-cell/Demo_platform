@@ -1,12 +1,10 @@
 from datetime import datetime
 
-import os
-
 from app.extensions import db
 
 from app.models import Document
 
-from app.services.documents.storage import resolve_document_path
+from app.services.documents.storage import temporary_document_path
 
 from app.services.document_intelligence import (
     analyze_document_intelligence,
@@ -32,20 +30,19 @@ def analyze_and_save_document(doc_id):
             "result": None,
         }
 
-    file_path = resolve_document_path(doc)
+    with temporary_document_path(doc) as file_path:
+        if not file_path:
+            return {
+                "success": False,
+                "error": "Document file not found.",
+                "document": doc,
+                "result": None,
+            }
 
-    if not file_path or not os.path.exists(file_path):
-        return {
-            "success": False,
-            "error": "Document file not found.",
-            "document": doc,
-            "result": None,
-        }
-
-    result = analyze_document_intelligence(
-        file_path=file_path,
-        document_type=doc.document_type,
-    )
+        result = analyze_document_intelligence(
+            file_path=file_path,
+            document_type=doc.document_type,
+        )
 
     if not result["success"]:
 
