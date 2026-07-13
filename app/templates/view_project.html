@@ -195,10 +195,16 @@ View Documents
 
 <td>
 
-<a href="{{ url_for('ai.analyze_document', doc_id=doc.id) }}"
-class="btn btn-sm btn-outline-success">
+<form action="{{ url_for('ai.analyze_document', doc_id=doc.id) }}"
+      method="POST"
+      style="display:inline;">
+{{ csrf_input() }}
+
+<button type="submit" class="btn btn-sm btn-outline-success">
 Analyze
-</a>
+</button>
+
+</form>
 
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}"
       method="POST"

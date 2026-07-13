@@ -143,6 +143,11 @@ must include the hidden `csrf_token` input. `/health` remains a public GET
 endpoint and does not require CSRF. Do not disable `WTF_CSRF_ENABLED` in
 production.
 
+Mutable routes must not use GET. Manual document analysis is a POST-only action
+protected by login and CSRF. It verifies document ownership before starting
+analysis and returns safe user-facing errors without exposing AI provider
+details, secrets, stack traces, or document contents.
+
 Security headers are applied centrally:
 
 - `X-Content-Type-Options: nosniff`

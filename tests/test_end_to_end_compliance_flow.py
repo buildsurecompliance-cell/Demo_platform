@@ -771,7 +771,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
                 },
             },
         ):
-            response = self.client.get(f"/documents/{document_id}/analyze")
+            response = self.client.post(f"/documents/{document_id}/analyze")
 
         self.assertEqual(response.status_code, 200)
 
