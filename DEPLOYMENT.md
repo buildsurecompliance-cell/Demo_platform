@@ -345,16 +345,32 @@ production. During the transition, `Project.user_id` and `Subcontractor.user_id`
 remain as legacy compatibility/audit fields, but Organization is the ownership
 boundary for application access.
 
+The final tenancy migration after the initial Organization migration makes
+`Project.organization_id` and `Subcontractor.organization_id` required. It
+backfills any remaining null values only when a single Organization can be
+inferred from the record's `user_id` through OrganizationMembership. If no
+membership exists or more than one Organization is possible, the migration
+fails explicitly and does not silently assign records to an arbitrary tenant.
+
+Before staging, inspect and correct any orphaned Project or Subcontractor rows
+with missing `organization_id`. After the final tenancy migration, application
+authorization must use Organization scope only. Matching `user_id` values do
+not grant access and must not be used as a tenancy fallback.
+
 V1 has no visual Organization selector. If a user belongs to multiple
 Organizations, the session value is accepted only when it matches one of that
 user's memberships; otherwise the app falls back to the first membership in
 deterministic order.
 
-Downgrading this migration removes Organization, Membership, and Invitation
-tables and returns the schema to direct user ownership. Project and
-Subcontractor IDs are preserved, but team-access records and pending invitations
-are not represented in the older schema. Treat downgrade as a staging rollback
-tool, not a production data-portability path.
+Downgrading the initial Organization migration removes Organization,
+Membership, and Invitation tables and returns the schema to direct user
+ownership. Project and Subcontractor IDs are preserved, but team-access records
+and pending invitations are not represented in the older schema. Treat
+downgrade as a staging rollback tool, not a production data-portability path.
+
+Downgrading only the final tenancy migration reopens `organization_id`
+nullability on Project and Subcontractor but keeps Organizations, Memberships,
+Invitations, record IDs, links, documents, and audit fields intact.
 
 After deploying the Organization migration, smoke test with at least:
 

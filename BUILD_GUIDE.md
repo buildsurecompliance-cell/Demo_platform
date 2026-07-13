@@ -286,12 +286,18 @@ or cross-Organization session values are ignored and replaced with the first
 membership in deterministic order. There is no visual multi-Organization
 selector in this sprint.
 
-`Project.user_id` and `Subcontractor.user_id` may remain temporarily for
-legacy compatibility and audit context during the migration window, but they
-must not be treated as the primary ownership boundary. New domain queries
-should use Organization scope. The legacy fallback can be removed after all
-environments have applied the Organization migration and legacy fixtures have
-been updated.
+`Project.organization_id` and `Subcontractor.organization_id` are required and
+are the only operational tenancy boundary for those records.
+
+`Project.user_id` and `Subcontractor.user_id` may remain temporarily as
+legacy/audit context for who created or originally owned records before
+Organization tenancy. They must not authorize access, filter tenant data, or
+act as a fallback when `organization_id` is missing. A record without
+`organization_id` is invalid for operational use and must be corrected before
+deployment migration completes.
+
+Future work may remove the legacy `user_id` columns in a separate migration
+after audit needs and historical references are reviewed.
 
 ## 7. Compliance Profiles
 

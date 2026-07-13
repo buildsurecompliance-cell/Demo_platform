@@ -9,8 +9,6 @@ from flask import (
     session,
 )
 from flask_login import current_user
-from sqlalchemy import or_
-
 from app.extensions import db
 from app.models import (
     ORGANIZATION_ROLES,
@@ -87,10 +85,8 @@ def get_current_organization():
     memberships = get_user_memberships(current_user)
 
     if not memberships:
-        organization = create_default_organization_for_user(current_user)
-        db.session.flush()
-        session["organization_id"] = organization.id
-        return organization
+        session.pop("organization_id", None)
+        return None
 
     requested_id = session.get("organization_id")
 
@@ -187,17 +183,9 @@ def organization_member_user_ids(organization=None):
 
 def project_scope_filter(model=Project, organization=None):
     organization = organization or get_current_organization()
-    member_ids = organization_member_user_ids(organization)
 
-    legacy_filter = False
-    if member_ids and hasattr(model, "user_id"):
-        legacy_filter = model.user_id.in_(member_ids)
-
-    if legacy_filter is not False:
-        return or_(
-            model.organization_id == organization.id,
-            model.organization_id.is_(None) & legacy_filter,
-        )
+    if not organization:
+        return False
 
     return model.organization_id == organization.id
 
@@ -220,6 +208,10 @@ def scoped_subcontractor_query():
 
 def set_domain_organization(entity, organization=None):
     organization = organization or get_current_organization()
+
+    if not organization:
+        raise ValueError("An active organization is required.")
+
     entity.organization_id = organization.id
 
     if hasattr(entity, "user_id") and not entity.user_id:
@@ -345,6 +337,9 @@ def accept_invitation(token, user=None):
 def list_members(organization=None):
     organization = organization or get_current_organization()
 
+    if not organization:
+        return []
+
     return (
         db.session.query(OrganizationMembership, User)
         .join(User, User.id == OrganizationMembership.user_id)
@@ -356,6 +351,9 @@ def list_members(organization=None):
 
 def pending_invitations(organization=None):
     organization = organization or get_current_organization()
+
+    if not organization:
+        return []
 
     return (
         OrganizationInvitation.query

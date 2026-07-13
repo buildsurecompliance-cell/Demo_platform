@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
+from sqlalchemy.exc import IntegrityError
 
 from app import create_app
 from app.config import TestingConfig
@@ -182,6 +183,99 @@ class OrganizationTenancyTest(unittest.TestCase):
             404,
         )
 
+    def test_matching_user_id_does_not_grant_cross_organization_access(self):
+        with self.app.app_context():
+            project = Project(
+                name="Same User Wrong Tenant",
+                user_id=self.owner_id,
+                organization_id=self.other_organization_id,
+            )
+            sub = Subcontractor(
+                name="Same User Wrong Tenant Sub",
+                user_id=self.owner_id,
+                organization_id=self.other_organization_id,
+            )
+            db.session.add_all([project, sub])
+            db.session.commit()
+            project_id = project.id
+            sub_id = sub.id
+
+        self.login(self.owner_id)
+
+        self.assertEqual(
+            self.client.get(f"/project/{project_id}").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(f"/sub/{sub_id}/documents").status_code,
+            404,
+        )
+
+    def test_changing_user_id_does_not_change_project_or_sub_ownership(self):
+        with self.app.app_context():
+            project = Project(
+                name="Organization Owned Project",
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            sub = Subcontractor(
+                name="Organization Owned Sub",
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add_all([project, sub])
+            db.session.flush()
+            project.user_id = self.outsider_id
+            sub.user_id = self.outsider_id
+            db.session.commit()
+            project_id = project.id
+            sub_id = sub.id
+
+        self.login(self.owner_id)
+        self.assertEqual(
+            self.client.get(f"/project/{project_id}").status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.get(f"/sub/{sub_id}/documents").status_code,
+            200,
+        )
+
+        self.login(self.outsider_id)
+        self.assertEqual(
+            self.client.get(f"/project/{project_id}").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(f"/sub/{sub_id}/documents").status_code,
+            404,
+        )
+
+    def test_project_and_subcontractor_require_organization_id(self):
+        with self.app.app_context():
+            db.session.add(
+                Project(
+                    name="No Tenant Project",
+                    user_id=self.owner_id,
+                )
+            )
+
+            with self.assertRaises(IntegrityError):
+                db.session.commit()
+
+            db.session.rollback()
+            db.session.add(
+                Subcontractor(
+                    name="No Tenant Sub",
+                    user_id=self.owner_id,
+                )
+            )
+
+            with self.assertRaises(IntegrityError):
+                db.session.commit()
+
+            db.session.rollback()
+
     def test_dashboard_uses_active_organization_not_user_only(self):
         with self.app.app_context():
             project = Project(
@@ -215,7 +309,7 @@ class OrganizationTenancyTest(unittest.TestCase):
                 self.organization_id,
             )
 
-    def test_user_without_membership_gets_deterministic_safe_organization(self):
+    def test_user_without_membership_gets_no_implicit_organization(self):
         with self.app.app_context():
             orphan = self.create_user("orphan@example.com")
             private_project = Project(
@@ -232,6 +326,9 @@ class OrganizationTenancyTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(b"Not Orphan Project", response.data)
+
+        with self.client.session_transaction() as session:
+            self.assertNotIn("organization_id", session)
 
     def test_first_membership_is_deterministic_fallback_for_multi_org_user(self):
         with self.app.app_context():

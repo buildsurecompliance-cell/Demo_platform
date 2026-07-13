@@ -12,6 +12,7 @@ from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
 from app.models import Document, Project, Subcontractor, User
+from app.services.organizations import create_default_organization_for_user
 
 
 class SafeDocumentAnalysisTest(unittest.TestCase):
@@ -34,9 +35,16 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             self.other_user = User(email="other@example.com", paid=True)
             self.other_user.set_password("password123")
             db.session.add_all([self.user, self.other_user])
+            db.session.flush()
+            self.organization = create_default_organization_for_user(self.user)
+            self.other_organization = create_default_organization_for_user(
+                self.other_user
+            )
             db.session.commit()
             self.user_id = self.user.id
             self.other_user_id = self.other_user.id
+            self.organization_id = self.organization.id
+            self.other_organization_id = self.other_organization.id
 
     def tearDown(self):
         with self.app.app_context():
@@ -62,6 +70,7 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         sub = Subcontractor(
             name="Analysis Sub",
             user_id=user_id,
+            organization_id=self.organization_id_for_user(user_id),
         )
         db.session.add(sub)
         db.session.flush()
@@ -82,6 +91,7 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         project = Project(
             name="Analysis Project",
             user_id=user_id,
+            organization_id=self.organization_id_for_user(user_id),
         )
         db.session.add(project)
         db.session.flush()
@@ -95,6 +105,12 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         db.session.add(document)
         db.session.commit()
         return document.id
+
+    def organization_id_for_user(self, user_id):
+        if user_id == self.other_user_id:
+            return self.other_organization_id
+
+        return self.organization_id
 
     def success_result(self, document_id):
         document = db.session.get(Document, document_id)

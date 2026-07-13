@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 
 from flask import (
+    abort,
     Blueprint,
     current_app,
     flash,
@@ -167,6 +168,10 @@ def view_sub_documents(sub_id):
 def add_sub():
 
     organization = get_current_organization()
+
+    if not organization:
+        abort(403)
+
     projects = scoped_project_query().all()
 
     if request.method == "POST":

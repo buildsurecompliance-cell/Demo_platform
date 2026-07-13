@@ -14,6 +14,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 from app import create_app
 from app.extensions import db
 from app.models import Document, Project, ProjectSubcontractor, Subcontractor, User
+from app.services.organizations import create_default_organization_for_user
 from app.services.compliance_officer import generate_compliance_advice
 from app.services.compliance_profiles import evaluate_profile_requirements
 from app.services.readiness_service import BLOCKED, PENDING, READY, calculate_readiness
@@ -41,9 +42,16 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
             self.other_user = User(email="other@example.com", paid=True)
             self.other_user.set_password("password123")
             db.session.add_all([self.user, self.other_user])
+            db.session.flush()
+            self.organization = create_default_organization_for_user(self.user)
+            self.other_organization = create_default_organization_for_user(
+                self.other_user
+            )
             db.session.commit()
             self.user_id = self.user.id
             self.other_user_id = self.other_user.id
+            self.organization_id = self.organization.id
+            self.other_organization_id = self.other_organization.id
 
     def tearDown(self):
         with self.app.app_context():
@@ -58,9 +66,11 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
             session["_fresh"] = True
 
     def create_project(self, name="Audit Project", user_id=None):
+        user_id = user_id or self.user_id
         project = Project(
             name=name,
-            user_id=user_id or self.user_id,
+            user_id=user_id,
+            organization_id=self.organization_id_for_user(user_id),
         )
         db.session.add(project)
         db.session.flush()
@@ -73,15 +83,23 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
         coi_expiration=None,
         role="Concrete",
     ):
+        user_id = user_id or self.user_id
         subcontractor = Subcontractor(
             name=name,
-            user_id=user_id or self.user_id,
+            user_id=user_id,
+            organization_id=self.organization_id_for_user(user_id),
             role=role,
             coi_expiration=coi_expiration,
         )
         db.session.add(subcontractor)
         db.session.flush()
         return subcontractor
+
+    def organization_id_for_user(self, user_id):
+        if user_id == self.other_user_id:
+            return self.other_organization_id
+
+        return self.organization_id
 
     def link(self, project, subcontractor, coverage_limit=1000000):
         project_subcontractor = ProjectSubcontractor(
@@ -270,7 +288,9 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
                     user.set_password("password123")
                     db.session.add(user)
                     db.session.flush()
+                    organization = create_default_organization_for_user(user)
                     self.user_id = user.id
+                    self.organization_id = organization.id
 
                     project = self.create_project(
                         name=f"Project {name}",

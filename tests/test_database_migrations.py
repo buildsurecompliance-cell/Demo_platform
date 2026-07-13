@@ -29,6 +29,7 @@ from app.models import (
     Subcontractor,
     User,
 )
+from app.services.organizations import create_default_organization_for_user
 
 
 EXPECTED_TABLES = {
@@ -261,11 +262,17 @@ class DatabaseMigrationTest(unittest.TestCase):
                 user.set_password("password123")
                 db.session.add(user)
                 db.session.flush()
+                organization = create_default_organization_for_user(user)
 
-                project = Project(name="Migrated Project", user_id=user.id)
+                project = Project(
+                    name="Migrated Project",
+                    user_id=user.id,
+                    organization_id=organization.id,
+                )
                 subcontractor = Subcontractor(
                     name="Migrated Sub",
                     user_id=user.id,
+                    organization_id=organization.id,
                     coi_expiration=date.today(),
                 )
                 db.session.add_all([project, subcontractor])
@@ -439,6 +446,237 @@ class DatabaseMigrationTest(unittest.TestCase):
                         ).count(),
                         1,
                     )
+
+    def test_final_tenancy_migration_backfills_deterministic_null_rows(self):
+        with self.temporary_migrated_app_from_revision(
+            "7c2b8d91f0a4"
+        ) as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (1001, 'single-member@example.com', 'hash', 1, 'UTC')
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization
+                            (id, name, created_at, updated_at)
+                        VALUES
+                            (2001, 'Single Member Org', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization_membership
+                            (organization_id, user_id, role, created_at)
+                        VALUES
+                            (2001, 1001, 'OWNER', CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO project
+                            (id, name, contract_value, user_id, organization_id)
+                        VALUES
+                            (3001, 'Needs Project Backfill', 0, 1001, NULL)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO subcontractor
+                            (id, name, user_id, organization_id)
+                        VALUES
+                            (4001, 'Needs Sub Backfill', 1001, NULL)
+                        """
+                    )
+                )
+                db.session.commit()
+
+                upgrade(directory="migrations")
+
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT organization_id
+                            FROM project
+                            WHERE id = 3001
+                            """
+                        )
+                    ).scalar_one(),
+                    2001,
+                )
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT organization_id
+                            FROM subcontractor
+                            WHERE id = 4001
+                            """
+                        )
+                    ).scalar_one(),
+                    2001,
+                )
+
+    def test_final_tenancy_migration_fails_on_ambiguous_null_rows(self):
+        with self.temporary_migrated_app_from_revision(
+            "7c2b8d91f0a4"
+        ) as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (1001, 'deterministic-before-ambiguous@example.com', 'hash', 1, 'UTC'),
+                            (1002, 'ambiguous@example.com', 'hash', 1, 'UTC')
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization
+                            (id, name, created_at, updated_at)
+                        VALUES
+                            (2001, 'Deterministic Org', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+                            (2101, 'First Org', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+                            (2102, 'Second Org', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization_membership
+                            (organization_id, user_id, role, created_at)
+                        VALUES
+                            (2001, 1001, 'OWNER', CURRENT_TIMESTAMP),
+                            (2101, 1002, 'OWNER', CURRENT_TIMESTAMP),
+                            (2102, 1002, 'MEMBER', CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO project
+                            (id, name, contract_value, user_id, organization_id)
+                        VALUES
+                            (3001, 'Should Not Partially Backfill', 0, 1001, NULL),
+                            (3101, 'Ambiguous Project', 0, 1002, NULL)
+                        """
+                    )
+                )
+                db.session.commit()
+
+                with self.assertRaises(SystemExit):
+                    upgrade(directory="migrations")
+
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM project
+                            WHERE id = 3101
+                            """
+                        )
+                    ).scalar_one(),
+                    1,
+                )
+                self.assertIsNone(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT organization_id
+                            FROM project
+                            WHERE id = 3001
+                            """
+                        )
+                    ).scalar_one()
+                )
+
+    def test_final_tenancy_migration_fails_on_missing_membership(self):
+        with self.temporary_migrated_app_from_revision(
+            "7c2b8d91f0a4"
+        ) as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (1003, 'missing-membership@example.com', 'hash', 1, 'UTC')
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO project
+                            (id, name, contract_value, user_id, organization_id)
+                        VALUES
+                            (3201, 'No Membership Project', 0, 1003, NULL)
+                        """
+                    )
+                )
+                db.session.commit()
+
+                with self.assertRaises(SystemExit):
+                    upgrade(directory="migrations")
+
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM project
+                            WHERE id = 3201
+                            """
+                        )
+                    ).scalar_one(),
+                    1,
+                )
+
+    def test_final_tenancy_migration_downgrade_only_reopens_nullability(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                downgrade(directory="migrations", revision="7c2b8d91f0a4")
+                inspector = inspect(db.engine)
+
+                self.assertIn("organization", inspector.get_table_names())
+                self.assertIn(
+                    "organization_membership",
+                    inspector.get_table_names(),
+                )
+                project_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("project")
+                }
+                subcontractor_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("subcontractor")
+                }
+                self.assertTrue(project_columns["organization_id"]["nullable"])
+                self.assertTrue(
+                    subcontractor_columns["organization_id"]["nullable"]
+                )
 
     def test_migration_downgrade_base_removes_schema(self):
         with self.temporary_migrated_app() as app:

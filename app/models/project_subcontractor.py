@@ -109,11 +109,12 @@ def _validate_same_organization(mapper, connection, target):
         .where(Subcontractor.id == target.subcontractor_id)
     ).scalar_one_or_none()
 
-    if (
-        project_org_id is not None
-        and subcontractor_org_id is not None
-        and project_org_id != subcontractor_org_id
-    ):
+    if project_org_id is None or subcontractor_org_id is None:
+        raise ValueError(
+            "Project and subcontractor must both belong to an organization."
+        )
+
+    if project_org_id != subcontractor_org_id:
         raise ValueError(
             "Project and subcontractor must belong to the same organization."
         )

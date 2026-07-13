@@ -17,6 +17,7 @@ from app.extensions import db
 from app.models import Document, Project, Subcontractor, User
 from app.routes.subcontractors import allowed_file
 from app.security import reset_rate_limits
+from app.services.organizations import create_default_organization_for_user
 
 
 class SecurityHardeningTest(unittest.TestCase):
@@ -50,9 +51,16 @@ class SecurityHardeningTest(unittest.TestCase):
             self.other_user = User(email="other@example.com", paid=True)
             self.other_user.set_password("password123")
             db.session.add_all([self.user, self.other_user])
+            db.session.flush()
+            self.organization = create_default_organization_for_user(self.user)
+            self.other_organization = create_default_organization_for_user(
+                self.other_user
+            )
             db.session.commit()
             self.user_id = self.user.id
             self.other_user_id = self.other_user.id
+            self.organization_id = self.organization.id
+            self.other_organization_id = self.other_organization.id
 
     def tearDown(self):
         with self.app.app_context():
@@ -169,7 +177,11 @@ class SecurityHardeningTest(unittest.TestCase):
 
     def test_delete_requires_csrf_token(self):
         with self.app.app_context():
-            sub = Subcontractor(name="Owned Sub", user_id=self.user_id)
+            sub = Subcontractor(
+                name="Owned Sub",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
             db.session.add(sub)
             db.session.flush()
             document = Document(
@@ -193,7 +205,11 @@ class SecurityHardeningTest(unittest.TestCase):
         token = self.csrf_token()
 
         with self.app.app_context():
-            sub = Subcontractor(name="Owned Sub", user_id=self.user_id)
+            sub = Subcontractor(
+                name="Owned Sub",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
             db.session.add(sub)
             db.session.flush()
             document = Document(
@@ -435,7 +451,11 @@ class SecurityHardeningTest(unittest.TestCase):
 
     def test_project_upload_rejects_disallowed_extension(self):
         with self.app.app_context():
-            project = Project(name="Project", user_id=self.user_id)
+            project = Project(
+                name="Project",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
             db.session.add(project)
             db.session.commit()
             project_id = project.id
@@ -460,7 +480,11 @@ class SecurityHardeningTest(unittest.TestCase):
     def test_large_upload_returns_413(self):
         self.app.config["MAX_CONTENT_LENGTH"] = 128
         with self.app.app_context():
-            project = Project(name="Project", user_id=self.user_id)
+            project = Project(
+                name="Project",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
             db.session.add(project)
             db.session.commit()
             project_id = project.id
@@ -578,6 +602,7 @@ class SecurityHardeningTest(unittest.TestCase):
                 name="Reminder Sub",
                 email="sub@example.com",
                 user_id=self.user_id,
+                organization_id=self.organization_id,
             )
             db.session.add(sub)
             db.session.commit()
@@ -603,7 +628,11 @@ class SecurityHardeningTest(unittest.TestCase):
 
     def test_delete_other_users_document_still_blocked(self):
         with self.app.app_context():
-            other_sub = Subcontractor(name="Other", user_id=self.other_user_id)
+            other_sub = Subcontractor(
+                name="Other",
+                user_id=self.other_user_id,
+                organization_id=self.other_organization_id,
+            )
             db.session.add(other_sub)
             db.session.flush()
             document = Document(

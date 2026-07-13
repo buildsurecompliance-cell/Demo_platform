@@ -22,7 +22,7 @@ class Subcontractor(db.Model):
     organization_id = db.Column(
         db.Integer,
         db.ForeignKey("organization.id"),
-        nullable=True,
+        nullable=False,
         index=True,
     )
 

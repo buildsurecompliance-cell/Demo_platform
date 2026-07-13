@@ -12,6 +12,7 @@ from app import create_app
 from app.extensions import db
 from app.models import Project, ProjectSubcontractor, Subcontractor, User
 from app.routes import projects as project_routes
+from app.services.organizations import create_default_organization_for_user
 
 
 class ProjectComplianceAdviceViewTest(unittest.TestCase):
@@ -46,9 +47,16 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
                     self.other_user,
                 ]
             )
+            db.session.flush()
+            self.organization = create_default_organization_for_user(self.user)
+            self.other_organization = create_default_organization_for_user(
+                self.other_user
+            )
             db.session.commit()
             self.user_id = self.user.id
             self.other_user_id = self.other_user.id
+            self.organization_id = self.organization.id
+            self.other_organization_id = self.other_organization.id
 
     def tearDown(self):
         with self.app.app_context():
@@ -65,6 +73,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
             project = Project(
                 name="Test Project",
                 user_id=self.user_id,
+                organization_id=self.organization_id,
             )
             db.session.add(project)
             db.session.flush()
@@ -73,6 +82,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
                 sub = Subcontractor(
                     name=f"Sub {index}",
                     user_id=self.user_id,
+                    organization_id=self.organization_id,
                     role="Trade",
                 )
                 db.session.add(sub)
@@ -332,6 +342,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
             project = Project(
                 name="Other Project",
                 user_id=self.other_user_id,
+                organization_id=self.other_organization_id,
             )
             db.session.add(project)
             db.session.commit()
@@ -348,6 +359,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
             project = Project(
                 name="Other Project",
                 user_id=self.other_user_id,
+                organization_id=self.other_organization_id,
             )
             db.session.add(project)
             db.session.commit()

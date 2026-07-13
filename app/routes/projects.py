@@ -9,6 +9,7 @@ from app.services.projects.project_ai_summary_service import (
     get_project_ai_summary,
 )
 from flask import (
+    abort,
     Blueprint,
     flash,
     redirect,
@@ -157,6 +158,10 @@ def _cleanup_saved_documents(storage_keys):
 def add_project():
 
     organization = get_current_organization()
+
+    if not organization:
+        abort(403)
+
     subs = scoped_subcontractor_query().all()
 
     if request.method == "POST":

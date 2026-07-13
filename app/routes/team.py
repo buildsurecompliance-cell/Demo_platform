@@ -39,6 +39,10 @@ team_bp = Blueprint(
 @login_required
 def team():
     organization = get_current_organization()
+
+    if not organization:
+        abort(403)
+
     can_manage = can_manage_members(
         current_user,
         organization,
