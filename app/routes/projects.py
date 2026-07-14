@@ -58,6 +58,11 @@ from app.services.organizations import (
     scoped_subcontractor_query,
     subcontractor_scope_filter,
 )
+from app.services.plan_capacity import (
+    PlanCapacityError,
+    get_organization_usage,
+    require_project_capacity,
+)
 
 
 projects_bp = Blueprint(
@@ -201,6 +206,12 @@ def add_project():
             flash("End date cannot be before start date.", "danger")
             return redirect(url_for("projects.add_project"))
 
+        try:
+            require_project_capacity(organization)
+        except PlanCapacityError as error:
+            flash(error.check.message, "warning")
+            return redirect(url_for("projects.add_project"))
+
         project = Project(
             name=name,
             contract_value=contract_value,
@@ -280,6 +291,7 @@ def add_project():
         "add_project.html",
         subs=subs,
         project_document_types=PROJECT_DOCUMENT_TYPES,
+        capacity_usage=get_organization_usage(organization),
     )
 
 

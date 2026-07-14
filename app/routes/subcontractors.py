@@ -46,6 +46,11 @@ from app.services.organizations import (
     scoped_subcontractor_query,
     subcontractor_scope_filter,
 )
+from app.services.plan_capacity import (
+    PlanCapacityError,
+    get_organization_usage,
+    require_subcontractor_capacity,
+)
 
 
 subcontractors_bp = Blueprint(
@@ -199,6 +204,12 @@ def add_sub():
         else:
             coi_expiration = None
 
+        try:
+            require_subcontractor_capacity(organization)
+        except PlanCapacityError as error:
+            flash(error.check.message, "warning")
+            return redirect(url_for("subcontractors.add_sub"))
+
         new_sub = Subcontractor(
             name=name,
             email=email,
@@ -308,6 +319,7 @@ def add_sub():
         sub=None,
         projects=projects,
         selected_projects=[],
+        capacity_usage=get_organization_usage(organization),
     )
 
 

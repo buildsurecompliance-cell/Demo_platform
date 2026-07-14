@@ -9,6 +9,12 @@
 {{ 'Edit Subcontractor' if sub else 'Add Subcontractor' }}
 </h3>
 
+{% if capacity_usage %}
+<p class="text-muted">
+{{ capacity_usage.subcontractor_count }} subcontractors currently in this Organization.
+</p>
+{% endif %}
+
 <form method="POST" enctype="multipart/form-data">
 {{ csrf_input() }}
 

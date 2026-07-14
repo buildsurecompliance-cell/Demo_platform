@@ -6,6 +6,12 @@ from app.extensions import db
 class Organization(db.Model):
 
     __tablename__ = "organization"
+    __table_args__ = (
+        db.CheckConstraint(
+            "plan_key IN ('STARTER', 'PROFESSIONAL', 'ENTERPRISE')",
+            name="ck_organization_plan_key",
+        ),
+    )
 
     id = db.Column(
         db.Integer,
@@ -15,6 +21,13 @@ class Organization(db.Model):
     name = db.Column(
         db.String(255),
         nullable=False
+    )
+
+    plan_key = db.Column(
+        db.String(32),
+        nullable=False,
+        default="STARTER",
+        server_default="STARTER",
     )
 
     created_at = db.Column(

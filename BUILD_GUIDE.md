@@ -130,6 +130,23 @@ Organization is the tenant boundary. Projects, subcontractors, document access, 
 
 Commercial plans may allow multiple users in the same Organization, but the data belongs to the company, not to an individual user account.
 
+Commercial capacity also belongs to the Organization. In Plan Capacity V1,
+plans limit only the number of Projects and Subcontractors. Users, team
+memberships, documents, AI analysis, Compliance Officer advice, storage, and
+features are not limited by plan in this version.
+
+Plan keys are:
+
+- STARTER: up to 10 Projects and 25 Subcontractors.
+- PROFESSIONAL: up to 50 Projects and 300 Subcontractors.
+- ENTERPRISE: unlimited Projects and Subcontractors.
+
+`User.paid` is legacy compatibility state from the earlier simulated
+subscription flow. It must not define capacity, grant an individual user extra
+quota, or override the Organization's `plan_key`. It may remain as a temporary
+gate for users without any Organization membership, but it must not block an
+invited Organization member from accessing that Organization.
+
 ### OrganizationMembership
 
 The relationship between a User and an Organization.
@@ -299,6 +316,44 @@ deployment migration completes.
 Future work may remove the legacy `user_id` columns in a separate migration
 after audit needs and historical references are reviewed.
 
+## 6.6 Plan Capacity
+
+BuildSure's commercial plan foundation is Organization-scoped capacity, not
+feature gating.
+
+Plan Capacity V1 limits only:
+
+- Projects;
+- Subcontractors.
+
+It does not limit:
+
+- Organization memberships;
+- documents;
+- AI analysis;
+- Compliance Evidence;
+- Readiness;
+- Compliance Profiles;
+- Compliance Officer advice;
+- dashboard access;
+- storage features.
+
+Capacity is reached when the current Organization count is greater than or
+equal to the plan limit. Creation is blocked before insert, upload, linking, or
+external service work. Existing records above a limit are preserved and may be
+viewed, edited, or deleted. Deleting a Project or Subcontractor frees capacity.
+`ProjectSubcontractor` links do not consume subcontractor capacity.
+
+V1 uses a simple count-before-insert guard. It is adequate for first staging and
+normal low-concurrency use, but it is not a hard distributed quota guarantee
+under simultaneous requests. A future billing sprint should add database-level
+or transactional quota protection before treating plan limits as strictly
+enforced under high concurrency.
+
+Plan changes are not public in V1. Stripe or an internal admin workflow may
+change `Organization.plan_key` in a future sprint through the central plan
+capacity service. No prices are stored in code.
+
 ## 7. Compliance Profiles
 
 Compliance Profiles are the next major product capability.
@@ -409,6 +464,7 @@ The product should be excellent at answering:
 
 - Compliance Profiles
 - AI Compliance Officer
+- Plan billing integration
 - Executive Dashboard
 - Analytics
 - Audit Trail

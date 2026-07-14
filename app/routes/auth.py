@@ -28,6 +28,7 @@ from app.security import (
 )
 from app.services.organizations import (
     create_default_organization_for_user,
+    get_user_memberships,
 )
 
 auth_bp = Blueprint(
@@ -87,9 +88,8 @@ def subscribe():
                 url_for("auth.subscribe")
             )
 
-        # Temporary simulated payment
         flash(
-            "Payment successful! Now create your account.",
+            "Account setup started. Now create your account.",
             "success"
         )
 
@@ -286,7 +286,7 @@ def login():
             password
         ):
 
-            if not user.paid:
+            if not user.paid and not get_user_memberships(user):
 
                 flash(
                     "You need to subscribe before accessing the platform.",

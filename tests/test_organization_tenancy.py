@@ -325,7 +325,7 @@ class OrganizationTenancyTest(unittest.TestCase):
         self.login(orphan_id)
         response = self.client.get("/dashboard")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
         self.assertNotIn(b"Not Orphan Project", response.data)
 
         with self.client.session_transaction() as session:

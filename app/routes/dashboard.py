@@ -1,4 +1,5 @@
 from flask import (
+    abort,
     Blueprint,
     render_template,
     request,
@@ -15,10 +16,15 @@ from app.models import (
     Subcontractor,
 )
 from app.services.organizations import (
+    get_current_organization,
     project_scope_filter,
     scoped_project_query,
     scoped_subcontractor_query,
     subcontractor_scope_filter,
+)
+from app.services.plan_capacity import (
+    get_organization_plan,
+    get_organization_usage,
 )
 
 dashboard_bp = Blueprint(
@@ -34,6 +40,10 @@ dashboard_bp = Blueprint(
 @dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
+    organization = get_current_organization()
+
+    if not organization:
+        abort(403)
 
     # =========================
     # FILTERS
@@ -299,4 +309,6 @@ def dashboard():
         pending_documents=pending_documents,
         ready_documents=ready_documents,
         average_ai_score=average_ai_score,
+        capacity_plan=get_organization_plan(organization),
+        capacity_usage=get_organization_usage(organization),
     )

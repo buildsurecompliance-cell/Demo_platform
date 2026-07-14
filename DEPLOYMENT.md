@@ -385,3 +385,38 @@ After deploying the Organization migration, smoke test with at least:
 
 Do not use local production data or real customer data for staging team-access
 tests.
+
+## Plan Capacity
+
+Plans are stored on `Organization.plan_key`.
+
+Plan Capacity V1 is intentionally narrow:
+
+- `STARTER`: 10 Projects, 25 Subcontractors.
+- `PROFESSIONAL`: 50 Projects, 300 Subcontractors.
+- `ENTERPRISE`: unlimited Projects and Subcontractors.
+
+Users, team memberships, documents, AI analysis, Compliance Officer advice,
+storage, and features remain unlimited in this version. Do not add prices,
+Stripe identifiers, subscription IDs, trial state, or card data to the codebase
+for this foundation.
+
+`User.paid` remains as a legacy compatibility flag for the current simulated
+subscription/login flow. It does not control Organization capacity and must not
+be used to grant individual quota. Invited users with Organization membership
+must not be blocked solely because their individual legacy `paid` flag is
+false. Future Stripe integration should update `Organization.plan_key` through
+the central plan capacity service or a reviewed admin path.
+
+The plan migration backfills existing Organizations to `STARTER` and makes
+`plan_key` required. Existing Projects, Subcontractors, memberships, links, and
+documents are preserved. Organizations already above a limit are not modified;
+they can view, edit, and delete existing data, but cannot create new records of
+that limited resource until capacity is available or the plan changes.
+
+Plan Capacity V1 checks the current count before inserting a new Project or
+Subcontractor. This avoids normal accidental over-capacity creation, but it is
+not a strict concurrency lock. Two simultaneous requests can both observe
+available capacity before either commits. Do not represent V1 capacity as an
+infallible billing control until a future sprint adds transactional or
+database-enforced quota protection.

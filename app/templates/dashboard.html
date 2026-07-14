@@ -22,6 +22,30 @@
 <span>Total Subs</span>
 </div>
 
+<div class="kpi-card">
+<h3>
+{{ capacity_usage.project_count }}
+{% if capacity_plan.max_projects is not none %}
+of {{ capacity_plan.max_projects }}
+{% else %}
+of Unlimited
+{% endif %}
+</h3>
+<span>Projects on {{ capacity_plan.name }}</span>
+</div>
+
+<div class="kpi-card">
+<h3>
+{{ capacity_usage.subcontractor_count }}
+{% if capacity_plan.max_subcontractors is not none %}
+of {{ capacity_plan.max_subcontractors }}
+{% else %}
+of Unlimited
+{% endif %}
+</h3>
+<span>Subcontractors on {{ capacity_plan.name }}</span>
+</div>
+
 <div class="kpi-card danger">
 <h3>{{ expired_count }}</h3>
 <span>Expired COIs</span>
