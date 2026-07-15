@@ -678,6 +678,59 @@ class DatabaseMigrationTest(unittest.TestCase):
                     subcontractor_columns["organization_id"]["nullable"]
                 )
 
+    def test_last_active_organization_migration_is_nullable_and_downgrades(self):
+        with self.temporary_migrated_app_from_revision("4a9f1c2d3e5b") as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (8101, 'last-active@example.com', 'hash', 1, 'UTC')
+                        """
+                    )
+                )
+                db.session.commit()
+
+                upgrade(directory="migrations")
+                inspector = inspect(db.engine)
+                user_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("user")
+                }
+
+                self.assertIn("last_active_organization_id", user_columns)
+                self.assertTrue(
+                    user_columns["last_active_organization_id"]["nullable"]
+                )
+                self.assertIsNone(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT last_active_organization_id
+                            FROM user
+                            WHERE id = 8101
+                            """
+                        )
+                    ).scalar_one()
+                )
+
+                downgrade(directory="migrations", revision="4a9f1c2d3e5b")
+                inspector = inspect(db.engine)
+                user_columns = {
+                    column["name"]
+                    for column in inspector.get_columns("user")
+                }
+
+                self.assertNotIn("last_active_organization_id", user_columns)
+                self.assertEqual(
+                    db.session.execute(
+                        text("SELECT COUNT(*) FROM user WHERE id = 8101")
+                    ).scalar_one(),
+                    1,
+                )
+
     def test_migration_downgrade_base_removes_schema(self):
         with self.temporary_migrated_app() as app:
             with app.app_context():

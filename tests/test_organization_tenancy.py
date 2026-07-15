@@ -133,6 +133,10 @@ class OrganizationTenancyTest(unittest.TestCase):
 
             self.assertEqual(membership.role, ROLE_OWNER)
             self.assertIsNotNone(membership.organization)
+            self.assertEqual(
+                user.last_active_organization_id,
+                membership.organization_id,
+            )
 
     def test_same_organization_members_see_shared_projects_and_subs(self):
         with self.app.app_context():
@@ -370,6 +374,68 @@ class OrganizationTenancyTest(unittest.TestCase):
         with self.client.session_transaction() as session:
             self.assertEqual(session["organization_id"], self.organization_id)
 
+    def test_last_active_organization_is_restored_on_login(self):
+        with self.app.app_context():
+            invited_org = Organization(name="Invited Organization")
+            db.session.add(invited_org)
+            db.session.flush()
+            db.session.add(
+                OrganizationMembership(
+                    organization_id=invited_org.id,
+                    user_id=self.owner_id,
+                    role=ROLE_MEMBER,
+                )
+            )
+            user = db.session.get(User, self.owner_id)
+            user.last_active_organization_id = invited_org.id
+            db.session.commit()
+            invited_org_id = invited_org.id
+
+        token = self.csrf_token("/login")
+        response = self.client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "password123",
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["organization_id"], invited_org_id)
+
+    def test_invalid_last_active_organization_is_discarded_on_login(self):
+        with self.app.app_context():
+            user = db.session.get(User, self.owner_id)
+            user.last_active_organization_id = self.other_organization_id
+            db.session.commit()
+
+        token = self.csrf_token("/login")
+        response = self.client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "password123",
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["organization_id"], self.organization_id)
+
+        with self.app.app_context():
+            user = db.session.get(User, self.owner_id)
+            self.assertEqual(
+                user.last_active_organization_id,
+                self.organization_id,
+            )
+
     def test_member_cannot_manage_team_and_csrf_is_required(self):
         self.login(self.member_id)
 
@@ -531,6 +597,14 @@ class OrganizationTenancyTest(unittest.TestCase):
                     token_hash=hash_invitation_token(token)
                 ).one().accepted_at
             )
+            user = db.session.get(User, invited_id)
+            self.assertEqual(
+                user.last_active_organization_id,
+                self.organization_id,
+            )
+
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["organization_id"], self.organization_id)
 
         csrf = self.csrf_token(f"/team/invitations/{token}/accept")
         reused = self.client.post(
@@ -587,6 +661,248 @@ class OrganizationTenancyTest(unittest.TestCase):
             data={"csrf_token": csrf},
         )
         self.assertEqual(expired.status_code, 404)
+
+    def test_invitation_get_redirects_new_user_to_register_with_token(self):
+        with self.app.app_context():
+            token = "new-user-token"
+            db.session.add(
+                OrganizationInvitation(
+                    organization_id=self.organization_id,
+                    email="new-invitee@example.com",
+                    role=ROLE_MEMBER,
+                    token_hash=hash_invitation_token(token),
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                    invited_by=self.owner_id,
+                )
+            )
+            db.session.commit()
+
+        response = self.client.get(
+            f"/team/invitations/{token}/accept"
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/register", response.location)
+        self.assertIn("invitation_token=", response.location)
+
+    def test_register_from_invitation_creates_only_invited_membership(self):
+        with self.app.app_context():
+            token = "register-invite-token"
+            db.session.add(
+                OrganizationInvitation(
+                    organization_id=self.organization_id,
+                    email="fresh-invitee@example.com",
+                    role=ROLE_MEMBER,
+                    token_hash=hash_invitation_token(token),
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                    invited_by=self.owner_id,
+                )
+            )
+            db.session.commit()
+
+        response = self.client.get(f"/team/invitations/{token}/accept")
+        self.assertEqual(response.status_code, 302)
+        register_path = response.location
+        csrf = self.csrf_token(register_path)
+        response = self.client.post(
+            register_path,
+            data={
+                "email": "fresh-invitee@example.com",
+                "password": "password123",
+                "invitation_token": token,
+                "csrf_token": csrf,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(f"/team/invitations/{token}/accept", response.location)
+
+        with self.app.app_context():
+            user = User.query.filter_by(
+                email="fresh-invitee@example.com"
+            ).one()
+            self.assertEqual(
+                OrganizationMembership.query.filter_by(user_id=user.id).count(),
+                0,
+            )
+            self.assertFalse(user.paid)
+
+        csrf = self.csrf_token(f"/team/invitations/{token}/accept")
+        response = self.client.post(
+            f"/team/invitations/{token}/accept",
+            data={"csrf_token": csrf},
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            user = User.query.filter_by(
+                email="fresh-invitee@example.com"
+            ).one()
+            memberships = OrganizationMembership.query.filter_by(
+                user_id=user.id
+            ).all()
+
+            self.assertEqual(len(memberships), 1)
+            self.assertEqual(memberships[0].organization_id, self.organization_id)
+            self.assertEqual(memberships[0].role, ROLE_MEMBER)
+            self.assertEqual(
+                user.last_active_organization_id,
+                self.organization_id,
+            )
+            self.assertIsNotNone(
+                OrganizationInvitation.query.filter_by(
+                    token_hash=hash_invitation_token(token)
+                ).one().accepted_at
+            )
+
+    def test_register_from_invitation_rejects_different_email(self):
+        with self.app.app_context():
+            token = "wrong-register-email-token"
+            db.session.add(
+                OrganizationInvitation(
+                    organization_id=self.organization_id,
+                    email="expected@example.com",
+                    role=ROLE_MEMBER,
+                    token_hash=hash_invitation_token(token),
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                    invited_by=self.owner_id,
+                )
+            )
+            db.session.commit()
+
+        register_path = f"/register?invitation_token={token}"
+        csrf = self.csrf_token(register_path)
+        response = self.client.post(
+            register_path,
+            data={
+                "email": "different@example.com",
+                "password": "password123",
+                "invitation_token": token,
+                "csrf_token": csrf,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            self.assertIsNone(
+                User.query.filter_by(email="different@example.com").first()
+            )
+
+    def test_register_from_used_or_expired_invitation_is_rejected(self):
+        with self.app.app_context():
+            used_token = "used-register-token"
+            expired_token = "expired-register-token"
+            db.session.add_all(
+                [
+                    OrganizationInvitation(
+                        organization_id=self.organization_id,
+                        email="used-register@example.com",
+                        role=ROLE_MEMBER,
+                        token_hash=hash_invitation_token(used_token),
+                        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                        accepted_at=datetime.now(timezone.utc),
+                        invited_by=self.owner_id,
+                    ),
+                    OrganizationInvitation(
+                        organization_id=self.organization_id,
+                        email="expired-register@example.com",
+                        role=ROLE_MEMBER,
+                        token_hash=hash_invitation_token(expired_token),
+                        expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+                        invited_by=self.owner_id,
+                    ),
+                ]
+            )
+            db.session.commit()
+
+        self.assertEqual(
+            self.client.get(f"/register?invitation_token={used_token}").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(
+                f"/register?invitation_token={expired_token}"
+            ).status_code,
+            404,
+        )
+
+    def test_invited_member_login_returns_to_inviting_organization(self):
+        with self.app.app_context():
+            personal_owner = self.create_user("dual@example.com")
+            personal_org = create_default_organization_for_user(personal_owner)
+            token = "dual-org-token"
+            db.session.add(
+                OrganizationInvitation(
+                    organization_id=self.organization_id,
+                    email="dual@example.com",
+                    role=ROLE_ADMIN,
+                    token_hash=hash_invitation_token(token),
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                    invited_by=self.owner_id,
+                )
+            )
+            db.session.commit()
+            personal_owner_id = personal_owner.id
+            personal_org_id = personal_org.id
+
+        self.login(personal_owner_id)
+        csrf = self.csrf_token(f"/team/invitations/{token}/accept")
+        response = self.client.post(
+            f"/team/invitations/{token}/accept",
+            data={"csrf_token": csrf},
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            memberships = OrganizationMembership.query.filter_by(
+                user_id=personal_owner_id
+            ).all()
+            self.assertEqual(len(memberships), 2)
+            self.assertIsNotNone(
+                OrganizationMembership.query.filter_by(
+                    user_id=personal_owner_id,
+                    organization_id=personal_org_id,
+                    role=ROLE_OWNER,
+                ).first()
+            )
+            self.assertIsNotNone(
+                OrganizationMembership.query.filter_by(
+                    user_id=personal_owner_id,
+                    organization_id=self.organization_id,
+                    role=ROLE_ADMIN,
+                ).first()
+            )
+
+        logout_csrf = self.csrf_token("/dashboard")
+        self.client.post(
+            "/logout",
+            data={"csrf_token": logout_csrf},
+        )
+        login_csrf = self.csrf_token("/login")
+        response = self.client.post(
+            "/login",
+            data={
+                "email": "dual@example.com",
+                "password": "password123",
+                "csrf_token": login_csrf,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["organization_id"], self.organization_id)
+
+        with self.app.app_context():
+            user = db.session.get(User, personal_owner_id)
+            self.assertEqual(
+                user.last_active_organization_id,
+                self.organization_id,
+            )
 
     def test_incorrect_invitation_token_fails(self):
         self.login(self.member_id)

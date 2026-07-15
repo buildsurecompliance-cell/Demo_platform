@@ -298,10 +298,23 @@ Team invitations are token-based:
 Organization access must be checked before storage access, AI analysis, document download, delete, reminders, or any mutable action.
 
 In V1, the active Organization is resolved from the session only after
-verifying that the current user has a membership in that Organization. Invalid
-or cross-Organization session values are ignored and replaced with the first
-membership in deterministic order. There is no visual multi-Organization
-selector in this sprint.
+verifying that the current user has a membership in that Organization. If the
+session has no valid Organization, the app uses the user's persisted
+`last_active_organization_id` only when that user still has membership in that
+Organization. If that preference is missing or invalid, the app falls back to
+the first membership in deterministic order and persists that safe fallback.
+There is no visual multi-Organization selector in this sprint.
+
+Users who register from a valid Organization invitation do not receive an
+automatic personal Organization. They create only the User account first, then
+accept the invitation, which creates the invited membership, preserves the
+invited role, marks the invitation accepted, and stores the inviting
+Organization as the active Organization. Normal registration outside an
+invitation still creates a default Organization and OWNER membership.
+
+Do not automatically delete personal Organizations that were created before
+this invitation flow was corrected. Empty duplicate Organizations may be
+removed later only through a reviewed administrative operation.
 
 `Project.organization_id` and `Subcontractor.organization_id` are required and
 are the only operational tenancy boundary for those records.

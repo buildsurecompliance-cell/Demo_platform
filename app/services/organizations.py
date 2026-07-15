@@ -61,6 +61,8 @@ def create_default_organization_for_user(user, role=ROLE_OWNER):
     db.session.add(membership)
     db.session.flush()
 
+    user.last_active_organization_id = organization.id
+
     return organization
 
 
@@ -78,25 +80,96 @@ def get_user_memberships(user=None):
     )
 
 
-def get_current_organization():
-    if not current_user.is_authenticated:
+def get_valid_invitation(token):
+    token_hash = hash_invitation_token(token or "")
+    invitation = (
+        OrganizationInvitation.query
+        .filter_by(token_hash=token_hash)
+        .first()
+    )
+
+    if not invitation:
         return None
 
-    memberships = get_user_memberships(current_user)
+    if invitation.accepted_at:
+        return None
+
+    now = datetime.now(timezone.utc)
+
+    if _as_aware_utc(invitation.expires_at) <= now:
+        return None
+
+    return invitation
+
+
+def remember_active_organization(user, organization_id):
+    if not user or not organization_id:
+        return None
+
+    membership = (
+        OrganizationMembership.query
+        .filter_by(
+            organization_id=organization_id,
+            user_id=user.id,
+        )
+        .first()
+    )
+
+    if not membership:
+        return None
+
+    user.last_active_organization_id = membership.organization_id
+    session["organization_id"] = membership.organization_id
+    session.modified = True
+    return membership.organization
+
+
+def resolve_active_organization(user=None):
+    user = user or current_user
+
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+
+    memberships = get_user_memberships(user)
 
     if not memberships:
         session.pop("organization_id", None)
+        if getattr(user, "last_active_organization_id", None):
+            user.last_active_organization_id = None
+            db.session.flush()
         return None
 
     requested_id = session.get("organization_id")
 
     for membership in memberships:
         if membership.organization_id == requested_id:
+            remember_active_organization(
+                user,
+                membership.organization_id,
+            )
+            return membership.organization
+
+    last_active_id = getattr(user, "last_active_organization_id", None)
+
+    for membership in memberships:
+        if membership.organization_id == last_active_id:
+            session["organization_id"] = membership.organization_id
+            session.modified = True
             return membership.organization
 
     membership = memberships[0]
+    user.last_active_organization_id = membership.organization_id
     session["organization_id"] = membership.organization_id
+    session.modified = True
+    db.session.flush()
     return membership.organization
+
+
+def get_current_organization():
+    if not current_user.is_authenticated:
+        return None
+
+    return resolve_active_organization(current_user)
 
 
 def get_current_membership():
@@ -288,22 +361,8 @@ def accept_invitation(token, user=None):
     if not user or not user.is_authenticated:
         abort(403)
 
-    token_hash = hash_invitation_token(token or "")
-    invitation = (
-        OrganizationInvitation.query
-        .filter_by(token_hash=token_hash)
-        .first()
-    )
-
+    invitation = get_valid_invitation(token)
     if not invitation:
-        abort(404)
-
-    if invitation.accepted_at:
-        abort(404)
-
-    now = datetime.now(timezone.utc)
-
-    if _as_aware_utc(invitation.expires_at) <= now:
         abort(404)
 
     if normalize_email(user.email) != invitation.email:
@@ -329,7 +388,10 @@ def accept_invitation(token, user=None):
 
     invitation.accepted_at = datetime.now(timezone.utc)
     db.session.flush()
-    session["organization_id"] = invitation.organization_id
+    remember_active_organization(
+        user,
+        invitation.organization_id,
+    )
 
     return invitation
 

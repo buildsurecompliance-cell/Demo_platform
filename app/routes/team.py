@@ -18,11 +18,13 @@ from app.models import (
     ORGANIZATION_ROLES,
     ROLE_ADMIN,
     ROLE_OWNER,
+    User,
 )
 from app.services.organizations import (
     accept_invitation,
     can_manage_members,
     create_invitation,
+    get_valid_invitation,
     get_current_organization,
     list_members,
     pending_invitations,
@@ -99,8 +101,37 @@ def team():
     "/team/invitations/<token>/accept",
     methods=["GET", "POST"],
 )
-@login_required
 def accept_invitation_route(token):
+    invitation = get_valid_invitation(token)
+
+    if not invitation:
+        abort(404)
+
+    if not current_user.is_authenticated:
+        existing_user = User.query.filter_by(
+            email=invitation.email,
+        ).first()
+        next_url = url_for(
+            "team.accept_invitation_route",
+            token=token,
+        )
+
+        if existing_user:
+            return redirect(
+                url_for(
+                    "auth.login",
+                    next=next_url,
+                )
+            )
+
+        return redirect(
+            url_for(
+                "auth.register",
+                email=invitation.email,
+                invitation_token=token,
+            )
+        )
+
     if request.method == "GET":
         return render_template(
             "accept_invitation.html"

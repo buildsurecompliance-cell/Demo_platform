@@ -9,6 +9,7 @@ from flask import (
     url_for,
     flash,
     session,
+    abort,
 )
 
 from flask_login import (
@@ -28,7 +29,10 @@ from app.security import (
 )
 from app.services.organizations import (
     create_default_organization_for_user,
+    get_valid_invitation,
     get_user_memberships,
+    normalize_email,
+    resolve_active_organization,
 )
 
 auth_bp = Blueprint(
@@ -126,6 +130,20 @@ def register():
         "email",
         ""
     ).lower().strip()
+    invitation_token = (
+        request.args.get("invitation_token")
+        or request.form.get("invitation_token")
+        or ""
+    ).strip()
+    invitation = None
+
+    if invitation_token:
+        invitation = get_valid_invitation(invitation_token)
+
+        if not invitation:
+            abort(404)
+
+        email_prefill = invitation.email
 
     if request.method == "POST":
 
@@ -148,7 +166,8 @@ def register():
 
             return render_template(
                 "register.html",
-                email_prefill=email
+                email_prefill=email,
+                invitation_token=invitation_token,
             )
 
         if not EMAIL_REGEX.match(email):
@@ -160,7 +179,8 @@ def register():
 
             return render_template(
                 "register.html",
-                email_prefill=email
+                email_prefill=email,
+                invitation_token=invitation_token,
             )
 
         existing_user = User.query.filter_by(
@@ -176,7 +196,21 @@ def register():
 
             return render_template(
                 "register.html",
-                email_prefill=email
+                email_prefill=email,
+                invitation_token=invitation_token,
+            )
+
+        if invitation and normalize_email(email) != invitation.email:
+
+            flash(
+                "Please register with the invited email address.",
+                "danger"
+            )
+
+            return render_template(
+                "register.html",
+                email_prefill=invitation.email,
+                invitation_token=invitation_token,
             )
 
         if len(password) < 8:
@@ -188,14 +222,15 @@ def register():
 
             return render_template(
                 "register.html",
-                email_prefill=email
+                email_prefill=email,
+                invitation_token=invitation_token,
             )
 
         try:
 
             new_user = User(
                 email=email,
-                paid=True
+                paid=not bool(invitation),
             )
 
             new_user.set_password(password)
@@ -203,7 +238,8 @@ def register():
             db.session.add(new_user)
             db.session.flush()
 
-            create_default_organization_for_user(new_user)
+            if not invitation:
+                create_default_organization_for_user(new_user)
 
             db.session.commit()
 
@@ -224,7 +260,26 @@ def register():
 
             return render_template(
                 "register.html",
-                email_prefill=email
+                email_prefill=email,
+                invitation_token=invitation_token,
+            )
+
+        if invitation:
+            login_user(
+                new_user,
+                remember=False,
+            )
+
+            flash(
+                "Account created. Please accept the invitation.",
+                "success"
+            )
+
+            return redirect(
+                url_for(
+                    "team.accept_invitation_route",
+                    token=invitation_token,
+                )
             )
 
         flash(
@@ -238,7 +293,8 @@ def register():
 
     return render_template(
         "register.html",
-        email_prefill=email_prefill
+        email_prefill=email_prefill,
+        invitation_token=invitation_token,
     )
 
 
@@ -301,6 +357,9 @@ def login():
                 user,
                 remember=False
             )
+
+            resolve_active_organization(user)
+            db.session.commit()
 
             next_page = request.args.get(
                 "next"

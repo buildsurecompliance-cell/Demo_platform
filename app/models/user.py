@@ -43,6 +43,13 @@ class User(UserMixin, db.Model):
         default="US/Eastern"
     )
 
+    last_active_organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organization.id"),
+        nullable=True,
+        index=True,
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow

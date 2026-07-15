@@ -364,6 +364,20 @@ Organizations, the session value is accepted only when it matches one of that
 user's memberships; otherwise the app falls back to the first membership in
 deterministic order.
 
+The active Organization preference is stored on
+`User.last_active_organization_id`. The migration adds this column as nullable
+and does not backfill arbitrary values for existing users. Login resolves the
+stored preference only when the user still has a matching membership; otherwise
+it clears the invalid preference, falls back deterministically, and persists
+the safe choice. Invitation acceptance sets both the session Organization and
+the persisted last active Organization to the inviting tenant.
+
+Users who register through a valid invitation should not get a personal
+Organization. The invitation flow creates the User account first, then the
+accepted invitation creates only the invited membership. Any empty personal
+Organizations created by the earlier behavior should be reviewed and removed
+later through a safe administrative cleanup, not by deployment migration.
+
 Downgrading the initial Organization migration removes Organization,
 Membership, and Invitation tables and returns the schema to direct user
 ownership. Project and Subcontractor IDs are preserved, but team-access records
