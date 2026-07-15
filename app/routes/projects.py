@@ -72,6 +72,100 @@ projects_bp = Blueprint(
 
 logger = logging.getLogger(__name__)
 
+PROJECT_REQUIRED_COVERAGE_OPTIONS = [
+    {
+        "value": "",
+        "label": "No minimum",
+    },
+    {
+        "value": "1000000",
+        "label": "$1M",
+    },
+    {
+        "value": "2000000",
+        "label": "$2M",
+    },
+    {
+        "value": "5000000",
+        "label": "$5M",
+    },
+    {
+        "value": "custom",
+        "label": "Custom amount",
+    },
+]
+
+PROJECT_REQUIRED_COVERAGE_PRESETS = {
+    "1000000": 1000000,
+    "2000000": 2000000,
+    "5000000": 5000000,
+}
+
+
+def _parse_positive_integer_amount(raw_value):
+    cleaned = (raw_value or "").strip().replace("$", "").replace(",", "")
+
+    if cleaned == "":
+        return None
+
+    try:
+        value = int(cleaned)
+    except ValueError as exc:
+        raise ValueError("Amount must be a whole number.") from exc
+
+    if value < 0:
+        raise ValueError("Amount cannot be negative.")
+
+    if value == 0:
+        return None
+
+    return value
+
+
+def _parse_required_coverage(form):
+    selected = (form.get("required_coverage_choice") or "").strip()
+
+    if selected in ("", "0"):
+        return None
+
+    if selected == "custom":
+        return _parse_positive_integer_amount(
+            form.get("required_coverage_custom")
+        )
+
+    if selected not in PROJECT_REQUIRED_COVERAGE_PRESETS:
+        raise ValueError("Invalid coverage option.")
+
+    return PROJECT_REQUIRED_COVERAGE_PRESETS[selected]
+
+
+def _coverage_form_values(required_coverage=None, form_data=None):
+    if form_data is not None:
+        return {
+            "choice": form_data.get("required_coverage_choice", ""),
+            "custom": form_data.get("required_coverage_custom", ""),
+        }
+
+    if required_coverage is None:
+        return {
+            "choice": "",
+            "custom": "",
+        }
+
+    coverage = int(required_coverage)
+    coverage_text = str(coverage)
+
+    if coverage_text in PROJECT_REQUIRED_COVERAGE_PRESETS:
+        return {
+            "choice": coverage_text,
+            "custom": "",
+        }
+
+    return {
+        "choice": "custom",
+        "custom": coverage_text,
+    }
+
 
 def _selected_owned_subcontractor_ids():
     selected_ids = []
@@ -158,6 +252,51 @@ def _cleanup_saved_documents(storage_keys):
         cleanup_saved_document(storage_key)
 
 
+def _render_add_project(
+    organization,
+    subs,
+    form_data=None,
+    selected_subcontractor_ids=None,
+):
+    return render_template(
+        "add_project.html",
+        subs=subs,
+        project_document_types=PROJECT_DOCUMENT_TYPES,
+        capacity_usage=get_organization_usage(organization),
+        coverage_options=PROJECT_REQUIRED_COVERAGE_OPTIONS,
+        coverage_form=_coverage_form_values(form_data=form_data),
+        form_data=form_data,
+        selected_subcontractor_ids=selected_subcontractor_ids or set(),
+    )
+
+
+def _render_edit_project(
+    project,
+    subs,
+    form_data=None,
+    selected_subcontractor_ids=None,
+):
+    if selected_subcontractor_ids is None:
+        selected_subcontractor_ids = {
+            link.subcontractor_id
+            for link in project.subs
+        }
+
+    return render_template(
+        "edit_project.html",
+        project=project,
+        subs=subs,
+        project_document_types=PROJECT_DOCUMENT_TYPES,
+        coverage_options=PROJECT_REQUIRED_COVERAGE_OPTIONS,
+        coverage_form=_coverage_form_values(
+            getattr(project, "required_coverage", None),
+            form_data=form_data,
+        ),
+        form_data=form_data,
+        selected_subcontractor_ids=selected_subcontractor_ids,
+    )
+
+
 @projects_bp.route("/add_project", methods=["GET", "POST"])
 @login_required
 def add_project():
@@ -175,16 +314,38 @@ def add_project():
         value_raw = request.form.get("contract_value")
         start_raw = request.form.get("start_date")
         end_raw = request.form.get("end_date")
+        selected_sub_ids = _selected_owned_subcontractor_ids()
 
         if not name:
             flash("Project name is required.", "danger")
-            return redirect(url_for("projects.add_project"))
+            return _render_add_project(
+                organization,
+                subs,
+                request.form,
+                selected_sub_ids,
+            )
 
         try:
             contract_value = float(value_raw) if value_raw else 0
         except ValueError:
             flash("Invalid contract value.", "danger")
-            return redirect(url_for("projects.add_project"))
+            return _render_add_project(
+                organization,
+                subs,
+                request.form,
+                selected_sub_ids,
+            )
+
+        try:
+            required_coverage = _parse_required_coverage(request.form)
+        except ValueError:
+            flash("Invalid minimum coverage amount.", "danger")
+            return _render_add_project(
+                organization,
+                subs,
+                request.form,
+                selected_sub_ids,
+            )
 
         start_date = None
         if start_raw:
@@ -192,7 +353,12 @@ def add_project():
                 start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
             except ValueError:
                 flash("Invalid start date.", "danger")
-                return redirect(url_for("projects.add_project"))
+                return _render_add_project(
+                    organization,
+                    subs,
+                    request.form,
+                    selected_sub_ids,
+                )
 
         end_date = None
         if end_raw:
@@ -200,11 +366,21 @@ def add_project():
                 end_date = datetime.strptime(end_raw, "%Y-%m-%d").date()
             except ValueError:
                 flash("Invalid end date.", "danger")
-                return redirect(url_for("projects.add_project"))
+                return _render_add_project(
+                    organization,
+                    subs,
+                    request.form,
+                    selected_sub_ids,
+                )
 
         if start_date and end_date and end_date < start_date:
             flash("End date cannot be before start date.", "danger")
-            return redirect(url_for("projects.add_project"))
+            return _render_add_project(
+                organization,
+                subs,
+                request.form,
+                selected_sub_ids,
+            )
 
         try:
             require_project_capacity(organization)
@@ -219,6 +395,7 @@ def add_project():
             organization_id=organization.id,
             start_date=start_date,
             end_date=end_date,
+            required_coverage=required_coverage,
         )
 
         db.session.add(project)
@@ -226,7 +403,7 @@ def add_project():
 
         _add_missing_project_links(
             project,
-            _selected_owned_subcontractor_ids(),
+            selected_sub_ids,
         )
 
         files = request.files.getlist("documents")
@@ -287,12 +464,7 @@ def add_project():
         flash("Project created successfully", "success")
         return redirect(url_for("dashboard.dashboard"))
 
-    return render_template(
-        "add_project.html",
-        subs=subs,
-        project_document_types=PROJECT_DOCUMENT_TYPES,
-        capacity_usage=get_organization_usage(organization),
-    )
+    return _render_add_project(organization, subs)
 
 
 @projects_bp.route("/edit_project/<int:project_id>", methods=["GET", "POST"])
@@ -309,28 +481,40 @@ def edit_project(project_id):
 
     if request.method == "POST":
 
-        project.name = request.form.get("name", "").strip()
+        name = request.form.get("name", "").strip()
+        selected_sub_ids = _selected_owned_subcontractor_ids()
 
-        if not project.name:
+        if not name:
             flash("Project name is required.", "danger")
-            return redirect(
-                url_for(
-                    "projects.edit_project",
-                    project_id=project.id,
-                )
+            return _render_edit_project(
+                project,
+                subs,
+                request.form,
+                selected_sub_ids,
             )
 
         value_raw = request.form.get("contract_value")
 
         try:
-            project.contract_value = float(value_raw) if value_raw else 0
+            contract_value = float(value_raw) if value_raw else 0
         except ValueError:
             flash("Invalid contract value.", "danger")
-            return redirect(
-                url_for(
-                    "projects.edit_project",
-                    project_id=project.id,
-                )
+            return _render_edit_project(
+                project,
+                subs,
+                request.form,
+                selected_sub_ids,
+            )
+
+        try:
+            required_coverage = _parse_required_coverage(request.form)
+        except ValueError:
+            flash("Invalid minimum coverage amount.", "danger")
+            return _render_edit_project(
+                project,
+                subs,
+                request.form,
+                selected_sub_ids,
             )
 
         start_raw = request.form.get("start_date")
@@ -351,26 +535,27 @@ def edit_project(project_id):
 
         except ValueError:
             flash("Invalid date format.", "danger")
-            return redirect(
-                url_for(
-                    "projects.edit_project",
-                    project_id=project.id,
-                )
+            return _render_edit_project(
+                project,
+                subs,
+                request.form,
+                selected_sub_ids,
             )
 
         if start_date and end_date and end_date < start_date:
             flash("End date cannot be before start date.", "danger")
-            return redirect(
-                url_for(
-                    "projects.edit_project",
-                    project_id=project.id,
-                )
+            return _render_edit_project(
+                project,
+                subs,
+                request.form,
+                selected_sub_ids,
             )
 
         project.start_date = start_date
         project.end_date = end_date
-
-        selected_sub_ids = _selected_owned_subcontractor_ids()
+        project.name = name
+        project.contract_value = contract_value
+        project.required_coverage = required_coverage
 
         current_links = ProjectSubcontractor.query.filter_by(
             project_id=project.id
@@ -467,12 +652,7 @@ def edit_project(project_id):
             )
         )
 
-    return render_template(
-        "edit_project.html",
-        project=project,
-        subs=subs,
-        project_document_types=PROJECT_DOCUMENT_TYPES,
-    )
+    return _render_edit_project(project, subs)
 
 
 @projects_bp.route("/project/<int:project_id>")

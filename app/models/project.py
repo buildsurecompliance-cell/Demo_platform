@@ -22,6 +22,11 @@ class Project(db.Model):
         default=0
     )
 
+    required_coverage = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),

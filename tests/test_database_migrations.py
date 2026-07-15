@@ -298,6 +298,99 @@ class DatabaseMigrationTest(unittest.TestCase):
                 self.assertEqual(ProjectSubcontractor.query.count(), 1)
                 self.assertEqual(Document.query.count(), 1)
 
+    def test_project_required_coverage_migration_handles_existing_projects(self):
+        with self.temporary_migrated_app_from_revision("8b7c6d5e4f30") as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO project (
+                            id,
+                            name,
+                            contract_value,
+                            user_id,
+                            organization_id
+                        )
+                        VALUES (9101, 'Legacy Project', 1000, 1, 1)
+                        """
+                    )
+                )
+                db.session.commit()
+
+                upgrade(
+                    directory="migrations",
+                    revision="head",
+                )
+
+                inspector = inspect(db.engine)
+                project_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("project")
+                }
+
+                self.assertIn("required_coverage", project_columns)
+                self.assertTrue(project_columns["required_coverage"]["nullable"])
+
+                required_coverage = db.session.execute(
+                    text(
+                        """
+                        SELECT required_coverage
+                        FROM project
+                        WHERE id = 9101
+                        """
+                    )
+                ).scalar_one()
+                self.assertIsNone(required_coverage)
+
+                db.session.execute(
+                    text(
+                        """
+                        UPDATE project
+                        SET required_coverage = 2000000
+                        WHERE id = 9101
+                        """
+                    )
+                )
+                db.session.commit()
+
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT required_coverage
+                            FROM project
+                            WHERE id = 9101
+                            """
+                        )
+                    ).scalar_one(),
+                    2000000,
+                )
+
+                downgrade(
+                    directory="migrations",
+                    revision="8b7c6d5e4f30",
+                )
+
+                inspector = inspect(db.engine)
+                project_columns = {
+                    column["name"]
+                    for column in inspector.get_columns("project")
+                }
+
+                self.assertNotIn("required_coverage", project_columns)
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM project
+                            WHERE id = 9101
+                            """
+                        )
+                    ).scalar_one(),
+                    1,
+                )
+
     def test_migration_upgrade_assigns_existing_data_to_organizations(self):
         with self.temporary_migrated_app_from_revision(
             "ebe17429fa03"

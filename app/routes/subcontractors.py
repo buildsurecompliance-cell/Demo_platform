@@ -2,6 +2,7 @@ import uuid
 
 from datetime import datetime
 import logging
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import (
     abort,
@@ -144,6 +145,73 @@ def _cleanup_saved_documents(storage_keys):
         cleanup_saved_document(storage_key)
 
 
+def _parse_optional_date(raw_value):
+    if not raw_value:
+        return None
+
+    try:
+        return datetime.strptime(
+            raw_value,
+            "%Y-%m-%d"
+        ).date()
+    except ValueError as exc:
+        raise ValueError("Invalid date format.") from exc
+
+
+def _form_timezone():
+    timezone_name = (
+        request.form.get("timezone")
+        or getattr(current_user, "timezone", None)
+        or "US/Eastern"
+    ).strip()
+
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError("Invalid timezone.") from exc
+
+    return timezone_name
+
+
+def _render_add_sub(
+    organization,
+    projects,
+    form_data=None,
+    selected_projects=None,
+):
+    return render_template(
+        "add_sub.html",
+        sub=None,
+        projects=projects,
+        selected_projects=selected_projects or [],
+        capacity_usage=get_organization_usage(organization),
+        form_data=form_data,
+    )
+
+
+def _render_edit_sub(
+    sub,
+    projects,
+    form_data=None,
+    selected_projects=None,
+):
+    if selected_projects is None:
+        selected_projects = [
+            link.project_id
+            for link in ProjectSubcontractor.query.filter_by(
+                subcontractor_id=sub.id
+            ).all()
+        ]
+
+    return render_template(
+        "edit_sub.html",
+        sub=sub,
+        projects=projects,
+        selected_projects=selected_projects,
+        form_data=form_data,
+    )
+
+
 @subcontractors_bp.route("/sub/<int:sub_id>/documents")
 @login_required
 def view_sub_documents(sub_id):
@@ -185,24 +253,40 @@ def add_sub():
         email = request.form.get("email", "").lower().strip()
         phone = request.form.get("phone")
         role = request.form.get("role")
+        project_ids = _selected_owned_project_ids()
 
         if not name:
             flash("Subcontractor name is required.", "danger")
-            return redirect(url_for("subcontractors.add_sub"))
+            return _render_add_sub(
+                organization,
+                projects,
+                request.form,
+                project_ids,
+            )
 
         coi_raw = request.form.get("coi_expiration")
 
-        if coi_raw:
-            try:
-                coi_expiration = datetime.strptime(
-                    coi_raw,
-                    "%Y-%m-%d"
-                ).date()
-            except ValueError:
-                flash("Invalid date format.", "danger")
-                return redirect(url_for("subcontractors.add_sub"))
-        else:
-            coi_expiration = None
+        try:
+            coi_expiration = _parse_optional_date(coi_raw)
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return _render_add_sub(
+                organization,
+                projects,
+                request.form,
+                project_ids,
+            )
+
+        try:
+            timezone_name = _form_timezone()
+        except ValueError:
+            flash("Invalid timezone.", "danger")
+            return _render_add_sub(
+                organization,
+                projects,
+                request.form,
+                project_ids,
+            )
 
         try:
             require_subcontractor_capacity(organization)
@@ -215,7 +299,7 @@ def add_sub():
             email=email,
             phone=phone,
             role=role,
-            timezone=current_user.timezone,
+            timezone=timezone_name,
             coi_expiration=coi_expiration,
             user_id=current_user.id,
             organization_id=organization.id,
@@ -223,8 +307,6 @@ def add_sub():
 
         db.session.add(new_sub)
         db.session.flush()
-
-        project_ids = _selected_owned_project_ids()
 
         for pid in project_ids:
             link = ProjectSubcontractor(
@@ -314,13 +396,7 @@ def add_sub():
 
         return redirect(url_for("dashboard.dashboard"))
 
-    return render_template(
-        "add_sub.html",
-        sub=None,
-        projects=projects,
-        selected_projects=[],
-        capacity_usage=get_organization_usage(organization),
-    )
+    return _render_add_sub(organization, projects)
 
 
 @subcontractors_bp.route("/edit_sub/<int:id>", methods=["GET", "POST"])
@@ -341,42 +417,47 @@ def edit_sub(id):
         email = request.form.get("email", "").lower().strip()
         phone = request.form.get("phone")
         role = request.form.get("role")
+        project_ids = _selected_owned_project_ids()
 
         if not name:
             flash("Subcontractor name is required.", "danger")
-            return redirect(
-                url_for(
-                    "subcontractors.edit_sub",
-                    id=sub.id
-                )
+            return _render_edit_sub(
+                sub,
+                projects,
+                request.form,
+                project_ids,
+            )
+
+        expiration_raw = request.form.get("coi_expiration")
+
+        try:
+            coi_expiration = _parse_optional_date(expiration_raw)
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return _render_edit_sub(
+                sub,
+                projects,
+                request.form,
+                project_ids,
+            )
+
+        try:
+            timezone_name = _form_timezone()
+        except ValueError:
+            flash("Invalid timezone.", "danger")
+            return _render_edit_sub(
+                sub,
+                projects,
+                request.form,
+                project_ids,
             )
 
         sub.name = name
         sub.email = email
         sub.phone = phone
         sub.role = role
-        sub.timezone = current_user.timezone
-
-        expiration_raw = request.form.get("coi_expiration")
-
-        if expiration_raw:
-            try:
-                sub.coi_expiration = datetime.strptime(
-                    expiration_raw,
-                    "%Y-%m-%d"
-                ).date()
-            except ValueError:
-                flash("Invalid date format.", "danger")
-                return redirect(
-                    url_for(
-                        "subcontractors.edit_sub",
-                        id=sub.id
-                    )
-                )
-        else:
-            sub.coi_expiration = None
-
-        project_ids = _selected_owned_project_ids()
+        sub.timezone = timezone_name
+        sub.coi_expiration = coi_expiration
 
         current_links = ProjectSubcontractor.query.filter_by(
             subcontractor_id=sub.id
@@ -485,19 +566,7 @@ def edit_sub(id):
 
         return redirect(url_for("dashboard.dashboard"))
 
-    selected_projects = [
-        link.project_id
-        for link in ProjectSubcontractor.query.filter_by(
-            subcontractor_id=sub.id
-        ).all()
-    ]
-
-    return render_template(
-        "edit_sub.html",
-        sub=sub,
-        projects=projects,
-        selected_projects=selected_projects,
-    )
+    return _render_edit_sub(sub, projects)
 
 
 @subcontractors_bp.route("/delete_sub/<int:id>", methods=["POST"])

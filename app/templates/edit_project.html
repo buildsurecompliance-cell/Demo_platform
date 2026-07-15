@@ -1,163 +1,204 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="page-wrapper">
+{% set project_name = form_data.get('name', project.name) if form_data else project.name %}
+{% set contract_value = form_data.get('contract_value', project.contract_value) if form_data else project.contract_value %}
+{% set start_value = form_data.get('start_date', '') if form_data else (project.start_date.strftime('%Y-%m-%d') if project.start_date else '') %}
+{% set end_value = form_data.get('end_date', '') if form_data else (project.end_date.strftime('%Y-%m-%d') if project.end_date else '') %}
 
-<h3>Edit Project</h3>
+<div class="form-shell">
 
-<!-- ========================= -->
-<!-- EDIT PROJECT -->
-<!-- ========================= -->
-
-<form method="POST">
-    {{ csrf_input() }}
-
-    <div class="mb-3">
-        <label>Project Name</label>
-
-        <input type="text"
-               name="name"
-               class="form-control"
-               value="{{ project.name }}"
-               required>
+    <div class="form-header">
+        <div>
+            <h1>Edit Project</h1>
+            <p class="text-muted mb-0">Update project details, requirements, documents, and assignments.</p>
+        </div>
+        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+            Back
+        </a>
     </div>
 
-    <div class="mb-3">
-        <label>Contract Value</label>
+    <form method="POST">
+        {{ csrf_input() }}
 
-        <input type="number"
-               step="0.01"
-               name="contract_value"
-               class="form-control"
-               value="{{ project.contract_value }}">
-    </div>
+        <section class="form-card">
+            <h4>Project Information</h4>
 
-    <!-- START DATE -->
+            <div class="form-field">
+                <label for="name">Project Name <span class="text-danger">*</span></label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    class="form-control"
+                    value="{{ project_name }}"
+                    aria-describedby="project-name-help"
+                    required>
+                <div id="project-name-help" class="field-help">Use the project name your team recognizes in daily compliance reviews.</div>
+            </div>
 
-    <div class="mb-3">
-        <label>Start Date</label>
+            <div class="form-field">
+                <label for="contract_value">Contract Value</label>
+                <div class="input-prefix">
+                    <span>$</span>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        id="contract_value"
+                        name="contract_value"
+                        class="form-control"
+                        value="{{ contract_value }}"
+                        aria-describedby="contract-value-help">
+                </div>
+                <div id="contract-value-help" class="field-help">Optional. Used for project context, not readiness decisions.</div>
+            </div>
 
-        <input type="date"
-               name="start_date"
-               class="form-control"
-               value="{{ project.start_date }}">
-    </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="start_date">Start Date</label>
+                    <input
+                        type="date"
+                        id="start_date"
+                        name="start_date"
+                        class="form-control"
+                        value="{{ start_value }}">
+                    <div class="field-help">Optional mobilization reference date.</div>
+                </div>
 
-    <!-- END DATE -->
+                <div class="form-field">
+                    <label for="end_date">End Date</label>
+                    <input
+                        type="date"
+                        id="end_date"
+                        name="end_date"
+                        class="form-control"
+                        value="{{ end_value }}">
+                    <div class="field-help">Optional contract completion reference date.</div>
+                </div>
+            </div>
 
-    <div class="mb-3">
-        <label>End Date</label>
-
-        <input type="date"
-               name="end_date"
-               class="form-control"
-               value="{{ project.end_date }}">
-    </div>
-
-    <!-- CONTRACT STATUS INFO -->
-
-    {% if project.end_date %}
-
-    <div class="alert alert-info">
-
-        Contract Status:
-        <strong>{{ project.contract_status }}</strong>
-
-        <br>
-
-        Days Remaining:
-        <strong>{{ project.days_remaining }}</strong>
-
-    </div>
-
-    {% endif %}
-
-    <!-- ========================= -->
-    <!-- SUBCONTRACTORS -->
-    <!-- ========================= -->
-
-    <label>Subcontractors</label>
-
-    <select name="subcontractors"
-            multiple
-            class="form-control"
-            style="height:200px">
-
-        {% for sub in subs %}
-
-        <option value="{{ sub.id }}"
-
-        {% for link in project.subs %}
-            {% if link.subcontractor_id == sub.id %}
-                selected
+            {% if project.end_date %}
+            <div class="alert alert-info mb-0">
+                Contract Status:
+                <strong>{{ project.contract_status }}</strong>
+                <br>
+                Days Remaining:
+                <strong>{{ project.days_remaining }}</strong>
+            </div>
             {% endif %}
-        {% endfor %}
+        </section>
 
-        >
+        <section class="form-card">
+            <h4>Insurance Requirements</h4>
 
-        {{ sub.name }}
+            <div class="form-field">
+                <label for="required_coverage_choice">Minimum General Liability Coverage</label>
+                <select
+                    id="required_coverage_choice"
+                    name="required_coverage_choice"
+                    class="form-select"
+                    aria-describedby="required-coverage-help">
+                    {% for option in coverage_options %}
+                    <option value="{{ option.value }}" {% if coverage_form.choice == option.value %}selected{% endif %}>
+                        {{ option.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="required-coverage-help" class="field-help">
+                    BuildSure compares this requirement against each subcontractor's validated COI coverage.
+                </div>
+            </div>
 
-        </option>
+            <div class="form-field">
+                <label for="required_coverage_custom">Custom Amount</label>
+                <div class="input-prefix">
+                    <span>$</span>
+                    <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        id="required_coverage_custom"
+                        name="required_coverage_custom"
+                        class="form-control"
+                        value="{{ coverage_form.custom }}"
+                        placeholder="Example: 3000000">
+                </div>
+                <div class="field-help">Use only when Custom amount is selected. Empty or zero means no minimum.</div>
+            </div>
+        </section>
 
-        {% endfor %}
+        <section class="form-card">
+            <h4>Assigned Subcontractors</h4>
+            <p class="field-help">
+                Optional. Select subcontractors that should be checked against this project's requirements.
+            </p>
 
-    </select>
+            {% if subs %}
+            <div class="checkbox-list">
+                {% for sub in subs %}
+                <label class="checkbox-row">
+                    <input
+                        type="checkbox"
+                        name="subcontractors"
+                        value="{{ sub.id }}"
+                        {% if sub.id in selected_subcontractor_ids %}checked{% endif %}>
+                    <span>{{ sub.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                No subcontractors are available in this Organization yet.
+            </div>
+            {% endif %}
+        </section>
 
-    <br>
+        <div class="form-actions mb-4">
+            <button type="submit" class="btn btn-success">
+                Save Changes
+            </button>
+        </div>
+    </form>
 
-    <button type="submit" class="btn btn-success">
-        Save Changes
-    </button>
+    <form
+        action="{{ url_for('projects.upload_project_document', project_id=project.id) }}"
+        method="POST"
+        enctype="multipart/form-data">
+        {{ csrf_input() }}
 
-</form>
+        <section class="form-card">
+            <h4>Initial Documents</h4>
 
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="doc_type">Project Document Type</label>
+                    <select id="doc_type" name="doc_type" class="form-select" required>
+                        {% for document_type in project_document_types %}
+                        <option value="{{ document_type }}">
+                            {{ document_type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-<br><br>
+                <div class="form-field">
+                    <label for="file">Upload Project Document</label>
+                    <input
+                        type="file"
+                        id="file"
+                        name="file"
+                        class="form-control"
+                        required>
+                    <div class="field-help">Optional separate upload for Contract, Scope, or Owner Requirements.</div>
+                </div>
+            </div>
 
-
-<!-- ========================= -->
-<!-- UPLOAD DOCUMENT -->
-<!-- ========================= -->
-
-<h4>Upload Document</h4>
-
-<form action="{{ url_for('projects.upload_project_document', project_id=project.id) }}"
-      method="POST"
-      enctype="multipart/form-data">
-    {{ csrf_input() }}
-
-    <div class="mb-3">
-
-        <input type="file"
-               name="file"
-               class="form-control"
-               required>
-
-    </div>
-
-    <div class="mb-3">
-
-        <select name="doc_type"
-                class="form-control"
-                required>
-
-            <option value="">Select document type</option>
-
-            {% for document_type in project_document_types %}
-                <option value="{{ document_type }}">
-                    {{ document_type }}
-                </option>
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-    <button type="submit" class="btn btn-primary">
-        Upload Document
-    </button>
-
-</form>
+            <button type="submit" class="btn btn-primary">
+                Upload Document
+            </button>
+        </section>
+    </form>
 
 </div>
 

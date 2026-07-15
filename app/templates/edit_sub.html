@@ -1,107 +1,184 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<h3 class="mb-4">{{ sub and "Edit" or "Add" }} Subcontractor</h3>
+{% set sub_name = form_data.get('name', sub.name) if form_data else sub.name %}
+{% set sub_email = form_data.get('email', sub.email or '') if form_data else (sub.email or '') %}
+{% set sub_phone = form_data.get('phone', sub.phone or '') if form_data else (sub.phone or '') %}
+{% set sub_role = form_data.get('role', sub.role or '') if form_data else (sub.role or '') %}
+{% set coi_value = form_data.get('coi_expiration', '') if form_data else (sub.coi_expiration.strftime('%Y-%m-%d') if sub.coi_expiration else '') %}
+{% set timezone_value = form_data.get('timezone', sub.timezone or current_user.timezone) if form_data else (sub.timezone or current_user.timezone) %}
+{% set selected_doc_type = form_data.get('doc_type', 'COI') if form_data else 'COI' %}
 
-<form method="POST" enctype="multipart/form-data">
-{{ csrf_input() }}
+<div class="form-shell">
 
-<div class="mb-3">
-<label>Name</label>
-<input type="text" name="name" class="form-control"
-value="{{ sub.name if sub else '' }}" required>
+    <div class="form-header">
+        <div>
+            <h1>Edit Subcontractor</h1>
+            <p class="text-muted mb-0">Update company details, insurance information, documents, and project links.</p>
+        </div>
+        <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=sub.id) }}" class="btn btn-outline-secondary">
+            Back
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {{ csrf_input() }}
+
+        <section class="form-card">
+            <h4>Company Information</h4>
+
+            <div class="form-field">
+                <label for="name">Company Name <span class="text-danger">*</span></label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    class="form-control"
+                    value="{{ sub_name }}"
+                    required>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-control"
+                        value="{{ sub_email }}">
+                </div>
+
+                <div class="form-field">
+                    <label for="phone">Phone</label>
+                    <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        class="form-control"
+                        value="{{ sub_phone }}">
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label for="role">Trade</label>
+                <input
+                    type="text"
+                    id="role"
+                    name="role"
+                    class="form-control"
+                    value="{{ sub_role }}">
+            </div>
+        </section>
+
+        <section class="form-card">
+            <h4>Insurance Information</h4>
+
+            <div class="form-field">
+                <label for="coi_expiration">COI Expiration Date</label>
+                <input
+                    type="date"
+                    id="coi_expiration"
+                    name="coi_expiration"
+                    class="form-control"
+                    value="{{ coi_value }}"
+                    aria-describedby="coi-expiration-help">
+                <div id="coi-expiration-help" class="field-help">
+                    Optional. Leave this blank and upload a COI after creating the subcontractor. BuildSure can extract the expiration date automatically.
+                </div>
+            </div>
+
+            <div class="empty-state">
+                Coverage is evaluated from validated COI evidence and project-specific requirements.
+            </div>
+
+            <div class="mt-3">
+                <h4>How it works</h4>
+                <ol class="steps-list">
+                    <li>Upload the subcontractor's Certificate of Insurance.</li>
+                    <li>BuildSure analyzes and validates the document.</li>
+                    <li>Readiness uses validated evidence and project requirements.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="form-card">
+            <h4>Settings</h4>
+
+            <div class="form-field">
+                <label for="timezone">Timezone</label>
+                <input
+                    type="text"
+                    id="timezone"
+                    name="timezone"
+                    class="form-control"
+                    value="{{ timezone_value }}"
+                    aria-describedby="timezone-help">
+                <div id="timezone-help" class="field-help">Used for reminder timing.</div>
+            </div>
+        </section>
+
+        <section class="form-card">
+            <h4>Projects</h4>
+            <p class="field-help">Optional. Select projects this subcontractor should be checked against.</p>
+
+            {% if projects %}
+            <div class="checkbox-list">
+                {% for project in projects %}
+                <label class="checkbox-row">
+                    <input
+                        type="checkbox"
+                        name="projects"
+                        value="{{ project.id }}"
+                        {% if project.id in selected_projects %}checked{% endif %}>
+                    <span>{{ project.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                No projects are available in this Organization yet.
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="form-card">
+            <h4>Documents</h4>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="documents">Upload Documents</label>
+                    <input
+                        type="file"
+                        id="documents"
+                        name="documents"
+                        class="form-control"
+                        multiple>
+                </div>
+
+                <div class="form-field">
+                    <label for="doc_type">Document Type</label>
+                    <select id="doc_type" class="form-select" name="doc_type">
+                        <option value="COI" {% if selected_doc_type == 'COI' %}selected{% endif %}>Certificate of Insurance</option>
+                        <option value="Contract" {% if selected_doc_type == 'Contract' %}selected{% endif %}>Contract</option>
+                        <option value="License" {% if selected_doc_type == 'License' %}selected{% endif %}>License</option>
+                        <option value="W9" {% if selected_doc_type == 'W9' %}selected{% endif %}>W9</option>
+                        <option value="Safety" {% if selected_doc_type == 'Safety' %}selected{% endif %}>Safety Document</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+                Save Changes
+            </button>
+            <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=sub.id) }}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+
 </div>
-
-<div class="mb-3">
-<label>Email</label>
-<input type="email" name="email" class="form-control"
-value="{{ sub.email if sub else '' }}">
-</div>
-
-<div class="mb-3">
-<label>Phone</label>
-<input type="text" name="phone" class="form-control"
-value="{{ sub.phone if sub else '' }}">
-</div>
-
-<div class="mb-3">
-<label>Role</label>
-<input type="text" name="role" class="form-control"
-value="{{ sub.role if sub else '' }}">
-</div>
-
-<div class="mb-3">
-<label>Projects</label>
-
-<select id="projects" name="projects" class="form-control" multiple>
-
-{% for project in projects %}
-
-<option value="{{ project.id }}"
-{% if project.id in selected_projects %}selected{% endif %}>
-
-{{ project.name }}
-
-</option>
-
-{% endfor %}
-
-</select>
-
-</div>
-
-<div class="mb-3">
-<label>COI Expiration</label>
-
-<input type="date"
-name="coi_expiration"
-class="form-control"
-value="{{ sub.coi_expiration.strftime('%Y-%m-%d') if sub and sub.coi_expiration else '' }}"
-required>
-
-</div>
-
-<div class="mb-3">
-<label>Documents</label>
-
-<input type="file"
-name="documents"
-multiple
-class="form-control">
-
-<div class="mb-3">
-<label>Document Type</label>
-
-<select class="form-control" name="doc_type">
-
-<option value="COI">Certificate of Insurance</option>
-<option value="Contract">Contract</option>
-<option value="License">License</option>
-<option value="W9">W9</option>
-<option value="Safety">Safety Document</option>
-
-</select>
-
-</div>
-</div>
-
-<button class="btn btn-primary">
-{{ sub and "Update" or "Add" }}
-</button>
-
-</form>
-
-<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
-
-<script>
-
-new TomSelect("#projects",{
-plugins:['remove_button'],
-placeholder:"Search projects..."
-});
-
-</script>
 
 {% endblock %}

@@ -184,6 +184,156 @@ z-index:9999;
 background:rgba(0,0,0,.6);
 }
 
+/* FORM SURFACES */
+
+.form-shell{
+max-width:980px;
+margin:0 auto;
+}
+
+.form-header{
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+gap:16px;
+margin-bottom:20px;
+}
+
+.form-header h1,
+.form-header h3{
+margin:0;
+font-weight:700;
+}
+
+.form-card{
+background:#fff;
+border:1px solid #e5e7eb;
+border-radius:8px;
+padding:24px;
+margin-bottom:18px;
+box-shadow:0 1px 3px rgba(15,23,42,.05);
+}
+
+.form-card h4{
+font-size:1rem;
+font-weight:700;
+margin-bottom:16px;
+}
+
+.form-grid{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:16px;
+}
+
+.form-field{
+margin-bottom:16px;
+}
+
+.form-field label{
+display:block;
+font-weight:600;
+margin-bottom:6px;
+}
+
+.field-help{
+color:#64748b;
+font-size:.875rem;
+margin-top:6px;
+}
+
+.input-prefix{
+display:flex;
+align-items:center;
+border:1px solid #ced4da;
+border-radius:.375rem;
+background:#fff;
+overflow:hidden;
+}
+
+.input-prefix span{
+background:#f8fafc;
+border-right:1px solid #ced4da;
+color:#64748b;
+padding:.375rem .75rem;
+}
+
+.input-prefix input{
+border:0;
+box-shadow:none;
+}
+
+.input-prefix input:focus{
+box-shadow:none;
+}
+
+.checkbox-list{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:10px;
+}
+
+.checkbox-row{
+border:1px solid #e5e7eb;
+border-radius:8px;
+padding:10px 12px;
+background:#f8fafc;
+display:flex;
+gap:8px;
+align-items:center;
+min-height:44px;
+}
+
+.empty-state{
+border:1px dashed #cbd5e1;
+border-radius:8px;
+padding:14px;
+color:#64748b;
+background:#f8fafc;
+}
+
+.form-actions{
+display:flex;
+gap:10px;
+align-items:center;
+flex-wrap:wrap;
+}
+
+.steps-list{
+margin:0;
+padding-left:18px;
+color:#475569;
+}
+
+.dark-mode .form-card,
+.dark-mode .input-prefix{
+background:#1e293b;
+border-color:#334155;
+}
+
+.dark-mode .input-prefix span,
+.dark-mode .checkbox-row,
+.dark-mode .empty-state{
+background:#0f172a;
+border-color:#334155;
+color:#cbd5e1;
+}
+
+.dark-mode .field-help,
+.dark-mode .steps-list{
+color:#94a3b8;
+}
+
+@media (max-width:767px){
+.form-grid{
+grid-template-columns:1fr;
+}
+
+.form-header{
+display:block;
+}
+}
+
 </style>
 
 </head>
