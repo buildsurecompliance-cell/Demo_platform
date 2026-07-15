@@ -367,6 +367,19 @@ Plan changes are not public in V1. Stripe or an internal admin workflow may
 change `Organization.plan_key` in a future sprint through the central plan
 capacity service. No prices are stored in code.
 
+Plan Selection UI V1 exposes the central plan registry on the `/subscribe`
+page as a Plans screen for authenticated users. The page is only a
+development/testing pilot configuration tool. It does not define prices, does
+not integrate Stripe, does not simulate payment success, and does not change
+`User.paid`.
+
+Only an Organization OWNER may change `Organization.plan_key`, and direct
+changes are blocked in production until reviewed billing infrastructure exists.
+ADMIN and MEMBER users may view plans but cannot change the Organization plan.
+All plans include the same core compliance features; they differ only by
+Project and Subcontractor capacity. Users and team memberships remain
+unlimited.
+
 ## 7. Compliance Profiles
 
 Compliance Profiles are the next major product capability.

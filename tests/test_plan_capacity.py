@@ -53,10 +53,12 @@ class PlanCapacityTest(unittest.TestCase):
             self.owner.set_password("password123")
             self.member = User(email="member@example.com", paid=False)
             self.member.set_password("password123")
+            self.admin = User(email="admin@example.com", paid=False)
+            self.admin.set_password("password123")
             self.other = User(email="other@example.com", paid=True)
             self.other.set_password("password123")
 
-            db.session.add_all([self.owner, self.member, self.other])
+            db.session.add_all([self.owner, self.member, self.admin, self.other])
             db.session.flush()
 
             self.organization = create_default_organization_for_user(self.owner)
@@ -65,6 +67,13 @@ class PlanCapacityTest(unittest.TestCase):
                     organization_id=self.organization.id,
                     user_id=self.member.id,
                     role="MEMBER",
+                )
+            )
+            db.session.add(
+                OrganizationMembership(
+                    organization_id=self.organization.id,
+                    user_id=self.admin.id,
+                    role="ADMIN",
                 )
             )
             self.other_organization = create_default_organization_for_user(
@@ -76,6 +85,7 @@ class PlanCapacityTest(unittest.TestCase):
             self.other_organization_id = self.other_organization.id
             self.owner_id = self.owner.id
             self.member_id = self.member.id
+            self.admin_id = self.admin.id
             self.other_id = self.other.id
 
     def tearDown(self):
@@ -553,6 +563,290 @@ class PlanCapacityTest(unittest.TestCase):
             "Your Starter plan allows up to 10 projects.",
             response.get_data(as_text=True),
         )
+
+    def test_subscribe_plan_page_uses_registry_without_prices(self):
+        self.login()
+
+        response = self.client.get("/subscribe")
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+
+        for plan in PLAN_DEFINITIONS.values():
+            self.assertIn(plan.name, body)
+            if plan.max_projects is None:
+                self.assertIn("Unlimited projects", body)
+            else:
+                self.assertIn(f"Up to {plan.max_projects} projects", body)
+            if plan.max_subcontractors is None:
+                self.assertIn("Unlimited subcontractors", body)
+            else:
+                self.assertIn(
+                    f"Up to {plan.max_subcontractors} subcontractors",
+                    body,
+                )
+
+        self.assertEqual(body.count("All core compliance features"), 3)
+        self.assertEqual(body.count("Unlimited team members"), 3)
+        self.assertIn("Current Plan", body)
+        self.assertNotIn("$", body)
+        self.assertNotIn("payment complete", body.lower())
+        self.assertNotIn("subscription activated", body.lower())
+        self.assertNotIn("purchase confirmed", body.lower())
+
+    def test_owner_can_change_plan_in_testing_and_dashboard_updates_limits(self):
+        self.login()
+        token = self.csrf_token("/subscribe")
+
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": PROFESSIONAL,
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Organization plan changed to Professional.", body)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            owner = db.session.get(User, self.owner_id)
+            self.assertEqual(organization.plan_key, PROFESSIONAL)
+            self.assertTrue(owner.paid)
+
+        dashboard = self.client.get("/dashboard")
+        dashboard_body = dashboard.get_data(as_text=True)
+        self.assertIn("of 50", dashboard_body)
+        self.assertIn("of 300", dashboard_body)
+
+    def test_owner_can_select_enterprise_and_remove_capacity_block(self):
+        self.login()
+
+        with self.app.app_context():
+            self.create_projects(self.organization_id, 10)
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertFalse(can_create_project(organization).allowed)
+
+        token = self.csrf_token("/subscribe")
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": ENTERPRISE,
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, ENTERPRISE)
+            self.assertTrue(can_create_project(organization).allowed)
+
+        dashboard = self.client.get("/dashboard")
+        self.assertIn(
+            "of Unlimited",
+            dashboard.get_data(as_text=True),
+        )
+
+    def test_downgrade_preserves_data_and_blocks_only_new_creation(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            set_organization_plan(organization, PROFESSIONAL)
+            db.session.commit()
+            self.create_projects(self.organization_id, 11)
+
+        self.login()
+        token = self.csrf_token("/subscribe")
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": STARTER,
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Organization plan changed to Starter.", body)
+        self.assertIn("above the selected plan limit", body)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, STARTER)
+            self.assertEqual(
+                Project.query.filter_by(
+                    organization_id=self.organization_id,
+                ).count(),
+                11,
+            )
+            self.assertFalse(can_create_project(organization).allowed)
+
+    def test_admin_and_member_can_view_but_not_change_plan(self):
+        for email in ("admin@example.com", "member@example.com"):
+            self.client = self.app.test_client()
+            self.login(email=email)
+            response = self.client.get("/subscribe")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                "Only the Organization Owner can select the plan.",
+                response.get_data(as_text=True),
+            )
+
+            token = self.csrf_token("/subscribe")
+            response = self.client.post(
+                "/subscribe",
+                data={
+                    "plan_key": PROFESSIONAL,
+                    "csrf_token": token,
+                },
+            )
+            self.assertEqual(response.status_code, 403)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, STARTER)
+
+    def test_subscribe_plan_change_requires_csrf_and_post(self):
+        self.login()
+
+        missing_csrf = self.client.post(
+            "/subscribe",
+            data={"plan_key": PROFESSIONAL},
+        )
+        self.assertEqual(missing_csrf.status_code, 403)
+
+        get_response = self.client.get(
+            f"/subscribe?plan_key={PROFESSIONAL}"
+        )
+        self.assertEqual(get_response.status_code, 200)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, STARTER)
+
+    def test_invalid_plan_key_is_rejected_by_subscribe_route(self):
+        self.login()
+        token = self.csrf_token("/subscribe")
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": "TEAM",
+                "csrf_token": token,
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, STARTER)
+
+    def test_production_blocks_direct_plan_change(self):
+        self.app.config["ENV"] = "production"
+        self.login()
+        token = self.csrf_token("/subscribe")
+
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": PROFESSIONAL,
+                "csrf_token": token,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            self.assertEqual(organization.plan_key, STARTER)
+
+    def test_plan_belongs_to_active_organization_not_user_paid(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            other = db.session.get(Organization, self.other_organization_id)
+            set_organization_plan(other, ENTERPRISE)
+            owner = db.session.get(User, self.owner_id)
+            owner.paid = False
+            db.session.commit()
+
+        self.login()
+        token = self.csrf_token("/subscribe")
+        self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": PROFESSIONAL,
+                "csrf_token": token,
+            },
+        )
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            other = db.session.get(Organization, self.other_organization_id)
+            owner = db.session.get(User, self.owner_id)
+            self.assertEqual(organization.plan_key, PROFESSIONAL)
+            self.assertEqual(other.plan_key, ENTERPRISE)
+            self.assertFalse(owner.paid)
+
+    def test_session_tampering_does_not_change_other_organization_plan(self):
+        self.login()
+
+        with self.client.session_transaction() as session:
+            session["organization_id"] = self.other_organization_id
+
+        token = self.csrf_token("/subscribe")
+        response = self.client.post(
+            "/subscribe",
+            data={
+                "plan_key": PROFESSIONAL,
+                "csrf_token": token,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            other = db.session.get(Organization, self.other_organization_id)
+            self.assertEqual(organization.plan_key, PROFESSIONAL)
+            self.assertEqual(other.plan_key, STARTER)
+
+    def test_members_share_same_plan_and_other_organizations_differ(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            other = db.session.get(Organization, self.other_organization_id)
+            set_organization_plan(organization, PROFESSIONAL)
+            set_organization_plan(other, ENTERPRISE)
+            db.session.commit()
+
+        self.login(email="member@example.com")
+        member_page = self.client.get("/subscribe").get_data(as_text=True)
+        self.assertIn("Professional", member_page)
+        self.assertIn("Current Plan", member_page)
+
+        self.client = self.app.test_client()
+        self.login(email="other@example.com")
+        other_page = self.client.get("/subscribe").get_data(as_text=True)
+        self.assertIn("Enterprise", other_page)
+        self.assertIn("Current Plan", other_page)
+
+    def test_invited_member_uses_inviting_organization_plan(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            set_organization_plan(organization, PROFESSIONAL)
+            db.session.commit()
+
+        response = self.login(email="member@example.com")
+
+        self.assertEqual(response.status_code, 200)
+        page = self.client.get("/subscribe").get_data(as_text=True)
+        self.assertIn("Professional", page)
+        self.assertIn("Current Plan", page)
 
 
 class PlanCapacityMigrationTest(unittest.TestCase):

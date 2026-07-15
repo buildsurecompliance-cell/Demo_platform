@@ -1,125 +1,192 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-    /* Dark Background */
     body {
-        background: #121212; /* fundo escuro total */
-        color: #f8f9fa; /* texto claro para contraste */
-    }
-
-    .card-hover {
-        background-color: #1e1e1e; /* card escuro */
+        background: #121212;
         color: #f8f9fa;
-        border: none;
+    }
+
+    .plan-card {
+        background-color: #1e1e1e;
+        color: #f8f9fa;
+        border: 1px solid #2d3748;
         border-radius: 12px;
-        transition: all 0.3s ease;
+        min-height: 100%;
     }
 
-    .card-hover:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    .plan-card.current {
+        border-color: #28a745;
+        box-shadow: 0 0 0 1px rgba(40, 167, 69, .35);
     }
 
-    .highlight {
-        color: #28a745;
-        font-weight: bold;
+    .plan-card .list-group-item {
+        background-color: #1e1e1e;
+        border: none;
+        color: #f8f9fa;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .cta-btn {
         background: linear-gradient(90deg, #28a745, #218838);
         border: none;
-        transition: all 0.3s ease;
         color: #fff;
     }
 
     .cta-btn:hover {
         background: linear-gradient(90deg, #218838, #28a745);
-        transform: scale(1.05);
+        color: #fff;
     }
 
-    .section-title {
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: bold;
-        margin-bottom: 2rem;
-        color: #f8f9fa;
-    }
-
-    .list-group-item {
-        background-color: #1e1e1e; 
-        border: none;
-        color: #f8f9fa;
-    }
-
-    .list-group-item i {
-        color: #28a745;
+    .muted-panel {
+        background: #1e1e1e;
+        border: 1px solid #2d3748;
+        border-radius: 12px;
     }
 </style>
 
 <div class="container mt-5">
-    <!-- Header -->
+    {% if current_user.is_authenticated %}
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">Plans</h1>
+        <p class="text-muted mb-1">
+            Choose the capacity plan for {{ organization.name }}.
+        </p>
+        <p class="text-muted">
+            Plan selection is a development/pilot configuration. Automated billing is not active yet.
+        </p>
+    </div>
+
+    {% if not can_change_plan %}
+    <div class="alert alert-warning">
+        Only the Organization Owner can select the plan. You can still review the available plans.
+    </div>
+    {% endif %}
+
+    {% if production_mode %}
+    <div class="alert alert-info">
+        Online plan changes are not available yet. Contact BuildSure to change plans.
+    </div>
+    {% endif %}
+
+    <div class="row g-4 mb-5">
+        {% for plan in plans %}
+        <div class="col-md-4">
+            <div class="card plan-card {% if plan.is_current %}current{% endif %}">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h2 class="h4 fw-bold mb-0">{{ plan.display_name }}</h2>
+                        {% if plan.is_current %}
+                        <span class="badge bg-success">Current Plan</span>
+                        {% endif %}
+                    </div>
+
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item">
+                            {% if plan.max_projects is none %}
+                            Unlimited projects
+                            {% else %}
+                            Up to {{ plan.max_projects }} projects
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            {% if plan.max_subcontractors is none %}
+                            Unlimited subcontractors
+                            {% else %}
+                            Up to {{ plan.max_subcontractors }} subcontractors
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            Unlimited team members
+                        </li>
+                        <li class="list-group-item">
+                            All core compliance features
+                        </li>
+                    </ul>
+
+                    <div class="mt-auto">
+                        {% if plan.is_current %}
+                        <button class="btn btn-outline-success w-100" type="button" disabled>
+                            Current Plan
+                        </button>
+                        {% elif production_mode %}
+                        <button class="btn btn-outline-light w-100" type="button" disabled>
+                            Contact BuildSure
+                        </button>
+                        {% elif can_change_plan %}
+                        <form method="POST" action="{{ url_for('auth.subscribe') }}">
+                            {{ csrf_input() }}
+                            <input type="hidden" name="plan_key" value="{{ plan.plan_key }}">
+                            <button class="btn cta-btn w-100" type="submit">
+                                Select {{ plan.display_name }}
+                            </button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-outline-light w-100" type="button" disabled>
+                            Owner Only
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="muted-panel p-4 mb-5">
+        <h2 class="h5 fw-bold">Current Usage</h2>
+        <p class="mb-1">
+            Projects: {{ capacity_usage.project_count }}
+            {% if current_plan.max_projects is not none %}
+            of {{ current_plan.max_projects }}
+            {% else %}
+            of Unlimited
+            {% endif %}
+        </p>
+        <p class="mb-0">
+            Subcontractors: {{ capacity_usage.subcontractor_count }}
+            {% if current_plan.max_subcontractors is not none %}
+            of {{ current_plan.max_subcontractors }}
+            {% else %}
+            of Unlimited
+            {% endif %}
+        </p>
+    </div>
+    {% else %}
     <div class="text-center mb-5">
         <h1 class="display-4 fw-bold">Create Your BuildSure Account</h1>
-        
+        <p class="text-muted">
+            Start with an Organization workspace for compliance documents, readiness, and team access.
+        </p>
     </div>
 
-    <!-- Features -->
-    <div class="row text-center mb-5">
-        <div class="col-md-4 mb-4">
-            <div class="card card-hover h-100 shadow-sm">
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-6">
+            <div class="card plan-card shadow-sm">
                 <div class="card-body">
-                    <i class="bi bi-infinity display-4 text-primary mb-3"></i>
-                    <h5 class="card-title fw-bold">Organization Workspace</h5>
-                    <p class="card-text">Manage projects and subcontractors within your Organization plan.</p>
+                    <h2 class="h4 fw-bold mb-3">Create Account</h2>
+                    <form method="POST" action="{{ url_for('auth.subscribe') }}">
+                        {{ csrf_input() }}
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input
+                                type="email"
+                                class="form-control"
+                                name="email"
+                                value="{{ email_prefill }}"
+                                required>
+                        </div>
+                        <button type="submit" class="btn cta-btn w-100">
+                            Continue
+                        </button>
+                    </form>
+                    <p class="mt-3 text-muted mb-0">
+                        You will choose Organization capacity after account setup. No automated billing is active yet.
+                    </p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
-            <div class="card card-hover h-100 shadow-sm">
-                <div class="card-body">
-                    <i class="bi bi-bell-fill display-4 text-warning mb-3"></i>
-                    <h5 class="card-title fw-bold">Automated Alerts</h5>
-                    <p class="card-text">Get notified before COIs expire and avoid compliance issues.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card card-hover h-100 shadow-sm">
-                <div class="card-body">
-                    <i class="bi bi-graph-up display-4 text-success mb-3"></i>
-                    <h5 class="card-title fw-bold">Smart Dashboard</h5>
-                    <p class="card-text">Visualize trends, statuses, and reports in a clean, intuitive interface.</p>
-                </div>
-            </div>
-        </div>
     </div>
-
-    <!-- Why it’s worth it -->
-    <div class="text-center mb-5">
-        <h3 class="section-title">Why It’s Worth It</h3>
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <ul class="list-group list-group-flush text-start">
-                    <li class="list-group-item"><i class="bi bi-check-circle me-2"></i>Save time with automated alerts and centralized management.</li>
-                    <li class="list-group-item"><i class="bi bi-check-circle me-2"></i>Prevent compliance risks by staying ahead of COI expirations.</li>
-                    <li class="list-group-item"><i class="bi bi-check-circle me-2"></i>Organization-based capacity for projects and subcontractors.</li>
-                    <li class="list-group-item"><i class="bi bi-check-circle me-2"></i>Priority support and continuous system updates.</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Call to Action -->
-<div class="text-center mb-5">
-    <a href="{{ url_for('auth.register') }}" class="btn cta-btn btn-lg px-5 py-3 fw-bold">
-    Access Now
-</a>
-
-    <p class="mt-3 text-muted">
-        You will be redirected to create your account and access the platform.
-    </p>
+    {% endif %}
 </div>
-
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 {% endblock %}

@@ -202,7 +202,7 @@ background:rgba(0,0,0,.6);
 
 <h4>BuildSure</h4>
 
-<a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a> <a href="{{ url_for('subcontractors.add_sub') }}">Add Sub</a> <a href="{{ url_for('projects.add_project') }}">+ Project</a> <a href="{{ url_for('team.team') }}">Team</a>
+<a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a> <a href="{{ url_for('subcontractors.add_sub') }}">Add Sub</a> <a href="{{ url_for('projects.add_project') }}">+ Project</a> <a href="{{ url_for('team.team') }}">Team</a> <a href="{{ url_for('auth.subscribe') }}">Plans</a>
 
 <a href="#" id="toggleDark">Dark Mode</a>
 
@@ -235,7 +235,11 @@ background:rgba(0,0,0,.6);
 <div class="d-flex align-items-center gap-3">
 
 <span class="badge bg-success rounded-pill px-3 py-2">
-Organization Plan
+{% if active_organization %}
+{{ active_organization.plan_key|title }} Plan
+{% else %}
+No Organization
+{% endif %}
 </span>
 
 <span class="fw-semibold">{{ current_user.email }}</span>

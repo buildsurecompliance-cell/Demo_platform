@@ -434,3 +434,24 @@ not a strict concurrency lock. Two simultaneous requests can both observe
 available capacity before either commits. Do not represent V1 capacity as an
 infallible billing control until a future sprint adds transactional or
 database-enforced quota protection.
+
+## Plan Selection UI
+
+The `/subscribe` route serves two purposes in this transitional version:
+
+- unauthenticated users can start account creation;
+- authenticated users can view Organization plans.
+
+Plan cards are rendered from the central plan capacity registry. Do not
+hardcode plan limits in templates. `Organization.plan_key` remains the only
+source of truth for capacity. `User.paid` is legacy compatibility state and
+must not change plan capacity.
+
+Direct plan changes are allowed only in development/testing so staging smoke
+tests can exercise STARTER, PROFESSIONAL, and ENTERPRISE capacity behavior. In
+production, direct POST changes are blocked and the UI should tell users to
+contact BuildSure. There is no automated billing, checkout, Stripe customer,
+subscription ID, payment status, or price stored in code for this V1.
+
+All plans include the same core compliance features. They differ only by
+Project and Subcontractor capacity; team members remain unlimited.

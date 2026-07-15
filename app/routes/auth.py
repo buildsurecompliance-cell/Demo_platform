@@ -3,6 +3,7 @@ import logging
 
 from flask import (
     Blueprint,
+    current_app,
     render_template,
     request,
     redirect,
@@ -22,17 +23,26 @@ from flask_login import (
 from werkzeug.security import check_password_hash
 
 from app.extensions import db
-from app.models import User
+from app.models import ROLE_OWNER, User
 from app.security import (
     rate_limited,
     safe_redirect_target,
 )
 from app.services.organizations import (
     create_default_organization_for_user,
+    get_current_membership,
+    get_current_organization,
     get_valid_invitation,
     get_user_memberships,
     normalize_email,
     resolve_active_organization,
+)
+from app.services.plan_capacity import (
+    get_organization_plan,
+    get_organization_usage,
+    get_plan_selection_options,
+    set_organization_plan,
+    validate_plan_key,
 )
 
 auth_bp = Blueprint(
@@ -66,6 +76,110 @@ def home():
     methods=["GET", "POST"]
 )
 def subscribe():
+    if current_user.is_authenticated:
+        organization = get_current_organization()
+
+        if not organization:
+            abort(403)
+
+        membership = get_current_membership()
+        can_change_plan = bool(
+            membership
+            and membership.role == ROLE_OWNER
+        )
+        production_mode = current_app.config.get("ENV") == "production"
+
+        if request.method == "POST":
+            if production_mode:
+                flash(
+                    "Online plan changes are not available yet. Contact BuildSure.",
+                    "warning",
+                )
+                abort(403)
+
+            if not can_change_plan:
+                abort(403)
+
+            plan_key = request.form.get("plan_key")
+
+            try:
+                previous_plan = get_organization_plan(organization)
+                normalized_plan_key = validate_plan_key(plan_key)
+
+                if normalized_plan_key == previous_plan.key:
+                    flash(
+                        f"{previous_plan.name} is already the current plan.",
+                        "info",
+                    )
+
+                    return redirect(
+                        url_for("auth.subscribe")
+                    )
+
+                set_organization_plan(
+                    organization,
+                    normalized_plan_key,
+                )
+                db.session.commit()
+            except ValueError:
+                db.session.rollback()
+                abort(404)
+            except Exception:
+                db.session.rollback()
+                logger.exception(
+                    "Organization plan change failed organization_id=%s user_id=%s",
+                    organization.id,
+                    current_user.id,
+                )
+                flash(
+                    "Plan could not be changed.",
+                    "danger",
+                )
+                return redirect(
+                    url_for("auth.subscribe")
+                )
+
+            selected_plan = get_organization_plan(organization)
+
+            flash(
+                f"Organization plan changed to {selected_plan.name}.",
+                "success",
+            )
+
+            usage = get_organization_usage(organization)
+            over_project_limit = (
+                selected_plan.max_projects is not None
+                and usage.project_count > selected_plan.max_projects
+            )
+            over_subcontractor_limit = (
+                selected_plan.max_subcontractors is not None
+                and usage.subcontractor_count
+                > selected_plan.max_subcontractors
+            )
+
+            if over_project_limit or over_subcontractor_limit:
+                flash(
+                    (
+                        "This Organization is above the selected plan limit. "
+                        "Existing data is preserved, but new records may be blocked."
+                    ),
+                    "warning",
+                )
+
+            return redirect(
+                url_for("auth.subscribe")
+            )
+
+        return render_template(
+            "subscribe.html",
+            organization=organization,
+            plans=get_plan_selection_options(organization),
+            capacity_usage=get_organization_usage(organization),
+            current_plan=get_organization_plan(organization),
+            can_change_plan=can_change_plan,
+            production_mode=production_mode,
+            email_prefill="",
+        )
 
     if request.method == "POST":
 
@@ -111,7 +225,9 @@ def subscribe():
 
     return render_template(
         "subscribe.html",
-        email_prefill=email_prefill
+        email_prefill=email_prefill,
+        organization=None,
+        plans=[],
     )
 
 

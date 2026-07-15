@@ -42,6 +42,17 @@ class CapacityCheck:
     message: str = ""
 
 
+@dataclass(frozen=True)
+class PlanSelectionOption:
+    plan_key: str
+    display_name: str
+    max_projects: int | None
+    max_subcontractors: int | None
+    unlimited_users: bool
+    current_plan: str
+    is_current: bool
+
+
 class PlanCapacityError(Exception):
     def __init__(self, check):
         super().__init__(check.message)
@@ -118,6 +129,23 @@ def get_organization_usage(organization):
         project_count=project_count,
         subcontractor_count=subcontractor_count,
     )
+
+
+def get_plan_selection_options(organization):
+    current_plan = get_organization_plan(organization)
+
+    return [
+        PlanSelectionOption(
+            plan_key=plan.key,
+            display_name=plan.name,
+            max_projects=plan.max_projects,
+            max_subcontractors=plan.max_subcontractors,
+            unlimited_users=plan.unlimited_users,
+            current_plan=current_plan.key,
+            is_current=plan.key == current_plan.key,
+        )
+        for plan in PLAN_DEFINITIONS.values()
+    ]
 
 
 def _capacity_check(plan, resource, current, limit):

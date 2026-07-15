@@ -2,6 +2,7 @@ import os
 import logging
 
 from flask import Flask
+from flask_login import current_user
 
 from app.config import get_config
 
@@ -58,6 +59,19 @@ def create_app(config_object=None):
 
     register_template_filters(app)
     register_security(app)
+
+    @app.context_processor
+    def organization_context():
+        if not current_user.is_authenticated:
+            return {
+                "active_organization": None,
+            }
+
+        from app.services.organizations import get_current_organization
+
+        return {
+            "active_organization": get_current_organization(),
+        }
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
