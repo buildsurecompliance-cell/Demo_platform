@@ -1,10 +1,16 @@
+import logging
+
 from datetime import datetime
 
 from app.extensions import db
 
-from app.models import Document
+from app.models import Document, Subcontractor
 
 from app.services.documents.storage import temporary_document_path
+
+from app.services.compliance_evidence_service import (
+    coi_evidence_from_document,
+)
 
 from app.services.document_intelligence import (
     analyze_document_intelligence,
@@ -13,6 +19,9 @@ from app.services.document_intelligence import (
 from app.services.subcontractor_compliance_service import (
     update_subcontractor_compliance,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_and_save_document(doc_id):
@@ -69,6 +78,8 @@ def analyze_and_save_document(doc_id):
     doc.ai_error = None
     doc.ai_analyzed_at = datetime.utcnow()
 
+    _auto_fill_subcontractor_coi_expiration(doc)
+
     db.session.commit()
 
     if doc.sub_id:
@@ -88,3 +99,59 @@ def analyze_and_save_document(doc_id):
             "category": result.get("category"),
         },
     }
+
+
+def _auto_fill_subcontractor_coi_expiration(doc):
+    if not doc.sub_id:
+        return False
+
+    evidence = coi_evidence_from_document(doc)
+
+    if not evidence.validated:
+        logger.info(
+            "COI expiration auto-fill skipped document_id=%s reason=%s",
+            doc.id,
+            evidence.rejection_code,
+        )
+        return False
+
+    expiration_date = evidence.value.get(
+        "expiration_date"
+    )
+
+    if not expiration_date:
+        logger.info(
+            "COI expiration auto-fill skipped document_id=%s reason=missing_expiration",
+            doc.id,
+        )
+        return False
+
+    subcontractor = db.session.get(
+        Subcontractor,
+        doc.sub_id,
+    )
+
+    if not subcontractor:
+        logger.info(
+            "COI expiration auto-fill skipped document_id=%s reason=subcontractor_missing",
+            doc.id,
+        )
+        return False
+
+    if subcontractor.coi_expiration:
+        logger.info(
+            "COI expiration auto-fill skipped document_id=%s subcontractor_id=%s reason=manual_value_present",
+            doc.id,
+            subcontractor.id,
+        )
+        return False
+
+    subcontractor.coi_expiration = expiration_date
+
+    logger.info(
+        "COI expiration auto-filled document_id=%s subcontractor_id=%s",
+        doc.id,
+        subcontractor.id,
+    )
+
+    return True

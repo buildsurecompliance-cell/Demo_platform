@@ -22,6 +22,27 @@ from app.services.document_intelligence.validators import (
 def get_mock_data_for_document(category):
 
     mock_data = {
+        "coi": {
+            "document_type": "Certificate of Insurance",
+            "named_insured": "ABC Flooring LLC",
+            "insurance_carrier": "Sample Insurance Carrier",
+            "producer": "Sample Insurance Agency",
+            "policy_number": "GL-123456",
+            "effective_date": "2026-01-01",
+            "expiration_date": "2029-01-01",
+            "general_liability_limit": "1000000",
+            "auto_liability_limit": "1000000",
+            "workers_compensation": True,
+            "umbrella_limit": "0",
+            "additional_insured": True,
+            "waiver_of_subrogation": True,
+            "primary_non_contributory": False,
+            "confidence": 0.92,
+            "missing_fields": [
+                "primary_non_contributory",
+            ],
+            "notes": "Mock COI data used for development testing.",
+        },
         "w9": {
             "legal_name": "ABC Flooring LLC",
             "tax_id_last4": "1234",
@@ -153,10 +174,12 @@ def analyze_document_intelligence(
             "category": category,
         }
 
+    validation_result = validation.to_dict()
+
     return {
         "success": True,
         "error": None,
         "extracted_data": extracted_data,
-        "compliance": validation.to_dict(),
+        "compliance": validation_result,
         "category": category,
     }

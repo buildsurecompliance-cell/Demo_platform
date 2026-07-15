@@ -5,7 +5,6 @@ from flask import (
     Blueprint,
     flash,
     redirect,
-    render_template,
     url_for,
 )
 
@@ -81,6 +80,28 @@ def user_can_access_document(doc):
     return True
 
 
+def _analysis_redirect_target(doc):
+    if doc and doc.sub_id:
+        return redirect(
+            url_for(
+                "subcontractors.view_sub_documents",
+                sub_id=doc.sub_id,
+            )
+        )
+
+    if doc and doc.project_id:
+        return redirect(
+            url_for(
+                "projects.view_project",
+                project_id=doc.project_id,
+            )
+        )
+
+    return redirect(
+        url_for("dashboard.dashboard")
+    )
+
+
 @ai_bp.route(
     "/documents/<int:doc_id>/analyze",
     methods=["POST"],
@@ -110,9 +131,7 @@ def analyze_document(doc_id):
             "warning",
         )
 
-        return redirect(
-            url_for("dashboard.dashboard")
-        )
+        return _analysis_redirect_target(doc)
 
     doc.ai_status = "analyzing"
     db.session.commit()
@@ -144,9 +163,7 @@ def analyze_document(doc_id):
             "danger",
         )
 
-        return redirect(
-            url_for("dashboard.dashboard")
-        )
+        return _analysis_redirect_target(failed_doc or doc)
 
     if not analysis["success"]:
         doc.ai_status = "failed"
@@ -158,12 +175,13 @@ def analyze_document(doc_id):
             "danger",
         )
 
-        return redirect(
-            url_for("dashboard.dashboard")
-        )
+        return _analysis_redirect_target(doc)
 
-    return render_template(
-        "ai_result.html",
-        doc=analysis["document"],
-        result=analysis["result"],
+    flash(
+        "Document analysis completed.",
+        "success",
+    )
+
+    return _analysis_redirect_target(
+        analysis["document"]
     )

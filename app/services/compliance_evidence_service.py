@@ -181,8 +181,8 @@ def _coi_evidence_from_document(document):
             confidence=confidence,
         )
 
-    expiration_date = _parse_date(
-        extracted_data.get("expiration_date")
+    expiration_date = extract_coi_expiration_date(
+        extracted_data
     )
 
     coverage = _usable_number(
@@ -243,7 +243,31 @@ def _rejected_evidence(
     )
 
 
-def _parse_date(value):
+def coi_evidence_from_document(document):
+    return _coi_evidence_from_document(document)
+
+
+def extract_coi_expiration_date(extracted_data):
+    extracted_data = _safe_dict(
+        extracted_data
+    )
+
+    for key in (
+        "expiration_date",
+        "policy_expiration_date",
+        "coi_expiration",
+    ):
+        expiration = normalize_coi_expiration_date(
+            extracted_data.get(key)
+        )
+
+        if expiration:
+            return expiration
+
+    return None
+
+
+def normalize_coi_expiration_date(value):
     if isinstance(value, datetime):
         return value.date()
 
@@ -253,10 +277,31 @@ def _parse_date(value):
     if not value:
         return None
 
-    try:
-        return datetime.fromisoformat(str(value)).date()
-    except ValueError:
+    normalized = str(value).strip()
+
+    if not normalized:
         return None
+
+    try:
+        return datetime.fromisoformat(
+            normalized.replace("Z", "+00:00")
+        ).date()
+    except ValueError:
+        pass
+
+    for date_format in (
+        "%m/%d/%Y",
+        "%Y-%m-%d",
+    ):
+        try:
+            return datetime.strptime(
+                normalized,
+                date_format,
+            ).date()
+        except ValueError:
+            continue
+
+    return None
 
 
 def _safe_dict(value):
