@@ -16,6 +16,10 @@ from app.services.document_intelligence import (
     analyze_document_intelligence,
 )
 
+from app.services.projects.contract_autofill_service import (
+    apply_contract_extraction_to_project,
+)
+
 from app.services.subcontractor_compliance_service import (
     update_subcontractor_compliance,
 )
@@ -79,6 +83,7 @@ def analyze_and_save_document(doc_id):
     doc.ai_analyzed_at = datetime.utcnow()
 
     _auto_fill_subcontractor_coi_expiration(doc)
+    _auto_fill_project_contract_fields(doc)
 
     db.session.commit()
 
@@ -155,3 +160,14 @@ def _auto_fill_subcontractor_coi_expiration(doc):
     )
 
     return True
+
+
+def _auto_fill_project_contract_fields(doc):
+    try:
+        return apply_contract_extraction_to_project(doc)
+    except Exception:
+        logger.exception(
+            "Contract auto-fill failed document_id=%s",
+            getattr(doc, "id", None),
+        )
+        raise

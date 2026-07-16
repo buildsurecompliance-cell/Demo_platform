@@ -11,17 +11,38 @@ from app.services.document_intelligence.openai_document_parser import (
 from app.services.document_intelligence.validators import (
     validate_background_check_data,
     validate_coi_data,
+    validate_contract_data,
     validate_drug_test_data,
     validate_license_data,
     validate_osha_data,
     validate_safety_training_data,
     validate_w9_data,
 )
+from app.services.projects.contract_autofill_service import (
+    normalize_contract_extraction,
+)
 
 
 def get_mock_data_for_document(category):
 
     mock_data = {
+        "contract": {
+            "document_type": "contract",
+            "project_name": "Riverside Office Building",
+            "contract_value": 4850000,
+            "start_date": "2026-08-01",
+            "end_date": "2027-06-30",
+            "required_coverage": 2000000,
+            "confidence": 0.95,
+            "field_confidence": {
+                "project_name": 0.94,
+                "contract_value": 0.97,
+                "start_date": 0.93,
+                "end_date": 0.91,
+                "required_coverage": 0.90,
+            },
+            "notes": [],
+        },
         "coi": {
             "document_type": "Certificate of Insurance",
             "named_insured": "ABC Flooring LLC",
@@ -90,6 +111,8 @@ def get_mock_data_for_document(category):
 
 
 def validate_by_category(category, extracted_data):
+    if category == "contract":
+        return validate_contract_data(extracted_data)
 
     if category == "w9":
         return validate_w9_data(extracted_data)
@@ -159,6 +182,11 @@ def analyze_document_intelligence(
             }
 
         extracted_data = parse_result["data"]
+
+    if category == "contract":
+        extracted_data = normalize_contract_extraction(
+            extracted_data
+        )
 
     validation = validate_by_category(
         category,

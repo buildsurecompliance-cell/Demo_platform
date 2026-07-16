@@ -5,9 +5,11 @@ from .osha_prompt import OSHA_PROMPT
 from .drug_test_prompt import DRUG_TEST_PROMPT
 from .safety_training_prompt import SAFETY_TRAINING_PROMPT
 from .background_check_prompt import BACKGROUND_CHECK_PROMPT
+from .contract_prompt import CONTRACT_PROMPT
 
 
 PROMPT_REGISTRY = {
+    "contract": CONTRACT_PROMPT,
     "coi": COI_PROMPT,
     "w9": W9_PROMPT,
     "license": LICENSE_PROMPT,
@@ -31,6 +33,7 @@ __all__ = [
     "DRUG_TEST_PROMPT",
     "SAFETY_TRAINING_PROMPT",
     "BACKGROUND_CHECK_PROMPT",
+    "CONTRACT_PROMPT",
     "PROMPT_REGISTRY",
     "get_prompt_for_document",
 ]

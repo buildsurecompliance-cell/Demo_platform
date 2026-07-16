@@ -12,6 +12,17 @@ def normalize_document_type(document_type):
     )
 
     if value in [
+        "contract",
+        "prime contract",
+        "project contract",
+        "subcontract",
+        "subcontract agreement",
+        "agreement",
+        "construction contract",
+    ]:
+        return "contract"
+
+    if value in [
         "certificate of insurance",
         "coi",
         "insurance",

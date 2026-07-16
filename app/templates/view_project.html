@@ -222,6 +222,82 @@ Delete
 
 </tr>
 
+{% if doc.document_type == "Contract" and doc.ai_status == "analyzed" and doc.ai_extracted_data %}
+{% set extraction = doc.ai_extracted_data %}
+{% set autofill = (doc.ai_compliance_result or {}).get("project_auto_fill", {}) %}
+{% set fields = autofill.get("fields", {}) %}
+{% macro contract_field_status(status) -%}
+{% if status == "applied" -%}
+Applied to project
+{% elif status == "preserved" -%}
+Preserved existing value
+{% elif status == "low_confidence" -%}
+Low confidence
+{% elif status == "invalid" -%}
+Invalid
+{% else -%}
+Not found
+{% endif -%}
+{%- endmacro %}
+<tr>
+<td colspan="5">
+<div class="border rounded p-3 bg-light">
+<h5 class="mb-3">Contract Extraction</h5>
+
+<div class="row g-3">
+<div class="col-md-4">
+<strong>Project Name</strong><br>
+{{ extraction.get("project_name") or "Not found" }}
+<br>
+<small class="text-muted">{{ contract_field_status(fields.get("project_name", {}).get("status", "not_found")) }}</small>
+</div>
+
+<div class="col-md-4">
+<strong>Contract Value</strong><br>
+{% if extraction.get("contract_value") is not none %}
+${{ "{:,.0f}".format(extraction.get("contract_value")) }}
+{% else %}
+Not found
+{% endif %}
+<br>
+<small class="text-muted">{{ contract_field_status(fields.get("contract_value", {}).get("status", "not_found")) }}</small>
+</div>
+
+<div class="col-md-4">
+<strong>Start Date</strong><br>
+{{ extraction.get("start_date") or "Not found" }}
+<br>
+<small class="text-muted">{{ contract_field_status(fields.get("start_date", {}).get("status", "not_found")) }}</small>
+</div>
+
+<div class="col-md-4">
+<strong>End Date</strong><br>
+{{ extraction.get("end_date") or "Not found" }}
+<br>
+<small class="text-muted">{{ contract_field_status(fields.get("end_date", {}).get("status", "not_found")) }}</small>
+</div>
+
+<div class="col-md-4">
+<strong>Minimum General Liability</strong><br>
+{% if extraction.get("required_coverage") is not none %}
+${{ "{:,.0f}".format(extraction.get("required_coverage")) }}
+{% else %}
+Not found
+{% endif %}
+<br>
+<small class="text-muted">{{ contract_field_status(fields.get("required_coverage", {}).get("status", "not_found")) }}</small>
+</div>
+
+<div class="col-md-4">
+<strong>Confidence</strong><br>
+{{ "{:.0%}".format(extraction.get("confidence") or 0) }}
+</div>
+</div>
+</div>
+</td>
+</tr>
+{% endif %}
+
 {% endfor %}
 
 </tbody>
