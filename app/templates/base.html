@@ -50,6 +50,12 @@ margin:6px 15px;
 transition:.2s ease;
 }
 
+.sidebar a.active{
+background:#e0f2fe;
+color:#075985;
+font-weight:700;
+}
+
 .sidebar a:hover{
 background:#334155;
 color:white;
@@ -103,6 +109,12 @@ margin-left:0!important;
 margin-left:250px;
 padding:30px;
 transition:margin-left .3s ease;
+}
+
+@media (max-width:575px){
+.main-content{
+padding:18px;
+}
 }
 
 /* NAVBAR */
@@ -165,6 +177,35 @@ color:#94a3b8!important;
 
 .dark-mode .badge.bg-warning{
 color:#000!important;
+}
+
+.dark-mode .ux-card,
+.dark-mode .ux-metric,
+.dark-mode .ux-table-wrap,
+.dark-mode .ux-empty,
+.dark-mode .ux-extraction-card{
+background:#1e293b;
+border-color:#334155;
+color:#f1f5f9;
+}
+
+.dark-mode .ux-table th,
+.dark-mode .ux-table td{
+border-color:#334155;
+}
+
+.dark-mode .ux-help,
+.dark-mode .ux-label{
+color:#94a3b8;
+}
+
+.dark-mode .ux-progress{
+background:#334155;
+}
+
+.dark-mode .ux-soft{
+background:#0f172a;
+border-color:#334155;
 }
 
 /* SPINNER */
@@ -299,6 +340,13 @@ align-items:center;
 flex-wrap:wrap;
 }
 
+.form-actions .form-control,
+.form-actions .form-select{
+width:auto;
+min-width:180px;
+max-width:100%;
+}
+
 .steps-list{
 margin:0;
 padding-left:18px;
@@ -322,6 +370,268 @@ color:#cbd5e1;
 .dark-mode .field-help,
 .dark-mode .steps-list{
 color:#94a3b8;
+}
+
+/* CORE UX */
+
+.ux-page{
+max-width:1440px;
+margin:0 auto;
+}
+
+.ux-page-header{
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+gap:16px;
+margin-bottom:24px;
+}
+
+.ux-page-header h1,
+.ux-page-header h2{
+margin:0;
+font-weight:800;
+letter-spacing:0;
+}
+
+.ux-help,
+.ux-label{
+color:#64748b;
+font-size:.875rem;
+}
+
+.ux-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:14px;
+margin-bottom:24px;
+}
+
+.ux-grid-lg{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+gap:16px;
+}
+
+.ux-card,
+.ux-metric,
+.ux-table-wrap,
+.ux-empty,
+.ux-extraction-card{
+background:#fff;
+border:1px solid #e5e7eb;
+border-radius:8px;
+box-shadow:0 1px 4px rgba(15,23,42,.05);
+}
+
+.ux-card{
+padding:20px;
+margin-bottom:22px;
+}
+
+.ux-card-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:12px;
+margin-bottom:16px;
+}
+
+.ux-card-header h2,
+.ux-card-header h3{
+margin:0;
+font-size:1.1rem;
+font-weight:800;
+}
+
+.ux-metric{
+padding:16px;
+min-width:0;
+}
+
+.ux-metric-value{
+display:block;
+font-size:1.55rem;
+font-weight:800;
+line-height:1.2;
+overflow-wrap:anywhere;
+}
+
+.ux-metric-label{
+display:block;
+color:#64748b;
+font-size:.82rem;
+font-weight:700;
+text-transform:uppercase;
+letter-spacing:.03em;
+margin-top:4px;
+}
+
+.ux-table-wrap{
+overflow-x:auto;
+margin-bottom:22px;
+}
+
+.ux-table{
+width:100%;
+border-collapse:collapse;
+min-width:860px;
+}
+
+.ux-table th,
+.ux-table td{
+border-bottom:1px solid #e5e7eb;
+padding:12px;
+vertical-align:middle;
+}
+
+.ux-table th{
+font-size:.75rem;
+letter-spacing:.03em;
+text-transform:uppercase;
+color:#475569;
+white-space:nowrap;
+}
+
+.ux-actions{
+display:flex;
+gap:8px;
+justify-content:flex-end;
+align-items:center;
+flex-wrap:wrap;
+white-space:nowrap;
+}
+
+.ux-btn{
+border:1px solid transparent;
+border-radius:6px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+min-height:34px;
+padding:6px 10px;
+font-size:.875rem;
+font-weight:700;
+text-decoration:none;
+cursor:pointer;
+}
+
+.ux-btn-primary{background:#2563eb;color:#fff;}
+.ux-btn-secondary{background:#f8fafc;color:#334155;border-color:#cbd5e1;}
+.ux-btn-danger{background:#fff1f2;color:#be123c;border-color:#fecdd3;}
+.ux-btn-warning{background:#fffbeb;color:#92400e;border-color:#fde68a;}
+.ux-btn-success{background:#ecfdf5;color:#166534;border-color:#bbf7d0;}
+
+.ux-btn:hover{
+filter:brightness(.97);
+}
+
+.ux-status{
+border-radius:999px;
+display:inline-flex;
+align-items:center;
+gap:6px;
+font-size:.75rem;
+font-weight:800;
+letter-spacing:.02em;
+padding:5px 9px;
+white-space:nowrap;
+}
+
+.ux-status-ready,
+.ux-status-compliant,
+.ux-status-success{
+background:#dcfce7;
+color:#166534;
+}
+
+.ux-status-pending,
+.ux-status-warning,
+.ux-status-at-risk{
+background:#fef3c7;
+color:#92400e;
+}
+
+.ux-status-blocked,
+.ux-status-expired,
+.ux-status-danger,
+.ux-status-missing{
+background:#fee2e2;
+color:#991b1b;
+}
+
+.ux-status-info{
+background:#dbeafe;
+color:#1e40af;
+}
+
+.ux-status-neutral,
+.ux-status-preserved{
+background:#e2e8f0;
+color:#334155;
+}
+
+.ux-empty{
+padding:18px;
+color:#64748b;
+border-style:dashed;
+}
+
+.ux-progress{
+height:8px;
+background:#e2e8f0;
+border-radius:999px;
+overflow:hidden;
+margin-top:6px;
+}
+
+.ux-progress-bar{
+height:100%;
+background:#16a34a;
+}
+
+.ux-soft{
+background:#f8fafc;
+border:1px solid #e2e8f0;
+border-radius:8px;
+padding:14px;
+}
+
+.ux-extraction-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+gap:12px;
+}
+
+.ux-extraction-card{
+padding:12px;
+}
+
+.ux-extraction-card strong{
+display:block;
+font-size:.8rem;
+color:#64748b;
+margin-bottom:4px;
+}
+
+.ux-sr-only{
+position:absolute;
+width:1px;
+height:1px;
+padding:0;
+margin:-1px;
+overflow:hidden;
+clip:rect(0,0,0,0);
+white-space:nowrap;
+border:0;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible{
+outline:3px solid #38bdf8;
+outline-offset:2px;
 }
 
 @media (max-width:767px){
@@ -352,7 +662,26 @@ display:block;
 
 <h4>BuildSure</h4>
 
-<a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a> <a href="{{ url_for('subcontractors.add_sub') }}">Add Sub</a> <a href="{{ url_for('projects.add_project') }}">+ Project</a> <a href="{{ url_for('team.team') }}">Team</a> <a href="{{ url_for('auth.subscribe') }}">Plans</a>
+<a href="{{ url_for('dashboard.dashboard') }}"
+   class="{% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+Dashboard
+</a>
+<a href="{{ url_for('dashboard.dashboard') }}#projects"
+   class="{% if request.endpoint in ['projects.view_project', 'projects.edit_project', 'projects.add_project'] %}active{% endif %}">
+Projects
+</a>
+<a href="{{ url_for('dashboard.dashboard') }}#subcontractors"
+   class="{% if request.endpoint in ['subcontractors.view_sub_documents', 'subcontractors.edit_sub', 'subcontractors.add_sub'] %}active{% endif %}">
+Subcontractors
+</a>
+<a href="{{ url_for('team.team') }}"
+   class="{% if request.endpoint == 'team.team' %}active{% endif %}">
+Team
+</a>
+<a href="{{ url_for('auth.subscribe') }}"
+   class="{% if request.endpoint == 'auth.subscribe' %}active{% endif %}">
+Plans
+</a>
 
 <a href="#" id="toggleDark">Dark Mode</a>
 
@@ -373,7 +702,7 @@ display:block;
 
 <div class="d-flex align-items-center gap-3">
 
-<button class="btn btn-outline-secondary d-lg-none" id="menuToggle">☰</button>
+<button class="btn btn-outline-secondary d-lg-none" id="menuToggle" aria-label="Open navigation">Menu</button>
 
 <div>
 <h5 class="mb-0 fw-bold">Dashboard</h5>

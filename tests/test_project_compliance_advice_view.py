@@ -161,10 +161,19 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
                 "project_subcontractor",
                 "advice",
                 "advice_available",
+                "status",
+                "current_coverage",
+                "required_coverage",
+                "coverage_gap",
+                "coi_expiration",
+                "primary_reason",
+                "recommended_action",
+                "action_priority",
             },
         )
         self.assertTrue(row["advice_available"])
         self.assertEqual(row["advice"].status, "READY")
+        self.assertEqual(row["status"], "READY")
 
     def test_view_model_fallback_has_predictable_contract(self):
         project_id = self.make_project_with_subs(["READY"])
@@ -183,6 +192,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
         self.assertFalse(row["advice_available"])
         self.assertEqual(row["advice"].summary, "Compliance advice unavailable.")
         self.assertEqual(row["advice"].actions, ())
+        self.assertEqual(row["recommended_action"], "No action required.")
         self.assertIn(
             row["advice"].status,
             {
@@ -241,6 +251,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
         self.assertIn("Compliance review is pending.", body)
         self.assertIn("Wait until document analysis completes.", body)
         self.assertIn("MEDIUM", body)
+        self.assertIn("Recommended Action", body)
 
     def test_blocked_renders_summary_and_priority_actions(self):
         project_id = self.make_project_with_subs(["BLOCKED"])
@@ -269,6 +280,9 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
         self.assertIn("BLOCKED", body)
         self.assertIn("Review insurance coverage.", body)
         self.assertIn("HIGH", body)
+        self.assertIn("Current GL", body)
+        self.assertIn("Required GL", body)
+        self.assertIn("Coverage Gap", body)
 
     def test_project_without_subcontractors_still_renders(self):
         project_id = self.make_project_with_subs([])
@@ -477,6 +491,39 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
         self.assertIn("Upload a valid Certificate of Insurance.", body)
         self.assertNotIn("Send Email", body)
         self.assertNotIn("Approve", body)
+
+    def test_project_summary_uses_final_readiness_language(self):
+        project_id = self.make_project_with_subs(["BLOCKED"])
+        self.login(self.user_id)
+
+        with patch(
+            "app.routes.projects.get_project_ai_summary",
+            return_value=SimpleNamespace(
+                score=100,
+                ready=3,
+                pending=0,
+                blocked=0,
+                risk="Low",
+                mobilization="Project Ready",
+                revenue_at_risk=0,
+                critical_issues=[],
+            ),
+        ), patch(
+            "app.routes.projects.generate_compliance_advice",
+            return_value=self.make_advice(
+                "BLOCKED",
+                "Mobilization blocked.",
+            ),
+        ):
+            response = self.client.get(f"/project/{project_id}")
+
+        body = response.get_data(as_text=True)
+        self.assertIn("Document Intelligence Summary", body)
+        self.assertIn(
+            "Document analysis results do not replace final mobilization readiness.",
+            body,
+        )
+        self.assertIn("One or more subcontractors cannot work today.", body)
 
 
 if __name__ == "__main__":

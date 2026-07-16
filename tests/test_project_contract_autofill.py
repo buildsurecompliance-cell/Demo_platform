@@ -4,6 +4,7 @@ import unittest
 
 from contextlib import contextmanager
 from datetime import date, timedelta
+from io import BytesIO
 from unittest.mock import patch
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -588,6 +589,208 @@ class ProjectContractAutoFillTest(unittest.TestCase):
         self.assertEqual(result["extracted_data"]["contract_value"], 4850000)
         self.assertEqual(result["extracted_data"]["required_coverage"], 2000000)
         self.assertEqual(result["compliance"]["status"], "Ready")
+
+    def test_add_project_without_document_does_not_auto_analyze(self):
+        self.login()
+
+        with patch(
+            "app.routes.projects.analyze_and_save_document"
+        ) as analyze_document:
+            response = self.client.post(
+                "/add_project",
+                data={
+                    "name": "No Document Project",
+                    "contract_value": "0",
+                    "required_coverage_choice": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        analyze_document.assert_not_called()
+
+    def test_add_project_contract_auto_analyzes_once_and_fills_empty_fields(self):
+        self.login()
+
+        with patch(
+            "app.routes.projects.analyze_and_save_document",
+            wraps=analyze_and_save_document,
+        ) as analyze_document, patch(
+            "app.services.document_analysis_service.analyze_document_intelligence",
+            return_value=self.valid_contract_result(),
+        ):
+            response = self.client.post(
+                "/add_project",
+                data={
+                    "name": "Project",
+                    "contract_value": "0",
+                    "required_coverage_choice": "",
+                    "doc_type": "Contract",
+                    "documents": (
+                        BytesIO(b"%PDF-1.4\ncontract"),
+                        "contract.pdf",
+                    ),
+                },
+                content_type="multipart/form-data",
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(analyze_document.call_count, 1)
+        body = response.get_data(as_text=True)
+        self.assertIn(
+            "Project created and contract analyzed successfully.",
+            body,
+        )
+
+        with self.app.app_context():
+            project = Project.query.filter_by(
+                name="Riverside Office Building"
+            ).one()
+            document = Document.query.filter_by(
+                project_id=project.id,
+                document_type="Contract",
+            ).one()
+
+            self.assertEqual(project.contract_value, 4850000)
+            self.assertEqual(project.start_date.isoformat(), "2026-08-01")
+            self.assertEqual(project.end_date.isoformat(), "2027-06-30")
+            self.assertEqual(project.required_coverage, 2000000)
+            self.assertEqual(document.ai_status, "analyzed")
+
+    def test_add_project_contract_auto_analysis_preserves_manual_fields(self):
+        self.login()
+
+        with patch(
+            "app.routes.projects.analyze_and_save_document",
+            wraps=analyze_and_save_document,
+        ) as analyze_document, patch(
+            "app.services.document_analysis_service.analyze_document_intelligence",
+            return_value=self.valid_contract_result(),
+        ):
+            response = self.client.post(
+                "/add_project",
+                data={
+                    "name": "Manual Project",
+                    "contract_value": "100",
+                    "start_date": "2026-01-01",
+                    "end_date": "2026-12-31",
+                    "required_coverage_choice": "1000000",
+                    "doc_type": "Contract",
+                    "documents": (
+                        BytesIO(b"%PDF-1.4\ncontract"),
+                        "contract.pdf",
+                    ),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(analyze_document.call_count, 1)
+
+        with self.app.app_context():
+            project = Project.query.filter_by(name="Manual Project").one()
+            document = Document.query.filter_by(project_id=project.id).one()
+
+            self.assertEqual(project.contract_value, 100)
+            self.assertEqual(project.start_date.isoformat(), "2026-01-01")
+            self.assertEqual(project.end_date.isoformat(), "2026-12-31")
+            self.assertEqual(project.required_coverage, 1000000)
+            self.assertEqual(
+                document.ai_compliance_result["project_auto_fill"]["fields"][
+                    "contract_value"
+                ]["status"],
+                "preserved",
+            )
+
+    def test_add_project_scope_and_owner_requirements_do_not_auto_analyze(self):
+        self.login()
+
+        for doc_type in ("Scope", "Owner Requirements"):
+            with self.subTest(doc_type=doc_type), patch(
+                "app.routes.projects.analyze_and_save_document"
+            ) as analyze_document:
+                response = self.client.post(
+                    "/add_project",
+                    data={
+                        "name": f"{doc_type} Project",
+                        "contract_value": "0",
+                        "required_coverage_choice": "",
+                        "doc_type": doc_type,
+                        "documents": (
+                            BytesIO(b"%PDF-1.4\nproject document"),
+                            f"{doc_type}.pdf",
+                        ),
+                    },
+                    content_type="multipart/form-data",
+                )
+
+                self.assertEqual(response.status_code, 302)
+                analyze_document.assert_not_called()
+
+    def test_add_project_contract_analysis_failure_preserves_project_document_and_file(self):
+        self.login()
+
+        with patch(
+            "app.routes.projects.analyze_and_save_document",
+            side_effect=RuntimeError("analysis unavailable"),
+        ) as analyze_document:
+            response = self.client.post(
+                "/add_project",
+                data={
+                    "name": "Analysis Failure Project",
+                    "contract_value": "0",
+                    "required_coverage_choice": "",
+                    "doc_type": "Contract",
+                    "documents": (
+                        BytesIO(b"%PDF-1.4\ncontract"),
+                        "contract.pdf",
+                    ),
+                },
+                content_type="multipart/form-data",
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(analyze_document.call_count, 1)
+        self.assertIn(
+            "Project created, but automatic contract analysis could not be completed. "
+            "You can retry from the project page.",
+            response.get_data(as_text=True),
+        )
+
+        with self.app.app_context():
+            project = Project.query.filter_by(
+                name="Analysis Failure Project"
+            ).one()
+            document = Document.query.filter_by(
+                project_id=project.id,
+                document_type="Contract",
+            ).one()
+
+            self.assertEqual(document.ai_status, "failed")
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(self.uploads.name, document.filename)
+                )
+            )
+            document_id = document.id
+
+        with patch(
+            "app.routes.ai.analyze_and_save_document",
+            return_value={
+                "success": True,
+                "error": None,
+                "document": Document(
+                    id=document_id,
+                    project_id=project.id,
+                ),
+                "result": {},
+            },
+        ) as retry_analysis:
+            retry = self.client.post(f"/documents/{document_id}/analyze")
+
+        self.assertEqual(retry.status_code, 302)
+        retry_analysis.assert_called_once_with(document_id)
 
     def test_project_view_displays_contract_extraction_block_safely(self):
         with self.app.app_context():

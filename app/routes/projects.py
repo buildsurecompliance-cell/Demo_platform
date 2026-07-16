@@ -43,6 +43,9 @@ from app.services.documents.storage import (
     delete_document_file,
     save_document_file,
 )
+from app.services.document_analysis_service import (
+    analyze_and_save_document,
+)
 
 from app.services.documents.types import (
     PROJECT_DOCUMENT_TYPES,
@@ -100,6 +103,64 @@ PROJECT_REQUIRED_COVERAGE_PRESETS = {
     "2000000": 2000000,
     "5000000": 5000000,
 }
+
+SUPPORTED_PROJECT_ANALYSIS_TYPES = {
+    "Contract",
+}
+
+
+def _money_short(value):
+    amount = float(value or 0)
+    abs_amount = abs(amount)
+
+    if abs_amount >= 1_000_000_000:
+        return f"${amount / 1_000_000_000:.1f}B"
+
+    if abs_amount >= 1_000_000:
+        return f"${amount / 1_000_000:.1f}M"
+
+    if abs_amount >= 1_000:
+        return f"${amount / 1_000:.1f}K"
+
+    return f"${amount:,.0f}"
+
+
+def _money_full(value):
+    return f"${float(value or 0):,.0f}"
+
+
+def _coverage_label(value):
+    if not value:
+        return "No minimum"
+
+    amount = int(value)
+    presets = {
+        1_000_000: "$1M",
+        2_000_000: "$2M",
+        5_000_000: "$5M",
+    }
+
+    return presets.get(amount, _money_full(amount))
+
+
+def _mobilization_label(status):
+    if status == "Ready to Mobilize":
+        return "READY"
+
+    if status == "Pending Compliance":
+        return "PENDING"
+
+    return "BLOCKED"
+
+
+def _mobilization_message(label):
+    messages = {
+        "READY": "This project is ready to mobilize.",
+        "PENDING": "This project requires review before mobilization.",
+        "BLOCKED": "One or more subcontractors cannot work today.",
+    }
+
+    return messages[label]
 
 
 def _parse_positive_integer_amount(raw_value):
@@ -232,10 +293,52 @@ def _project_subcontractor_view_model(project_subcontractor):
         advice_available = False
         advice = _fallback_compliance_advice(project_subcontractor)
 
+    current_coverage = project_subcontractor.coverage_limit
+    required_coverage = getattr(
+        project_subcontractor.project,
+        "required_coverage",
+        None,
+    )
+    coverage_gap = None
+
+    if current_coverage is not None and required_coverage:
+        coverage_gap = max(
+            int(required_coverage) - int(current_coverage or 0),
+            0,
+        )
+
+    primary_action = advice.actions[0] if advice.actions else None
+
     return {
         "project_subcontractor": project_subcontractor,
         "advice": advice,
         "advice_available": advice_available,
+        "status": advice.status,
+        "current_coverage": _coverage_label(current_coverage),
+        "required_coverage": _coverage_label(required_coverage),
+        "coverage_gap": (
+            _coverage_label(coverage_gap)
+            if coverage_gap
+            else "No gap"
+        ),
+        "coi_expiration": (
+            project_subcontractor.subcontractor.coi_expiration.strftime(
+                "%m/%d/%Y"
+            )
+            if project_subcontractor.subcontractor.coi_expiration
+            else "Not available"
+        ),
+        "primary_reason": advice.summary,
+        "recommended_action": (
+            primary_action.description
+            if primary_action
+            else "No action required."
+        ),
+        "action_priority": (
+            primary_action.priority
+            if primary_action
+            else "LOW"
+        ),
     }
 
 
@@ -245,6 +348,77 @@ def _fallback_compliance_advice(project_subcontractor):
         summary="Compliance advice unavailable.",
         actions=(),
     )
+
+
+def _project_summary_view_model(project):
+    status = project.mobilization_status
+    label = _mobilization_label(status)
+
+    return {
+        "name": project.name,
+        "status": label,
+        "message": _mobilization_message(label),
+        "risk": project.risk_level,
+        "contract_value": _money_short(project.contract_value),
+        "contract_value_full": _money_full(project.contract_value),
+        "required_coverage": _coverage_label(project.required_coverage),
+        "start_date": (
+            project.start_date.strftime("%m/%d/%Y")
+            if project.start_date
+            else "Not scheduled"
+        ),
+        "end_date": (
+            project.end_date.strftime("%m/%d/%Y")
+            if project.end_date
+            else "Not scheduled"
+        ),
+        "days_remaining": (
+            f"{project.days_remaining} days"
+            if project.days_remaining is not None
+            else "Not scheduled"
+        ),
+    }
+
+
+def _document_type_view(doc_type, docs):
+    return {
+        "type": doc_type,
+        "documents": docs,
+        "supports_analysis": doc_type in SUPPORTED_PROJECT_ANALYSIS_TYPES,
+        "empty_message": f"No {doc_type} uploaded yet.",
+    }
+
+
+def _analyze_created_contract_documents(document_ids):
+    for document_id in document_ids:
+        try:
+            analysis = analyze_and_save_document(document_id)
+        except Exception as error:
+            db.session.rollback()
+
+            failed_doc = db.session.get(Document, document_id)
+
+            if failed_doc:
+                failed_doc.ai_status = "failed"
+                failed_doc.ai_error = "Document analysis failed."
+                db.session.commit()
+
+            logger.error(
+                "Automatic contract analysis failed document_id=%s error_type=%s",
+                document_id,
+                error.__class__.__name__,
+            )
+
+            return False
+
+        if not analysis["success"]:
+            logger.info(
+                "Automatic contract analysis did not complete document_id=%s",
+                document_id,
+            )
+            return False
+
+    return True
 
 
 def _cleanup_saved_documents(storage_keys):
@@ -412,6 +586,7 @@ def add_project():
         )
         next_versions = defaultdict(lambda: 1)
         saved_storage_keys = []
+        created_contract_document_ids = []
 
         for file in files:
 
@@ -444,6 +619,11 @@ def add_project():
                 )
 
                 db.session.add(doc)
+                db.session.flush()
+
+                if doc_type == "Contract":
+                    created_contract_document_ids.append(doc.id)
+
                 next_versions[doc_type] += 1
 
             except Exception as e:
@@ -461,8 +641,29 @@ def add_project():
             flash("Error creating project.", "danger")
             return redirect(url_for("projects.add_project"))
 
-        flash("Project created successfully", "success")
-        return redirect(url_for("dashboard.dashboard"))
+        if created_contract_document_ids:
+            if _analyze_created_contract_documents(
+                created_contract_document_ids
+            ):
+                flash(
+                    "Project created and contract analyzed successfully.",
+                    "success",
+                )
+            else:
+                flash(
+                    "Project created, but automatic contract analysis could not be completed. "
+                    "You can retry from the project page.",
+                    "warning",
+                )
+        else:
+            flash("Project created successfully", "success")
+
+        return redirect(
+            url_for(
+                "projects.view_project",
+                project_id=project.id,
+            )
+        )
 
     return _render_add_project(organization, subs)
 
@@ -696,11 +897,22 @@ def view_project(project_id):
     for doc in docs:
         documents[doc.document_type].append(doc)
 
+    document_groups = [
+        _document_type_view(
+            doc_type,
+            documents.get(doc_type, []),
+        )
+        for doc_type in PROJECT_DOCUMENT_TYPES
+    ]
+
     return render_template(
         "view_project.html",
         project=project,
+        project_summary=_project_summary_view_model(project),
         subcontractor_rows=subcontractor_rows,
         documents=dict(documents),
+        document_groups=document_groups,
+        project_document_types=PROJECT_DOCUMENT_TYPES,
         ai_summary=ai_summary,
     )
 

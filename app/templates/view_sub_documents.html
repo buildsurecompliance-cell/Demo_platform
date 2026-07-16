@@ -1,175 +1,115 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>{{ sub.name }} — Documents</h3>
+{% macro readiness_badge(status) -%}
+<span class="ux-status ux-status-{{ status|lower }}">{{ status }}</span>
+{%- endmacro %}
 
-<p class="text-muted">
+<div class="ux-page">
+
+<div class="ux-page-header">
+<div>
+<h1>{{ sub.name }} Documents</h1>
+<p class="ux-help mb-0">
 COI Expiration:
 {% if sub.coi_expiration %}
-    {{ sub.coi_expiration.strftime("%m/%d/%Y") }}
+{{ sub.coi_expiration.strftime("%m/%d/%Y") }}
 {% else %}
-    â€”
+Not available
 {% endif %}
 </p>
+</div>
+</div>
 
-{% if documents %}
+{% if document_rows %}
+<div class="ux-grid-lg">
+{% for row in document_rows %}
+{% set doc = row.document %}
+<article class="ux-card">
+<div class="ux-card-header">
+<div>
+<h2>{{ doc.original_name or doc.filename }}</h2>
+<p class="ux-help mb-0">{{ doc.document_type }} - v{{ doc.version }} - {{ doc.uploaded_at|format_local_time }}</p>
+</div>
+<span class="ux-status ux-status-{% if row.status == 'Analyzed' %}success{% elif row.status == 'Failed' %}danger{% else %}neutral{% endif %}">
+{{ row.status }}
+</span>
+</div>
 
-<table class="table table-striped align-middle">
+<div class="ux-grid-lg">
+<section class="ux-soft" aria-labelledby="intelligence-{{ doc.id }}">
+<h3 id="intelligence-{{ doc.id }}" class="h6">Document Intelligence</h3>
+<dl class="mb-0">
+<dt>Expiration</dt>
+<dd>{{ row.expiration }}</dd>
+<dt>General Liability</dt>
+<dd>{{ row.general_liability }}</dd>
+<dt>Confidence</dt>
+<dd>{{ row.confidence }}</dd>
+<dt>Evidence State</dt>
+<dd>{{ row.evidence_state }}</dd>
+</dl>
+</section>
 
-<thead>
-<tr>
-<th>File</th>
-<th>Type</th>
-<th>Version</th>
-<th>Uploaded</th>
-<th>AI Status</th>
-<th>Risk</th>
-<th>Score</th>
-<th>Action</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for doc in documents %}
-
-<tr>
-
-<td>{{ doc.original_name or doc.filename }}</td>
-
-<td>{{ doc.document_type }}</td>
-
-<td>v{{ doc.version }}</td>
-
-<td>{{ doc.uploaded_at | format_local_time }}</td>
-
-<td>
-    {% if doc.ai_status == "analyzed" %}
-        <span class="badge bg-success">Analyzed</span>
-    {% elif doc.ai_status == "failed" %}
-        <span class="badge bg-danger">Failed</span>
-    {% else %}
-        <span class="badge bg-secondary">Not Analyzed</span>
-    {% endif %}
-</td>
-
-<td>
-    {% if doc.ai_compliance_result %}
-        {% set risk = doc.ai_compliance_result.get("risk_level") %}
-
-        {% if risk == "High" %}
-            <span class="badge bg-danger">High</span>
-        {% elif risk == "Medium" %}
-            <span class="badge bg-warning text-dark">Medium</span>
-        {% elif risk == "Low" %}
-            <span class="badge bg-success">Low</span>
-        {% else %}
-            —
-        {% endif %}
-    {% else %}
-        —
-    {% endif %}
-</td>
-
-<td>
-    {% if doc.ai_compliance_result %}
-        {{ doc.ai_compliance_result.get("score") }}
-    {% else %}
-        —
-    {% endif %}
-</td>
-
-<td>
-
-<a href="{{ url_for('documents.view_document', doc_id=doc.id) }}"
-target="_blank"
-class="btn btn-sm btn-primary">
-Open
-</a>
-
-<form action="{{ url_for('ai.analyze_document', doc_id=doc.id) }}"
-method="POST"
-style="display:inline;">
-{{ csrf_input() }}
-
-<button type="submit" class="btn btn-sm btn-outline-success">
-Analyze
-</button>
-
-</form>
-
-<form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}"
-method="POST"
-style="display:inline;">
-{{ csrf_input() }}
-
-<button class="btn btn-sm btn-danger"
-onclick="return confirm('Delete this document?')">
-Delete
-</button>
-
-</form>
-
-</td>
-
-</tr>
-
-{% if doc.ai_compliance_result %}
-
-<tr>
-<td colspan="8">
-
-    <div class="border rounded p-3 bg-light">
-
-        <strong>Status:</strong>
-        {{ doc.ai_compliance_result.get("status") }}
-
-        <br>
-
-        <strong>Summary:</strong>
-        {{ doc.ai_compliance_result.get("risk_summary") }}
-
-        {% set issues = doc.ai_compliance_result.get("issues", []) %}
-        {% set warnings = doc.ai_compliance_result.get("warnings", []) %}
-
-        {% if issues %}
-            <div class="mt-2">
-                <strong>Issues:</strong>
-                <ul class="mb-0">
-                    {% for issue in issues %}
-                        <li>{{ issue.get("message") }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-        {% if warnings %}
-            <div class="mt-2">
-                <strong>Warnings:</strong>
-                <ul class="mb-0">
-                    {% for warning in warnings %}
-                        <li>{{ warning.get("message") }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-    </div>
-
-</td>
-</tr>
-
-{% endif %}
-
+<section class="ux-soft" aria-labelledby="decision-{{ doc.id }}">
+<h3 id="decision-{{ doc.id }}" class="h6">Compliance Decision</h3>
+{% if row.readiness_impacts %}
+{% for impact in row.readiness_impacts %}
+<div class="mb-2">
+<strong>{{ impact.project }}</strong>
+<div>{{ readiness_badge(impact.status) }}</div>
+<dl class="mb-1">
+<dt>Current Coverage</dt>
+<dd>{{ impact.current_coverage }}</dd>
+<dt>Required Coverage</dt>
+<dd>{{ impact.required_coverage }}</dd>
+<dt>Coverage Gap</dt>
+<dd>{{ impact.coverage_gap }}</dd>
+</dl>
+<p class="ux-help mb-0">{{ impact.reason }}</p>
+</div>
 {% endfor %}
-
-</tbody>
-</table>
-
 {% else %}
-
-<p>No documents uploaded for this subcontractor.</p>
-
+<p class="ux-help mb-0">No project links yet.</p>
 {% endif %}
+</section>
+</div>
+
+{% if row.issues or row.warnings %}
+<div class="ux-soft mt-3">
+{% if row.issues %}
+<strong>Issues</strong>
+{% for issue in row.issues %}
+<div class="ux-help">{{ issue.get("message") }}</div>
+{% endfor %}
+{% endif %}
+{% if row.warnings %}
+<strong>Warnings</strong>
+{% for warning in row.warnings %}
+<div class="ux-help">{{ warning.get("message") }}</div>
+{% endfor %}
+{% endif %}
+</div>
+{% endif %}
+
+<div class="ux-actions mt-3">
+<a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" target="_blank" class="ux-btn ux-btn-primary">Open</a>
+<form action="{{ url_for('ai.analyze_document', doc_id=doc.id) }}" method="POST">
+{{ csrf_input() }}
+<button type="submit" class="ux-btn ux-btn-success">Analyze</button>
+</form>
+<form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document?');">
+{{ csrf_input() }}
+<button class="ux-btn ux-btn-danger" type="submit">Delete</button>
+</form>
+</div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="ux-empty">No documents uploaded for this subcontractor.</div>
+{% endif %}
+
+</div>
 
 {% endblock %}

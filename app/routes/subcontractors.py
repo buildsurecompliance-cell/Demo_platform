@@ -21,6 +21,7 @@ from flask_login import (
 )
 
 from werkzeug.utils import secure_filename
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 
@@ -34,6 +35,7 @@ from app.models import (
 from app.services.document_analysis_service import (
     analyze_and_save_document,
 )
+from app.services.readiness_service import calculate_readiness
 
 from app.services.documents.storage import (
     cleanup_saved_document,
@@ -60,6 +62,122 @@ subcontractors_bp = Blueprint(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _money_label(value):
+    if not value:
+        return "Not available"
+
+    amount = float(value)
+
+    if amount >= 1_000_000 and amount % 1_000_000 == 0:
+        return f"${amount / 1_000_000:.0f}M"
+
+    return f"${amount:,.0f}"
+
+
+def _coverage_gap_label(current_coverage, required_coverage):
+    if not required_coverage:
+        return "No project minimum"
+
+    if current_coverage is None:
+        return _money_label(required_coverage)
+
+    gap = max(
+        int(required_coverage) - int(current_coverage or 0),
+        0,
+    )
+
+    if not gap:
+        return "No gap"
+
+    return _money_label(gap)
+
+
+def _doc_status_label(status):
+    if status == "analyzed":
+        return "Analyzed"
+
+    if status == "failed":
+        return "Failed"
+
+    return "Not Analyzed"
+
+
+def _coi_document_view_model(doc, sub, readiness_impacts):
+    extracted = doc.ai_extracted_data or {}
+    compliance = doc.ai_compliance_result or {}
+
+    return {
+        "document": doc,
+        "status": _doc_status_label(doc.ai_status),
+        "expiration": (
+            extracted.get("expiration_date")
+            or (
+                sub.coi_expiration.strftime("%m/%d/%Y")
+                if sub.coi_expiration
+                else "Not available"
+            )
+        ),
+        "general_liability": _money_label(
+            extracted.get("general_liability_limit")
+            or extracted.get("coverage")
+        ),
+        "confidence": _confidence_label(
+            extracted.get("confidence")
+            or doc.ai_confidence
+        ),
+        "evidence_state": compliance.get("status") or "Not available",
+        "issues": compliance.get("issues") or [],
+        "warnings": compliance.get("warnings") or [],
+        "readiness_impacts": readiness_impacts,
+    }
+
+
+def _confidence_label(value):
+    if value is None:
+        return "Not available"
+
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return "Not available"
+
+    if confidence <= 1:
+        confidence *= 100
+
+    return f"{confidence:.0f}%"
+
+
+def _sub_readiness_impacts(sub):
+    impacts = []
+
+    for link in sub.projects:
+        readiness = calculate_readiness(link)
+        reason = (
+            readiness["reasons"][0]["message"]
+            if readiness.get("reasons")
+            else "No blocking issue."
+        )
+        impacts.append(
+            {
+                "project": link.project.name if link.project else "Project",
+                "status": readiness["status"],
+                "reason": reason,
+                "current_coverage": _money_label(link.coverage_limit),
+                "required_coverage": (
+                    _money_label(link.project.required_coverage)
+                    if link.project and link.project.required_coverage
+                    else "No minimum"
+                ),
+                "coverage_gap": _coverage_gap_label(
+                    link.coverage_limit,
+                    link.project.required_coverage if link.project else None,
+                ),
+            }
+        )
+
+    return impacts
 
 
 def allowed_file(filename):
@@ -218,6 +336,9 @@ def view_sub_documents(sub_id):
 
     sub = Subcontractor.query.filter_by(
         id=sub_id,
+    ).options(
+        joinedload(Subcontractor.projects)
+        .joinedload(ProjectSubcontractor.project),
     ).filter(
         subcontractor_scope_filter(Subcontractor)
     ).first_or_404()
@@ -229,10 +350,16 @@ def view_sub_documents(sub_id):
         .all()
     )
 
+    readiness_impacts = _sub_readiness_impacts(sub)
+
     return render_template(
         "view_sub_documents.html",
         sub=sub,
         documents=documents,
+        document_rows=[
+            _coi_document_view_model(doc, sub, readiness_impacts)
+            for doc in documents
+        ],
     )
 
 
