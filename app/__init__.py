@@ -60,6 +60,14 @@ def create_app(config_object=None):
     register_template_filters(app)
     register_security(app)
 
+    from app.services.demo_company_generator import register_demo_company_cli
+    from app.services.demo_project_generator import register_demo_project_cli
+    from app.services.database_health import register_database_cli
+
+    register_demo_company_cli(app)
+    register_demo_project_cli(app)
+    register_database_cli(app)
+
     @app.context_processor
     def organization_context():
         if not current_user.is_authenticated:

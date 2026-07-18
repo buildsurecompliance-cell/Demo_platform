@@ -331,7 +331,7 @@ def _extract_contract_data_from_text(text):
         text,
         (
             r"project\s+name\s*[:\-]\s*(.+)",
-            r"project\s*[:\-]\s*(.+)",
+            r"project\s*:\s*(.+)",
             r"project\s+known\s+as\s+(.+?)\s+is\s+located",
             r"contract\s+for\s*[:\-]\s*(.+)",
             r"agreement\s+for\s*[:\-]\s*(.+)",
