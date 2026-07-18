@@ -28,6 +28,15 @@ from app.services.subcontractor_compliance_service import (
 logger = logging.getLogger(__name__)
 
 
+def _result_keys(result):
+    extracted_data = result.get("extracted_data") or {}
+
+    if not isinstance(extracted_data, dict):
+        return []
+
+    return sorted(extracted_data.keys())
+
+
 def analyze_and_save_document(doc_id):
 
     doc = db.session.get(
@@ -52,9 +61,26 @@ def analyze_and_save_document(doc_id):
                 "result": None,
             }
 
+        logger.info(
+            "Document analysis started document_id=%s original_name=%s filename=%s document_type=%s",
+            doc.id,
+            doc.original_name,
+            getattr(doc, "filename", None),
+            doc.document_type,
+        )
+
         result = analyze_document_intelligence(
             file_path=file_path,
             document_type=doc.document_type,
+        )
+
+        logger.info(
+            "Document analysis completed document_id=%s original_name=%s success=%s category=%s extracted_keys=%s",
+            doc.id,
+            doc.original_name,
+            result.get("success"),
+            result.get("category"),
+            _result_keys(result),
         )
 
     if not result["success"]:

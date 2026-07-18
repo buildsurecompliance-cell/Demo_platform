@@ -1,6 +1,9 @@
 CONTRACT_PROMPT = """
 Extract project contract fields as strict JSON.
 
+Extract values only from the supplied document. Never copy values from
+examples. Return null for fields not present.
+
 Use only project contract terms:
 - project_name: project title/name from the contract.
 - contract_value: contract sum, contract price, or contract value only.
@@ -26,6 +29,25 @@ Return exactly these keys:
 - field_confidence: object with project_name, contract_value, start_date,
   end_date, required_coverage numbers from 0 to 1
 - notes: array of short strings
+
+Example output shape only:
+{
+  "document_type": "contract",
+  "project_name": "Example Project",
+  "contract_value": 1000000,
+  "start_date": "2026-01-01",
+  "end_date": "2026-12-31",
+  "required_coverage": 1000000,
+  "confidence": 0.9,
+  "field_confidence": {
+    "project_name": 0.9,
+    "contract_value": 0.9,
+    "start_date": 0.9,
+    "end_date": 0.9,
+    "required_coverage": 0.9
+  },
+  "notes": []
+}
 
 Do not decide compliance readiness. Do not add entities.
 """

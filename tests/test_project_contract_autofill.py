@@ -571,22 +571,49 @@ class ProjectContractAutoFillTest(unittest.TestCase):
             )
 
     def test_contract_mock_mode_is_supported(self):
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as temp_file, patch.dict(
-            os.environ,
-            {"AI_MOCK_MODE": "true"},
-        ):
-            result = analyze_document_intelligence(
-                file_path=temp_file.name,
-                document_type="Contract",
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=".pdf",
+            mode="w",
+            encoding="utf-8",
+            delete=False,
+        )
+
+        try:
+            temp_file.write(
+                "\n".join(
+                    [
+                        "Project Name: Mock Contract Project",
+                        "Contract Sum: $3,000,000",
+                        "Start Date: 2026-08-01",
+                        "Completion Date: 2027-06-30",
+                        "Minimum General Liability: $2,000,000 per occurrence",
+                    ]
+                )
             )
+            temp_file.close()
+
+            with patch.dict(
+                os.environ,
+                {"AI_MOCK_MODE": "true"},
+            ):
+                result = analyze_document_intelligence(
+                    file_path=temp_file.name,
+                    document_type="Contract",
+                )
+
+        finally:
+            try:
+                os.remove(temp_file.name)
+            except OSError:
+                pass
 
         self.assertTrue(result["success"])
         self.assertEqual(result["category"], "contract")
         self.assertEqual(
             result["extracted_data"]["project_name"],
-            "Riverside Office Building",
+            "Mock Contract Project",
         )
-        self.assertEqual(result["extracted_data"]["contract_value"], 4850000)
+        self.assertEqual(result["extracted_data"]["contract_value"], 3000000)
         self.assertEqual(result["extracted_data"]["required_coverage"], 2000000)
         self.assertEqual(result["compliance"]["status"], "Ready")
 
