@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from datetime import date
+from pathlib import Path
 from unittest.mock import patch
 
 from flask_migrate import downgrade, upgrade
@@ -152,6 +153,10 @@ class DatabaseMigrationTest(unittest.TestCase):
             with app.app_context():
                 inspector = inspect(db.engine)
                 self.assertEqual(set(inspector.get_table_names()), EXPECTED_TABLES)
+                self.assertNotEqual(
+                    set(inspector.get_table_names()),
+                    {"alembic_version"},
+                )
 
                 unique_constraints = inspector.get_unique_constraints(
                     "project_subcontractor"
@@ -205,6 +210,47 @@ class DatabaseMigrationTest(unittest.TestCase):
                     "unique_pending_organization_invitation",
                     invitation_indexes,
                 )
+
+    def test_empty_database_upgrade_creates_all_model_tables(self):
+        with self.temporary_migrated_app() as app:
+            self.assertTrue(os.path.exists(app.config["DATABASE_PATH"]))
+
+            with app.app_context():
+                inspector = inspect(db.engine)
+                existing_tables = set(inspector.get_table_names())
+                expected_tables = set(db.metadata.tables.keys())
+
+                self.assertEqual(expected_tables, MODEL_TABLES)
+                self.assertEqual(
+                    existing_tables - {"alembic_version"},
+                    expected_tables,
+                )
+                self.assertGreater(len(existing_tables), 1)
+
+    def test_migrated_database_has_no_missing_or_unexpected_model_tables(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                from app.services.database_health import collect_database_health
+
+                health = collect_database_health()
+
+                self.assertEqual(health.missing_tables, [])
+                self.assertEqual(health.unexpected_tables, [])
+                self.assertTrue(health.healthy)
+
+    def test_all_foreign_keys_reference_existing_tables(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                inspector = inspect(db.engine)
+                existing_tables = set(inspector.get_table_names())
+
+                for table_name in MODEL_TABLES:
+                    with self.subTest(table=table_name):
+                        for foreign_key in inspector.get_foreign_keys(table_name):
+                            self.assertIn(
+                                foreign_key["referred_table"],
+                                existing_tables,
+                            )
 
     def test_migrated_schema_columns_match_metadata(self):
         with self.temporary_migrated_app() as app:
@@ -297,6 +343,146 @@ class DatabaseMigrationTest(unittest.TestCase):
                 self.assertEqual(Subcontractor.query.count(), 1)
                 self.assertEqual(ProjectSubcontractor.query.count(), 1)
                 self.assertEqual(Document.query.count(), 1)
+
+    def test_login_and_core_writes_work_after_migration_upgrade(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                user = User(email="login-migrated@example.com", paid=True)
+                user.set_password("password123")
+                db.session.add(user)
+                db.session.flush()
+                organization = create_default_organization_for_user(user)
+                db.session.commit()
+
+                self.assertIsNotNone(
+                    User.query.filter_by(
+                        email="login-migrated@example.com"
+                    ).first()
+                )
+
+                db.session.add(
+                    Project(
+                        name="Migrated Write Project",
+                        user_id=user.id,
+                        organization_id=organization.id,
+                    )
+                )
+                db.session.add(
+                    Subcontractor(
+                        name="Migrated Write Sub",
+                        user_id=user.id,
+                        organization_id=organization.id,
+                    )
+                )
+                db.session.commit()
+
+                self.assertEqual(Project.query.count(), 1)
+                self.assertEqual(Subcontractor.query.count(), 1)
+
+    def test_db_health_cli_reports_healthy_schema(self):
+        with self.temporary_migrated_app() as app:
+            result = app.test_cli_runner().invoke(args=["db-health"])
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("Status: HEALTHY", result.output)
+            self.assertIn("Missing tables: none", result.output)
+            self.assertIn("Migration head: 9d1e2f3a4b5c", result.output)
+
+    def test_db_health_cli_reports_unhealthy_unmigrated_schema(self):
+        with self.temporary_unmigrated_app() as app:
+            result = app.test_cli_runner().invoke(args=["db-health"])
+
+            self.assertNotEqual(result.exit_code, 0)
+            self.assertIn("Status: UNHEALTHY", result.output)
+            self.assertIn("Missing tables:", result.output)
+
+    def test_db_health_masks_database_password(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context(), patch.object(
+                db.engine,
+                "url",
+            ) as url_mock:
+                url_mock.render_as_string.return_value = (
+                    "postgresql+psycopg://user:***@host/db"
+                )
+
+                from app.services.database_health import collect_database_health
+
+                health = collect_database_health()
+
+            self.assertIn("***", health.database_uri)
+
+    def test_init_local_db_runs_migrations_and_refuses_production(self):
+        with self.temporary_unmigrated_app() as app:
+            result = app.test_cli_runner().invoke(args=["init-local-db"])
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("Status: HEALTHY", result.output)
+
+            with app.app_context():
+                inspector = inspect(db.engine)
+                self.assertEqual(set(inspector.get_table_names()), EXPECTED_TABLES)
+
+        with self.temporary_unmigrated_app(env="production") as app:
+            result = app.test_cli_runner().invoke(args=["init-local-db"])
+
+            self.assertNotEqual(result.exit_code, 0)
+            self.assertIn("disabled in production", result.output)
+
+    def test_init_local_db_can_create_demo_user(self):
+        with self.temporary_unmigrated_app() as app:
+            result = app.test_cli_runner().invoke(
+                args=["init-local-db", "--create-demo-user"]
+            )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+
+            with app.app_context():
+                self.assertEqual(
+                    User.query.filter_by(email="demo@buildsure.local").count(),
+                    1,
+                )
+                self.assertEqual(Organization.query.count(), 1)
+                self.assertEqual(OrganizationMembership.query.count(), 1)
+
+    def test_demo_environment_create_records_is_idempotent_after_migration(self):
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as uploads:
+            with self.temporary_migrated_app(upload_folder=uploads) as app:
+                with app.app_context():
+                    user = User(email="demo-records@example.com", paid=True)
+                    user.set_password("password123")
+                    db.session.add(user)
+                    db.session.flush()
+                    organization = create_default_organization_for_user(user)
+                    db.session.commit()
+
+                    from app.services.demo_project_generator.project_generator import (
+                        generate_demo_environment,
+                    )
+
+                    generate_demo_environment(
+                        output=output,
+                        seed=123,
+                        scenario="mixed",
+                        create_records=True,
+                    )
+                    generate_demo_environment(
+                        output=output,
+                        seed=123,
+                        scenario="mixed",
+                        create_records=True,
+                    )
+
+                    self.assertEqual(Project.query.count(), 5)
+                    self.assertEqual(Subcontractor.query.count(), 40)
+                    self.assertEqual(ProjectSubcontractor.query.count(), 40)
+                    self.assertEqual(Document.query.count(), 450)
+                    self.assertEqual(
+                        Project.query.filter_by(
+                            organization_id=organization.id,
+                        ).count(),
+                        5,
+                    )
 
     def test_project_required_coverage_migration_handles_existing_projects(self):
         with self.temporary_migrated_app_from_revision("8b7c6d5e4f30") as app:
@@ -834,17 +1020,29 @@ class DatabaseMigrationTest(unittest.TestCase):
                     {"alembic_version"},
                 )
 
-    def temporary_migrated_app(self):
-        return TemporaryMigratedApp()
+    def temporary_migrated_app(self, **kwargs):
+        return TemporaryMigratedApp(**kwargs)
 
     def temporary_migrated_app_from_revision(self, revision):
         return TemporaryMigratedApp(revision=revision)
 
+    def temporary_unmigrated_app(self, env="development"):
+        return TemporaryMigratedApp(migrate_on_enter=False, env=env)
+
 
 class TemporaryMigratedApp:
 
-    def __init__(self, revision=None):
+    def __init__(
+        self,
+        revision=None,
+        migrate_on_enter=True,
+        env="development",
+        upload_folder=None,
+    ):
         self.revision = revision
+        self.migrate_on_enter = migrate_on_enter
+        self.env = env
+        self.upload_folder = upload_folder
 
     def __enter__(self):
         self.database = tempfile.NamedTemporaryFile(
@@ -852,19 +1050,30 @@ class TemporaryMigratedApp:
             delete=False,
         )
         self.database.close()
+        os.unlink(self.database.name)
 
         database_uri = "sqlite:///" + self.database.name.replace("\\", "/")
+        database_path = self.database.name
+        env = self.env
+        upload_folder = self.upload_folder or str(
+            Path(self.database.name).parent / "uploads"
+        )
 
         class TempMigrationConfig(TestingConfig):
             SQLALCHEMY_DATABASE_URI = database_uri
+            DATABASE_PATH = database_path
+            ENV = env
+            UPLOAD_FOLDER = upload_folder
+            STORAGE_BACKEND = "local"
 
         self.app = create_app(TempMigrationConfig)
 
-        with self.app.app_context():
-            upgrade(
-                directory="migrations",
-                revision=self.revision or "head",
-            )
+        if self.migrate_on_enter:
+            with self.app.app_context():
+                upgrade(
+                    directory="migrations",
+                    revision=self.revision or "head",
+                )
 
         return self.app
 

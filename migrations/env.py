@@ -39,6 +39,10 @@ def get_engine_url():
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
 
+# Import every model before Alembic reads metadata. This keeps fresh database
+# upgrades and autogeneration tied to the single SQLAlchemy instance.
+from app import models  # noqa: F401, E402
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")

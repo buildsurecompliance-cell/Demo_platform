@@ -316,17 +316,19 @@ class DocumentStorageTest(unittest.TestCase):
         self.assertFalse(LocalStorage(self.uploads.name).exists(storage_key))
 
     def test_cleanup_saved_document_logs_failure_without_raising(self):
-        with patch(
-            "app.services.documents.storage.get_document_storage",
-        ) as storage_factory:
-            storage_factory.return_value.delete.side_effect = StorageError(
-                "cleanup failed"
-            )
+        storage_factory = Mock()
+        storage_factory.return_value.delete.side_effect = StorageError(
+            "cleanup failed"
+        )
 
-            with self.assertLogs("app", level="ERROR"):
-                result = cleanup_saved_document("projects/1/file.pdf")
+        with patch.dict(
+            cleanup_saved_document.__globals__,
+            {"get_document_storage": storage_factory},
+        ), patch.object(self.app.logger, "exception") as logger_exception:
+            result = cleanup_saved_document("projects/1/file.pdf")
 
         self.assertFalse(result)
+        logger_exception.assert_called_once()
 
     def test_temporary_document_path_uses_local_file_without_copy(self):
         storage_key = save_document_file(
