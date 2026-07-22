@@ -705,6 +705,34 @@ class ReadinessServiceTest(unittest.TestCase):
             self.reason_codes(result),
         )
 
+    def test_ai_coverage_and_expiration_aliases_feed_readiness(self):
+        document = self.make_coi_document(
+            extracted_data={
+                "policy_exp": "09/01/2027",
+                "general_liability_each_occurrence": "$2,500,000",
+                "insurance_carrier": "Sample Carrier",
+                "policy_number": "POL-123",
+                "confidence": 0.92,
+            },
+        )
+        link = self.make_link(
+            None,
+            coverage_limit=None,
+            required_coverage=2_000_000,
+            documents=[document],
+        )
+
+        result = calculate_readiness(
+            link,
+            today=date(2026, 1, 1),
+        )
+
+        self.assertEqual(result["status"], READY)
+        self.assertNotIn(
+            "COVERAGE_INSUFFICIENT",
+            self.reason_codes(result),
+        )
+
     def test_manual_coverage_lower_than_ai_is_conservative(self):
         document = self.make_coi_document(coverage=2000000)
         link = self.make_link(

@@ -16,7 +16,7 @@ def build_apex_concrete_company(seed=123):
     return DemoCompany(
         legal_name="Apex Concrete LLC",
         dba_name="Apex Concrete",
-        trade="Concrete",
+        trade="Concrete Contractor",
         address=DemoAddress(
             street="1840 Founders Yard",
             city="Dallas",

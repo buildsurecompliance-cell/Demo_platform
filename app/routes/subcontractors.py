@@ -1,5 +1,3 @@
-import uuid
-
 from datetime import datetime
 import logging
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -34,6 +32,10 @@ from app.models import (
 
 from app.services.document_analysis_service import (
     analyze_and_save_document,
+)
+from app.services.compliance_evidence_service import (
+    collect_coi_evidence,
+    extract_coi_coverage,
 )
 from app.services.readiness_service import calculate_readiness
 
@@ -120,8 +122,7 @@ def _coi_document_view_model(doc, sub, readiness_impacts):
             )
         ),
         "general_liability": _money_label(
-            extracted.get("general_liability_limit")
-            or extracted.get("coverage")
+            extract_coi_coverage(extracted)
         ),
         "confidence": _confidence_label(
             extracted.get("confidence")
@@ -151,6 +152,7 @@ def _confidence_label(value):
 
 def _sub_readiness_impacts(sub):
     impacts = []
+    evidence_coverage = _active_coverage_for_subcontractor(sub)
 
     for link in sub.projects:
         readiness = calculate_readiness(link)
@@ -164,20 +166,54 @@ def _sub_readiness_impacts(sub):
                 "project": link.project.name if link.project else "Project",
                 "status": readiness["status"],
                 "reason": reason,
-                "current_coverage": _money_label(link.coverage_limit),
+                "current_coverage": _money_label(
+                    _conservative_coverage(
+                        evidence_coverage,
+                        link.coverage_limit,
+                    )
+                ),
                 "required_coverage": (
                     _money_label(link.project.required_coverage)
                     if link.project and link.project.required_coverage
                     else "No minimum"
                 ),
                 "coverage_gap": _coverage_gap_label(
-                    link.coverage_limit,
+                    _conservative_coverage(
+                        evidence_coverage,
+                        link.coverage_limit,
+                    ),
                     link.project.required_coverage if link.project else None,
                 ),
             }
         )
 
     return impacts
+
+
+def _active_coverage_for_subcontractor(sub):
+    validated_evidence = [
+        item
+        for item in collect_coi_evidence(sub)
+        if item.validated
+    ]
+
+    if not validated_evidence:
+        return None
+
+    return validated_evidence[0].value.get("coverage")
+
+
+def _conservative_coverage(evidence_coverage, manual_coverage):
+    if evidence_coverage is None:
+        return manual_coverage
+
+    if manual_coverage is None:
+        return evidence_coverage
+
+    return min(
+        float(evidence_coverage),
+        float(manual_coverage),
+    )
 
 
 def allowed_file(filename):
@@ -457,7 +493,7 @@ def add_sub():
                 continue
 
             try:
-                original_name = secure_filename(file.filename)
+                original_name = file.filename
 
                 doc_type = (
                     request.form.get("doc_type")
@@ -480,11 +516,9 @@ def add_sub():
                     else 1
                 )
 
-                unique_name = f"{uuid.uuid4().hex}_{original_name}"
-
                 storage_key = save_document_file(
                     file,
-                    unique_name,
+                    original_name,
                     sub_id=new_sub.id,
                 )
                 saved_storage_keys.append(storage_key)
@@ -624,7 +658,7 @@ def edit_sub(id):
                 continue
 
             try:
-                original_name = secure_filename(file.filename)
+                original_name = file.filename
 
                 doc_type = (
                     request.form.get("doc_type")
@@ -647,11 +681,9 @@ def edit_sub(id):
                     else 1
                 )
 
-                unique_name = f"{uuid.uuid4().hex}_{original_name}"
-
                 storage_key = save_document_file(
                     file,
-                    unique_name,
+                    original_name,
                     sub_id=sub.id,
                 )
                 saved_storage_keys.append(storage_key)

@@ -2,7 +2,10 @@ import logging
 
 from datetime import UTC, date, datetime
 
-from app.services.compliance_evidence_service import collect_coi_evidence
+from app.services.compliance_evidence_service import (
+    collect_coi_evidence,
+    normalize_coverage_amount,
+)
 from app.services.compliance_profiles import (
     SATISFIED,
     evaluate_profile_requirements,
@@ -130,6 +133,12 @@ def _log_coi_evidence_selection(coi_evidence, manual_expiration):
             "Readiness using validated AI evidence document_id=%s",
             validated_evidence[0].document_id,
         )
+        logger.info(
+            "Readiness COI expiration source=document_intelligence document_id=%s expiration=%s manual_expiration=%s",
+            validated_evidence[0].document_id,
+            validated_evidence[0].value.get("expiration_date"),
+            manual_expiration,
+        )
 
         if manual_expiration:
             logger.debug("Manual value used")
@@ -150,6 +159,10 @@ def _log_coi_evidence_selection(coi_evidence, manual_expiration):
 
     if manual_expiration:
         logger.debug("Readiness falling back to manual COI")
+        logger.info(
+            "Readiness COI expiration source=manual expiration=%s",
+            manual_expiration,
+        )
 
 
 def _append_coverage_reasons(
@@ -180,6 +193,12 @@ def _append_coverage_reasons(
     coverage_limit = _resolve_coverage_limit(
         coi_evidence,
         manual_coverage,
+    )
+    logger.info(
+        "Readiness coverage calculation required_coverage=%s manual_coverage=%s current_coverage=%s",
+        required_coverage,
+        manual_coverage,
+        coverage_limit,
     )
 
     if coverage_limit is None:
@@ -285,15 +304,4 @@ def _as_date(value):
 
 
 def _usable_number(value):
-    if value is None:
-        return None
-
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-
-    if number <= 0:
-        return None
-
-    return number
+    return normalize_coverage_amount(value)

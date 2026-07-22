@@ -109,7 +109,7 @@ class DemoProjectGeneratorTest(unittest.TestCase):
             seed=123,
             populate=True,
         )
-        self.assertEqual(len(result["subcontractors"]), 8)
+        self.assertEqual(len(result["subcontractors"]), 10)
 
         with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
             for subcontractor in result["subcontractors"]:
@@ -125,7 +125,7 @@ class DemoProjectGeneratorTest(unittest.TestCase):
                 self.assertTrue(analysis["success"])
                 self.assertIn("expiration_date", analysis["extracted_data"])
 
-    def test_environment_generates_five_projects_and_forty_subcontractors(self):
+    def test_environment_generates_five_projects_and_fifty_subcontractors(self):
         result = generate_demo_environment(
             output=self.output.name,
             seed=123,
@@ -147,12 +147,12 @@ class DemoProjectGeneratorTest(unittest.TestCase):
             for subcontractor in project["subcontractors"]
         )
 
-        self.assertEqual(subcontractor_count, 40)
+        self.assertEqual(subcontractor_count, 50)
         self.assertEqual(project_document_count, 50)
-        self.assertEqual(subcontractor_document_count, 400)
+        self.assertEqual(subcontractor_document_count, 500)
         self.assertEqual(
             result["statistics"],
-            {"READY": 20, "PENDING": 10, "BLOCKED": 10},
+            {"READY": 30, "PENDING": 10, "BLOCKED": 10},
         )
         self.assertTrue(result["manifest_path"].exists())
 
@@ -281,9 +281,9 @@ class DemoProjectGeneratorTest(unittest.TestCase):
                 )
 
                 self.assertEqual(Project.query.count(), 1)
-                self.assertEqual(Subcontractor.query.count(), 8)
-                self.assertEqual(ProjectSubcontractor.query.count(), 8)
-                self.assertEqual(Document.query.count(), 90)
+                self.assertEqual(Subcontractor.query.count(), 10)
+                self.assertEqual(ProjectSubcontractor.query.count(), 10)
+                self.assertEqual(Document.query.count(), 110)
 
                 db.session.remove()
                 db.drop_all()

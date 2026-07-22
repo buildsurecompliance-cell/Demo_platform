@@ -1,5 +1,3 @@
-import uuid
-
 from collections import defaultdict
 from datetime import datetime
 import logging
@@ -24,8 +22,6 @@ from flask_login import (
 )
 
 from sqlalchemy.orm import joinedload
-
-from werkzeug.utils import secure_filename
 
 from app.extensions import db
 
@@ -53,6 +49,9 @@ from app.services.documents.types import (
 )
 from app.services.compliance_officer import (
     generate_compliance_advice,
+)
+from app.services.compliance_evidence_service import (
+    collect_coi_evidence,
 )
 from app.services.organizations import (
     get_current_organization,
@@ -293,7 +292,9 @@ def _project_subcontractor_view_model(project_subcontractor):
         advice_available = False
         advice = _fallback_compliance_advice(project_subcontractor)
 
-    current_coverage = project_subcontractor.coverage_limit
+    current_coverage = _active_coverage_for_project_subcontractor(
+        project_subcontractor
+    )
     required_coverage = getattr(
         project_subcontractor.project,
         "required_coverage",
@@ -348,6 +349,37 @@ def _fallback_compliance_advice(project_subcontractor):
         summary="Compliance advice unavailable.",
         actions=(),
     )
+
+
+def _active_coverage_for_project_subcontractor(project_subcontractor):
+    subcontractor = getattr(
+        project_subcontractor,
+        "subcontractor",
+        None,
+    )
+
+    if subcontractor:
+        validated_evidence = [
+            item
+            for item in collect_coi_evidence(subcontractor)
+            if item.validated
+        ]
+
+        if validated_evidence:
+            coverage = validated_evidence[0].value.get("coverage")
+
+            if coverage:
+                manual_coverage = project_subcontractor.coverage_limit
+
+                if manual_coverage:
+                    return min(
+                        float(coverage),
+                        float(manual_coverage),
+                    )
+
+                return coverage
+
+    return project_subcontractor.coverage_limit
 
 
 def _project_summary_view_model(project):
@@ -599,12 +631,10 @@ def add_project():
 
             try:
                 original_name = file.filename
-                safe_name = secure_filename(original_name)
-                unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
                 storage_key = save_document_file(
                     file,
-                    unique_name,
+                    original_name,
                     project_id=project.id,
                 )
                 saved_storage_keys.append(storage_key)
@@ -788,12 +818,10 @@ def edit_project(project_id):
             if allowed_file(file.filename):
 
                 original_name = file.filename
-                safe_name = secure_filename(original_name)
-                unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
                 storage_key = save_document_file(
                     file,
-                    unique_name,
+                    original_name,
                     project_id=project.id,
                 )
                 saved_storage_keys.append(storage_key)
@@ -992,13 +1020,11 @@ def upload_project_document(project_id):
     )
 
     original_name = file.filename
-    safe_name = secure_filename(original_name)
-    unique_name = f"{uuid.uuid4().hex}_{safe_name}"
 
     try:
         storage_key = save_document_file(
             file,
-            unique_name,
+            original_name,
             project_id=project.id,
         )
     except Exception as e:

@@ -11,6 +11,10 @@
 <div>
 <h1>{{ sub.name }} Documents</h1>
 <p class="ux-help mb-0">
+Contact:
+{{ sub.email or "No email" }}{% if sub.phone %} - {{ sub.phone }}{% else %} - No phone{% endif %}
+</p>
+<p class="ux-help mb-0">
 COI Expiration:
 {% if sub.coi_expiration %}
 {{ sub.coi_expiration.strftime("%m/%d/%Y") }}

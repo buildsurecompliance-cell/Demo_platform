@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import types
 import unittest
@@ -153,13 +154,13 @@ class DocumentStorageTest(unittest.TestCase):
             self.assertEqual(stored_file.read(), b"first")
 
     def test_storage_key_uses_project_and_subcontractor_prefixes(self):
-        self.assertEqual(
+        self.assertRegex(
             build_document_storage_key("Contract.pdf", project_id=3),
-            "projects/3/Contract.pdf",
+            r"^projects/3/[a-f0-9]{32}\.pdf$",
         )
-        self.assertEqual(
+        self.assertRegex(
             build_document_storage_key("COI.pdf", sub_id=9),
-            "subcontractors/9/COI.pdf",
+            r"^subcontractors/9/[a-f0-9]{32}\.pdf$",
         )
 
     def test_storage_key_sanitizes_unusual_filenames(self):
@@ -174,9 +175,9 @@ class DocumentStorageTest(unittest.TestCase):
 
         for raw_name, expected_name in cases:
             with self.subTest(raw_name=raw_name):
-                self.assertEqual(
+                self.assertRegex(
                     build_document_storage_key(raw_name, project_id=1),
-                    f"projects/1/{expected_name}",
+                    r"^projects/1/[a-f0-9]{32}\.pdf$",
                 )
 
     def test_storage_key_rejects_empty_or_invalid_filename(self):
@@ -203,8 +204,7 @@ class DocumentStorageTest(unittest.TestCase):
         )
 
         filename = storage_key.rsplit("/", 1)[-1]
-        self.assertLessEqual(len(filename), 180)
-        self.assertTrue(filename.endswith(".pdf"))
+        self.assertRegex(filename, r"^[a-f0-9]{32}\.pdf$")
 
     def test_unknown_backend_fails_clearly(self):
         self.app.config["STORAGE_BACKEND"] = "mystery"
@@ -213,21 +213,53 @@ class DocumentStorageTest(unittest.TestCase):
             get_document_storage()
 
     def test_document_legacy_project_path_is_found(self):
-        legacy_folder = os.path.join(self.uploads.name, "project_7")
-        os.makedirs(legacy_folder, exist_ok=True)
-
-        with open(os.path.join(legacy_folder, "legacy.pdf"), "wb") as file:
-            file.write(b"legacy")
-
         doc = Document(
             filename="legacy.pdf",
             original_name="legacy.pdf",
             document_type="Contract",
             project_id=7,
         )
+        storage = Mock()
+        storage.exists.side_effect = lambda key: key == "project_7/legacy.pdf"
 
         self.assertIn("project_7/legacy.pdf", document_storage_keys(doc))
-        self.assertEqual(resolve_document_storage_key(doc), "project_7/legacy.pdf")
+        with patch(
+            "app.services.documents.storage.get_document_storage",
+            return_value=storage,
+        ):
+            with patch.object(self.app.logger, "warning") as warning:
+                self.assertEqual(
+                    resolve_document_storage_key(doc),
+                    "project_7/legacy.pdf",
+                )
+
+        warning.assert_called_once()
+        self.assertIn("legacy storage fallback", warning.call_args.args[0])
+
+    def test_exact_filename_is_preferred_over_legacy_fallback(self):
+        os.makedirs(
+            os.path.join(self.uploads.name, "subcontractors", "4"),
+            exist_ok=True,
+        )
+        with open(
+            os.path.join(self.uploads.name, "subcontractors", "4", "current.pdf"),
+            "wb",
+        ) as file:
+            file.write(b"current")
+        with open(os.path.join(self.uploads.name, "current.pdf"), "wb") as file:
+            file.write(b"legacy")
+
+        doc = Document(
+            filename="subcontractors/4/current.pdf",
+            original_name="current.pdf",
+            document_type="COI",
+            sub_id=4,
+        )
+
+        self.assertEqual(
+            resolve_document_storage_key(doc),
+            "subcontractors/4/current.pdf",
+        )
 
     def test_document_legacy_root_path_is_found(self):
         with open(os.path.join(self.uploads.name, "legacy.pdf"), "wb") as file:
@@ -242,7 +274,7 @@ class DocumentStorageTest(unittest.TestCase):
 
         self.assertEqual(resolve_document_storage_key(doc), "legacy.pdf")
 
-    def test_legacy_resolution_is_deterministic_and_prefers_entity_key(self):
+    def test_resolution_prefers_exact_filename_before_legacy_candidates(self):
         os.makedirs(
             os.path.join(self.uploads.name, "projects", "7"),
             exist_ok=True,
@@ -268,7 +300,7 @@ class DocumentStorageTest(unittest.TestCase):
             file.write(b"legacy-root")
 
         project_doc = Document(
-            filename="same.pdf",
+            filename="projects/7/same.pdf",
             original_name="same.pdf",
             document_type="Contract",
             project_id=7,
@@ -286,21 +318,34 @@ class DocumentStorageTest(unittest.TestCase):
         )
         self.assertEqual(resolve_document_storage_key(sub_doc), "same.pdf")
 
-    def test_save_document_file_returns_stable_project_key(self):
+    def test_save_document_file_returns_unique_project_key(self):
         storage_key = save_document_file(
             self.file(b"project"),
             "abc_contract.pdf",
             project_id=5,
         )
+        second_key = save_document_file(
+            self.file(b"other"),
+            "abc_contract.pdf",
+            project_id=5,
+        )
 
-        self.assertEqual(storage_key, "projects/5/abc_contract.pdf")
+        self.assertNotEqual(storage_key, second_key)
+        self.assertRegex(storage_key, r"^projects/5/[a-f0-9]{32}\.pdf$")
+        self.assertRegex(second_key, r"^projects/5/[a-f0-9]{32}\.pdf$")
         self.assertTrue(
             os.path.exists(
                 os.path.join(
                     self.uploads.name,
-                    "projects",
-                    "5",
-                    "abc_contract.pdf",
+                    *storage_key.split("/"),
+                )
+            )
+        )
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    self.uploads.name,
+                    *second_key.split("/"),
                 )
             )
         )

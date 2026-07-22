@@ -26,6 +26,12 @@ from app.services.documents.storage import (
     document_exists,
     get_document_response,
 )
+from app.services.document_analysis_service import (
+    refresh_subcontractor_coi_from_evidence,
+)
+from app.services.compliance_evidence_service import (
+    coi_evidence_from_document,
+)
 from app.services.organizations import (
     project_scope_filter,
     subcontractor_scope_filter,
@@ -190,10 +196,26 @@ def delete_document(doc_id):
         )
 
     try:
+        removed_expiration = None
+        removed_sub_id = doc.sub_id
+
+        if removed_sub_id:
+            evidence = coi_evidence_from_document(doc)
+
+            if evidence.validated:
+                removed_expiration = evidence.value.get("expiration_date")
 
         delete_document_file(doc)
 
         db.session.delete(doc)
+        db.session.flush()
+
+        if removed_sub_id:
+            refresh_subcontractor_coi_from_evidence(
+                removed_sub_id,
+                removed_expiration=removed_expiration,
+            )
+
         db.session.commit()
 
         flash(

@@ -474,9 +474,9 @@ class DatabaseMigrationTest(unittest.TestCase):
                     )
 
                     self.assertEqual(Project.query.count(), 5)
-                    self.assertEqual(Subcontractor.query.count(), 40)
-                    self.assertEqual(ProjectSubcontractor.query.count(), 40)
-                    self.assertEqual(Document.query.count(), 450)
+                    self.assertEqual(Subcontractor.query.count(), 50)
+                    self.assertEqual(ProjectSubcontractor.query.count(), 50)
+                    self.assertEqual(Document.query.count(), 550)
                     self.assertEqual(
                         Project.query.filter_by(
                             organization_id=organization.id,

@@ -1,4 +1,8 @@
 from app.services.document_intelligence import DocumentIntelligenceResult
+from app.services.compliance_evidence_service import (
+    extract_coi_coverage,
+    extract_coi_expiration_date,
+)
 
 
 def validate_coi_data(data):
@@ -7,11 +11,11 @@ def validate_coi_data(data):
     warnings = []
     score = 100
 
-    if not data.get("expiration_date"):
+    if not extract_coi_expiration_date(data):
         issues.append({"field": "expiration_date", "message": "Expiration date missing."})
         score -= 25
 
-    if not data.get("general_liability_limit"):
+    if extract_coi_coverage(data) is None:
         issues.append({"field": "general_liability_limit", "message": "General Liability missing."})
         score -= 25
 

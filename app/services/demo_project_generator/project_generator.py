@@ -21,35 +21,41 @@ from app.services.documents.storage import save_document_file
 
 SUBCONTRACTOR_PRESETS = (
     ("apex-concrete", "ready"),
-    ("skyline-steel", "pending"),
-    ("volt-electrical", "ready"),
-    ("elite-mechanical", "blocked"),
-    ("precision-fire", "ready"),
-    ("titan-drywall", "pending"),
-    ("metro-roofing", "blocked"),
-    ("diamond-flooring", "ready"),
+    ("titan-electrical", "ready"),
+    ("precision-plumbing", "ready"),
+    ("peak-mechanical", "ready"),
+    ("elite-flooring", "ready"),
+    ("vertex-glass", "ready"),
+    ("guardian-fire", "pending"),
+    ("blue-sky-roofing", "pending"),
+    ("ironworks-steel", "blocked"),
+    ("summit-drywall", "blocked"),
 )
 
 SUBCONTRACTOR_NAMES = {
     "apex-concrete": "Apex Concrete LLC",
-    "skyline-steel": "Skyline Steel LLC",
-    "volt-electrical": "Volt Electrical LLC",
-    "elite-mechanical": "Elite Mechanical LLC",
-    "precision-fire": "Precision Fire Protection LLC",
-    "titan-drywall": "Titan Drywall LLC",
-    "metro-roofing": "Metro Roofing LLC",
-    "diamond-flooring": "Diamond Flooring LLC",
+    "titan-electrical": "Titan Electrical LLC",
+    "precision-plumbing": "Precision Plumbing LLC",
+    "peak-mechanical": "Peak Mechanical LLC",
+    "elite-flooring": "Elite Flooring LLC",
+    "vertex-glass": "Vertex Glass LLC",
+    "guardian-fire": "Guardian Fire LLC",
+    "blue-sky-roofing": "Blue Sky Roofing LLC",
+    "ironworks-steel": "IronWorks Steel LLC",
+    "summit-drywall": "Summit Drywall LLC",
 }
 
 SUBCONTRACTOR_TRADES = {
-    "apex-concrete": "Concrete",
-    "skyline-steel": "Structural Steel",
-    "volt-electrical": "Electrical",
-    "elite-mechanical": "Mechanical",
-    "precision-fire": "Fire Protection",
-    "titan-drywall": "Drywall",
-    "metro-roofing": "Roofing",
-    "diamond-flooring": "Flooring",
+    "apex-concrete": "Concrete Contractor",
+    "titan-electrical": "Electrical Contractor",
+    "precision-plumbing": "Plumbing Contractor",
+    "peak-mechanical": "HVAC / Mechanical Contractor",
+    "elite-flooring": "Flooring Contractor",
+    "vertex-glass": "Glass & Glazing Contractor",
+    "guardian-fire": "Fire Protection Contractor",
+    "blue-sky-roofing": "Roofing Contractor",
+    "ironworks-steel": "Structural Steel Contractor",
+    "summit-drywall": "Drywall Contractor",
 }
 
 

@@ -25,6 +25,10 @@ from app.services.document_intelligence.validators import (
     validate_safety_training_data,
     validate_w9_data,
 )
+from app.services.compliance_evidence_service import (
+    normalize_coi_expiration_date,
+    normalize_coverage_amount,
+)
 from app.services.projects.contract_autofill_service import (
     normalize_contract_extraction,
 )
@@ -37,25 +41,8 @@ def get_mock_data_for_document(category):
 
     mock_data = {
         "coi": {
-            "document_type": "Certificate of Insurance",
-            "named_insured": "ABC Flooring LLC",
-            "insurance_carrier": "Sample Insurance Carrier",
-            "producer": "Sample Insurance Agency",
-            "policy_number": "GL-123456",
-            "effective_date": "2026-01-01",
-            "expiration_date": "2029-01-01",
-            "general_liability_limit": "1000000",
-            "auto_liability_limit": "1000000",
-            "workers_compensation": True,
-            "umbrella_limit": "0",
-            "additional_insured": True,
-            "waiver_of_subrogation": True,
-            "primary_non_contributory": False,
-            "confidence": 0.92,
-            "missing_fields": [
-                "primary_non_contributory",
-            ],
-            "notes": "Mock COI data used for development testing.",
+            "confidence": 0.0,
+            "notes": "COI mock data must be parsed from a supplied document.",
         },
         "w9": {
             "legal_name": "ABC Flooring LLC",
@@ -497,6 +484,467 @@ def _parse_contract_in_mock_mode(file_path):
     }
 
 
+def _date_pattern():
+    return (
+        r"([0-9]{4}-[0-9]{2}-[0-9]{2}|"
+        r"[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|"
+        r"[A-Za-z]+\s+\d{1,2},\s+\d{4}|"
+        r"[A-Za-z]{3}\s+\d{1,2},\s+\d{4})"
+    )
+
+
+def _normalize_coi_mock_date(value):
+    normalized = normalize_coi_expiration_date(value)
+
+    if normalized:
+        return normalized.isoformat()
+
+    return None
+
+
+def _extract_labeled_date(text, labels):
+    date_value = _date_pattern()
+
+    for label in labels:
+        match = re.search(
+            rf"\b{label}\b\s*[:#\-]?\s*{date_value}",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        if match:
+            return _normalize_coi_mock_date(match.group(1))
+
+    return None
+
+
+def _amount_regex():
+    return (
+        r"(?:USD\s*)?\$?\s*\d+(?:[\s,.\d]*\d)?"
+        r"(?:\s*(?:m|million))?"
+    )
+
+
+def _extract_labeled_value(text, labels):
+    for label in labels:
+        match = re.search(
+            rf"\b{label}\b\s*[:#\-]?\s*([^\n\r]+)",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        if match:
+            value = match.group(1).strip()
+
+            if value:
+                return value
+
+    return None
+
+
+def _extract_general_liability_each_occurrence(text):
+    lines = _lines(text)
+    stop_headings = (
+        "automobile liability",
+        "auto liability",
+        "workers compensation",
+        "workers' compensation",
+        "umbrella liability",
+        "excess liability",
+    )
+
+    for index, line in enumerate(lines):
+        normalized_line = line.lower()
+
+        if (
+            "commercial general liability" not in normalized_line
+            and "general liability" not in normalized_line
+            and "cgl" not in normalized_line
+        ):
+            continue
+
+        block = []
+
+        for candidate in lines[index:index + 8]:
+            candidate_lower = candidate.lower()
+
+            if block and any(
+                heading in candidate_lower
+                for heading in stop_headings
+            ):
+                break
+
+            block.append(candidate)
+
+        block_text = "\n".join(block)
+
+        match = re.search(
+            rf"each\s+occurrence\s*[:#\-]?\s*({_amount_regex()})",
+            block_text,
+            flags=re.IGNORECASE,
+        )
+
+        if not match:
+            match = re.search(
+                rf"({_amount_regex()})\s*(?:per\s+)?each\s+occurrence",
+                block_text,
+                flags=re.IGNORECASE,
+            )
+
+        if match:
+            amount = normalize_coverage_amount(match.group(1))
+
+            if amount:
+                return str(int(amount))
+
+    return None
+
+
+def _extract_trade(text):
+    labels = (
+        r"trade\s*/\s*operations",
+        r"description\s+of\s+operations",
+        r"type\s+of\s+work",
+        r"scope\s+of\s+work",
+        r"scope\s+of\s+operations",
+    )
+
+    trade = _extract_labeled_value(text, labels)
+
+    if not trade:
+        return None
+
+    trade = re.sub(
+        r"\s+",
+        " ",
+        trade,
+    ).strip(" .;")
+
+    return trade or None
+
+
+def _is_forbidden_contact_context(value):
+    normalized = value.lower()
+
+    return any(
+        marker in normalized
+        for marker in (
+            "producer",
+            "broker",
+            "agency",
+            "agent",
+            "carrier",
+            "insurer",
+            "insurance company",
+            "certificate holder",
+        )
+    )
+
+
+def _is_subcontractor_contact_context(value):
+    normalized = value.lower()
+
+    return any(
+        marker in normalized
+        for marker in (
+            "subcontractor",
+            "insured",
+            "named insured",
+            "contact",
+        )
+    )
+
+
+def _normalize_extracted_email(value):
+    if not value:
+        return None
+
+    match = re.search(
+        r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}",
+        str(value),
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    email = match.group(0).strip().strip(".,;:").lower()
+
+    if not re.fullmatch(
+        r"[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}",
+        email,
+    ):
+        return None
+
+    return email
+
+
+def _normalize_extracted_phone(value):
+    if not value:
+        return None
+
+    text = re.sub(
+        r"(?:ext\.?|extension|x)\s*\d+\b",
+        "",
+        str(value),
+        flags=re.IGNORECASE,
+    ).strip()
+    has_plus = text.startswith("+")
+    digits = re.sub(r"\D", "", text)
+
+    if len(digits) == 10:
+        return f"+1{digits}"
+
+    if len(digits) == 11 and digits.startswith("1"):
+        return f"+{digits}"
+
+    if has_plus and len(digits) >= 11:
+        return f"+{digits}"
+
+    return None
+
+
+def _context_before_position(text, position, line_count=3):
+    prefix = text[:position]
+    lines = _lines(prefix)
+
+    return " ".join(lines[-line_count:])
+
+
+def _extract_contact_email(text):
+    allowed_labels = (
+        r"subcontractor\s+email",
+        r"insured\s+email",
+        r"contact\s+email",
+        r"e-?mail",
+    )
+
+    for label in allowed_labels:
+        for match in re.finditer(
+            rf"\b{label}\b\s*[:#\-]?\s*([^\n\r]+)",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        ):
+            context = " ".join(
+                (
+                    _context_before_position(text, match.start()),
+                    match.group(0),
+                )
+            )
+
+            if _is_forbidden_contact_context(context):
+                continue
+
+            email = _normalize_extracted_email(match.group(1))
+
+            if email:
+                return email
+
+    lines = _lines(text)
+
+    for index, line in enumerate(lines):
+        email = _normalize_extracted_email(line)
+
+        if not email:
+            continue
+
+        context = " ".join(lines[max(0, index - 3):index + 1])
+
+        if _is_forbidden_contact_context(context):
+            continue
+
+        if _is_subcontractor_contact_context(context):
+            return email
+
+    return None
+
+
+def _extract_contact_phone(text):
+    phone_value = (
+        r"(\+?1?[\s.\-]*(?:\([0-9]{3}\)|[0-9]{3})"
+        r"[\s.\-]*[0-9]{3}[\s.\-]*[0-9]{4})"
+    )
+    allowed_labels = (
+        r"subcontractor\s+phone",
+        r"insured\s+phone",
+        r"contact\s+phone",
+        r"phone\s+number",
+        r"telephone",
+        r"phone",
+        r"tel",
+    )
+
+    for label in allowed_labels:
+        for match in re.finditer(
+            rf"\b{label}\b\s*[:#\-]?\s*{phone_value}",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        ):
+            context = " ".join(
+                (
+                    _context_before_position(text, match.start()),
+                    match.group(0),
+                )
+            )
+
+            if _is_forbidden_contact_context(context):
+                continue
+
+            phone = _normalize_extracted_phone(match.group(1))
+
+            if phone:
+                return phone
+
+    lines = _lines(text)
+
+    for index, line in enumerate(lines):
+        match = re.search(phone_value, line, flags=re.IGNORECASE)
+
+        if not match:
+            continue
+
+        context = " ".join(lines[max(0, index - 3):index + 1])
+
+        if _is_forbidden_contact_context(context):
+            continue
+
+        if _is_subcontractor_contact_context(context):
+            phone = _normalize_extracted_phone(match.group(1))
+
+            if phone:
+                return phone
+
+    return None
+
+
+def _extract_coi_data_from_text(text):
+    expiration_date = _extract_labeled_date(
+        text,
+        (
+            r"policy\s+exp(?:iration)?(?:\s+date)?",
+            r"policy\s+expires",
+            r"policy\s+end\s+date",
+            r"expiration\s+date",
+        ),
+    )
+    effective_date = _extract_labeled_date(
+        text,
+        (
+            r"policy\s+eff(?:ective)?(?:\s+date)?",
+            r"effective\s+date",
+        ),
+    )
+    general_liability = _extract_general_liability_each_occurrence(text)
+    trade = _extract_trade(text)
+    email = _extract_contact_email(text)
+    phone = _extract_contact_phone(text)
+    policy_number = _extract_labeled_value(
+        text,
+        (
+            r"policy\s+number",
+            r"policy\s+#",
+            r"policy\s+no\.?",
+        ),
+    )
+    insurance_carrier = _extract_labeled_value(
+        text,
+        (
+            r"carrier",
+            r"insurer",
+            r"insurance\s+carrier",
+        ),
+    )
+    producer = _extract_labeled_value(
+        text,
+        (
+            r"producer",
+            r"agency",
+        ),
+    )
+    named_insured = _extract_labeled_value(
+        text,
+        (
+            r"named\s+insured",
+            r"insured",
+        ),
+    )
+    workers_compensation = bool(
+        re.search(
+            r"workers'?[\s-]+comp(?:ensation)?",
+            text,
+            flags=re.IGNORECASE,
+        )
+    )
+
+    if not expiration_date and not general_liability:
+        return None
+
+    confidence = 0.92 if expiration_date and general_liability else 0.6
+
+    return {
+        "document_type": "Certificate of Insurance",
+        "named_insured": named_insured,
+        "insurance_carrier": insurance_carrier,
+        "producer": producer,
+        "policy_number": policy_number,
+        "effective_date": effective_date,
+        "expiration_date": expiration_date,
+        "general_liability_limit": general_liability,
+        "auto_liability_limit": None,
+        "workers_compensation": workers_compensation,
+        "umbrella_limit": None,
+        "additional_insured": False,
+        "waiver_of_subrogation": False,
+        "primary_non_contributory": False,
+        "trade": trade,
+        "email": email,
+        "phone": phone,
+        "confidence": confidence,
+        "missing_fields": [],
+        "notes": "Mock COI data parsed from supplied document text.",
+    }
+
+
+def _parse_coi_in_mock_mode(file_path):
+    try:
+        file_bytes = _read_document_bytes(file_path)
+    except OSError as error:
+        return {
+            "success": False,
+            "error": f"Document file could not be read: {error.__class__.__name__}",
+            "data": None,
+            "document_hash": None,
+        }
+
+    document_hash = _document_hash(file_bytes)
+    text = _decode_document_text(file_bytes)
+
+    if not _has_usable_text(text):
+        return {
+            "success": False,
+            "error": "Document text could not be extracted.",
+            "data": None,
+            "document_hash": document_hash,
+        }
+
+    extracted_data = _extract_coi_data_from_text(text)
+
+    if not extracted_data:
+        return {
+            "success": False,
+            "error": "COI fields could not be extracted from the document.",
+            "data": None,
+            "document_hash": document_hash,
+        }
+
+    return {
+        "success": True,
+        "error": None,
+        "data": extracted_data,
+        "document_hash": document_hash,
+    }
+
+
 def validate_by_category(category, extracted_data):
     if category == "contract":
         return validate_contract_data(extracted_data)
@@ -547,10 +995,15 @@ def analyze_document_intelligence(
 
     document_hash = None
 
-    if mock_mode and category == "contract":
-        parse_result = _parse_contract_in_mock_mode(
-            file_path
-        )
+    if mock_mode and category in {"contract", "coi"}:
+        if category == "contract":
+            parse_result = _parse_contract_in_mock_mode(
+                file_path
+            )
+        else:
+            parse_result = _parse_coi_in_mock_mode(
+                file_path
+            )
 
         document_hash = parse_result.get(
             "document_hash"
@@ -558,7 +1011,8 @@ def analyze_document_intelligence(
 
         if not parse_result["success"]:
             logger.info(
-                "Document intelligence contract mock extraction failed file_hash=%s reason=%s",
+                "Document intelligence mock extraction failed category=%s file_hash=%s reason=%s",
+                category,
                 document_hash[:12] if document_hash else None,
                 parse_result["error"],
             )

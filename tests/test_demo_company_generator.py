@@ -99,7 +99,10 @@ class DemoCompanyGeneratorTest(unittest.TestCase):
             company_data["company"]["legal_name"],
             "Apex Concrete LLC",
         )
-        self.assertEqual(company_data["company"]["trade"], "Concrete")
+        self.assertEqual(
+            company_data["company"]["trade"],
+            "Concrete Contractor",
+        )
         self.assertEqual(company_data["company"]["city"], "Dallas")
         self.assertEqual(company_data["company"]["state"], "TX")
         self.assertEqual(company_data["company"]["ein"][-4:], "1857")

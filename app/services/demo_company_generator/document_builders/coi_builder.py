@@ -22,6 +22,8 @@ def build_coi(company, scenario, output_dir):
         "general_liability_limit": policy.general_liability_each_occurrence,
         "insurance_carrier": policy.carrier_name,
         "policy_number": policy.policy_number,
+        "email": company.email,
+        "phone": company.phone,
         "additional_insured": policy.additional_insured,
         "waiver_of_subrogation": policy.waiver_of_subrogation,
     }
@@ -36,8 +38,11 @@ def build_coi(company, scenario, output_dir):
                 ("Insured", f"{company.legal_name}<br/>{company.address.single_line}"),
                 ("Insurers Affording Coverage", policy.carrier_name),
                 ("Policy Number", policy.policy_number),
-                ("Effective Date", format_date(policy.effective_date)),
-                ("Expiration Date", format_date(policy.expiration_date)),
+                ("Policy EFF", format_date(policy.effective_date)),
+                ("Policy EXP", format_date(policy.expiration_date)),
+                ("TRADE / OPERATIONS", company.trade),
+                ("SUBCONTRACTOR EMAIL", company.email),
+                ("SUBCONTRACTOR PHONE", company.phone),
             ]
         ),
         section("Coverage Summary"),
@@ -72,7 +77,8 @@ def build_coi(company, scenario, output_dir):
         ),
         section("Description of Operations"),
         body(
-            "Concrete mobilization, layout coordination, foundations, slab-on-grade, "
+            f"{company.trade} operations including mobilization, layout coordination, "
+            "foundations, slab-on-grade, "
             "equipment pads, curbs, housekeeping pads, placement, finishing and cleanup "
             "for Summit Distribution Center. Certificate holder is included as additional "
             "insured where required by written contract."

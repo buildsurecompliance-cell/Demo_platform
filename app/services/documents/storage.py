@@ -1,5 +1,6 @@
 import os
 import tempfile
+import uuid
 from contextlib import contextmanager
 from mimetypes import guess_type
 from pathlib import PurePosixPath
@@ -347,21 +348,18 @@ def build_document_storage_key(filename, project_id=None, sub_id=None):
     if not safe_name:
         raise ValueError("Document filename is required.")
 
-    max_filename_length = 180
-    if len(safe_name) > max_filename_length:
-        root, extension = os.path.splitext(safe_name)
-        extension = extension[:20]
-        safe_name = f"{root[:max_filename_length - len(extension)]}{extension}"
+    extension = os.path.splitext(safe_name)[1].lower()[:20]
+    storage_name = f"{uuid.uuid4().hex}{extension}"
 
     if project_id is not None:
         project_id = _positive_int(project_id, "project_id")
-        return normalize_storage_key(f"projects/{project_id}/{safe_name}")
+        return normalize_storage_key(f"projects/{project_id}/{storage_name}")
 
     if sub_id is not None:
         sub_id = _positive_int(sub_id, "sub_id")
-        return normalize_storage_key(f"subcontractors/{sub_id}/{safe_name}")
+        return normalize_storage_key(f"subcontractors/{sub_id}/{storage_name}")
 
-    return normalize_storage_key(safe_name)
+    return normalize_storage_key(storage_name)
 
 
 def _positive_int(value, field_name):
@@ -413,8 +411,7 @@ def document_storage_keys(doc):
         if key not in candidates:
             candidates.append(key)
 
-    if "/" in filename or "\\" in filename:
-        add_candidate(filename)
+    add_candidate(filename)
 
     if doc.project_id and basename:
         add_candidate(f"projects/{doc.project_id}/{basename}")
@@ -433,8 +430,16 @@ def resolve_document_storage_key(doc):
     storage = get_document_storage()
     candidates = document_storage_keys(doc)
 
-    for key in candidates:
+    for index, key in enumerate(candidates):
         if storage.exists(key):
+            if index > 0:
+                current_app.logger.warning(
+                    "Document legacy storage fallback used document_id=%s filename=%s selected_key=%s candidates=%s",
+                    getattr(doc, "id", None),
+                    getattr(doc, "filename", None),
+                    key,
+                    candidates,
+                )
             return key
 
     return candidates[0] if candidates else None

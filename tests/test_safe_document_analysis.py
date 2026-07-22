@@ -1,10 +1,14 @@
 import os
 import re
+import tempfile
 import unittest
 
 from contextlib import contextmanager
 from datetime import date, timedelta
+from io import BytesIO
 from unittest.mock import patch
+
+from werkzeug.datastructures import FileStorage
 
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -15,24 +19,40 @@ from app.config import TestingConfig
 from app.extensions import db
 from app.models import Document, Project, ProjectSubcontractor, Subcontractor, User
 from app.services.document_analysis_service import analyze_and_save_document
+from app.services.document_analysis_service import (
+    _get_extracted_email,
+    _get_extracted_phone,
+)
+from app.services.compliance_evidence_service import coi_evidence_from_document
 from app.services.document_intelligence.engine import analyze_document_intelligence
+from app.services.documents.storage import save_document_file
 from app.services.organizations import create_default_organization_for_user
-from app.services.readiness_service import READY, calculate_readiness
+from app.services.readiness_service import BLOCKED, READY, calculate_readiness
 
 
 @contextmanager
 def temporary_analysis_path(_document):
-    yield "coi.pdf"
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    temp_file.write(b"mock analysis file")
+    temp_file.close()
+
+    try:
+        yield temp_file.name
+    finally:
+        os.unlink(temp_file.name)
 
 
 class SafeDocumentAnalysisTest(unittest.TestCase):
 
     def setUp(self):
+        self.uploads = tempfile.TemporaryDirectory()
         self.app = create_app(TestingConfig)
         self.app.config.update(
             TESTING=True,
             WTF_CSRF_ENABLED=True,
             PROPAGATE_EXCEPTIONS=False,
+            STORAGE_BACKEND="local",
+            UPLOAD_FOLDER=self.uploads.name,
         )
         self.client = self.app.test_client()
 
@@ -61,6 +81,7 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             db.session.remove()
             db.drop_all()
             db.engine.dispose()
+        self.uploads.cleanup()
 
     def csrf_token(self, path="/login"):
         response = self.client.get(path)
@@ -75,6 +96,19 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         with self.client.session_transaction() as session:
             session["_user_id"] = str(user_id)
             session["_fresh"] = True
+
+    def _write_temp_document(self, content):
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        temp_file.write(content)
+        temp_file.close()
+        return temp_file.name
+
+    def _file_storage(self, content, filename="Certificate_of_Insurance.pdf"):
+        return FileStorage(
+            stream=BytesIO(content),
+            filename=filename,
+            content_type="application/pdf",
+        )
 
     def make_sub_document(self, user_id=None, ai_status="not_analyzed"):
         user_id = user_id or self.user_id
@@ -146,6 +180,9 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         confidence=0.92,
         issues=None,
         status="Ready",
+        email=None,
+        phone=None,
+        trade=None,
     ):
         expiration_date = expiration_date or (
             date.today() + timedelta(days=60)
@@ -157,6 +194,12 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             "policy_number": "POL-123",
             "confidence": confidence,
         }
+        if email is not None:
+            extracted_data["email"] = email
+        if phone is not None:
+            extracted_data["phone"] = phone
+        if trade is not None:
+            extracted_data["trade"] = trade
 
         return {
             "success": True,
@@ -177,12 +220,18 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         coi_expiration=None,
         document_type="COI",
         sub_name="Analysis Sub",
+        email=None,
+        phone=None,
+        role=None,
     ):
         subcontractor = Subcontractor(
             name=sub_name,
             user_id=self.user_id,
             organization_id=self.organization_id,
             coi_expiration=coi_expiration,
+            email=email,
+            phone=phone,
+            role=role,
         )
         db.session.add(subcontractor)
         db.session.flush()
@@ -220,21 +269,174 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
         analyze_mock.assert_not_called()
 
     def test_mock_mode_coi_returns_expiration_and_general_liability(self):
+        content = b"""
+Certificate of Insurance
+Named Insured: Demo Concrete LLC
+Carrier: Demo Mutual
+Policy Number: GL-2000
+Policy EFF: 01/01/2027
+Policy EXP: 12/31/2027
+Commercial General Liability
+Each Occurrence USD 2,000,000
+General Aggregate USD 4,000,000
+Workers Compensation Statutory
+TRADE / OPERATIONS: Concrete Contractor
+SUBCONTRACTOR EMAIL: Contact@ApexConcrete.COM
+SUBCONTRACTOR PHONE: (407) 555-0132
+"""
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        temp_file.write(content)
+        temp_file.close()
+
         with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
-            result = analyze_document_intelligence(
-                file_path="unused-in-mock-mode.pdf",
-                document_type="COI",
-            )
+            try:
+                result = analyze_document_intelligence(
+                    file_path=temp_file.name,
+                    document_type="COI",
+                )
+            finally:
+                os.unlink(temp_file.name)
 
         self.assertTrue(result["success"])
         self.assertEqual(result["category"], "coi")
         self.assertEqual(result["compliance"]["status"], "Ready")
         self.assertEqual(result["compliance"]["issues"], [])
-        self.assertEqual(result["extracted_data"]["expiration_date"], "2029-01-01")
+        self.assertEqual(result["extracted_data"]["expiration_date"], "2027-12-31")
         self.assertEqual(
             result["extracted_data"]["general_liability_limit"],
+            "2000000",
+        )
+        self.assertEqual(result["extracted_data"]["trade"], "Concrete Contractor")
+        self.assertEqual(
+            result["extracted_data"]["email"],
+            "contact@apexconcrete.com",
+        )
+        self.assertEqual(result["extracted_data"]["phone"], "+14075550132")
+
+    def test_contact_helpers_normalize_email_and_phone_legacy_keys(self):
+        self.assertEqual(
+            _get_extracted_email({"contact_email": " CONTACT@ApexConcrete.COM; "}),
+            "contact@apexconcrete.com",
+        )
+        self.assertIsNone(_get_extracted_email({"email": "not-an-email"}))
+        self.assertEqual(
+            _get_extracted_phone({"phone_number": "(407) 555-0132"}),
+            "+14075550132",
+        )
+        self.assertEqual(
+            _get_extracted_phone({"telephone": "407-555-0132"}),
+            "+14075550132",
+        )
+        self.assertEqual(
+            _get_extracted_phone({"contact_phone": "+1 407 555 0132"}),
+            "+14075550132",
+        )
+        self.assertIsNone(_get_extracted_phone({"phone": "123"}))
+
+    def test_mock_mode_coi_reads_each_file_without_cross_document_contamination(self):
+        first_path = self._write_temp_document(
+            b"""
+Certificate of Insurance
+Policy EXP: 12/31/2027
+Commercial General Liability
+Each Occurrence $2,000,000
+General Aggregate $4,000,000
+TRADE / OPERATIONS: Concrete Contractor
+"""
+        )
+        second_path = self._write_temp_document(
+            b"""
+Certificate of Insurance
+Date Issued: 01/01/2029
+Policy EXP: 06/30/2028
+Commercial General Liability
+Each Occurrence $1,000,000
+General Aggregate $9,000,000
+TYPE OF WORK: Roofing Contractor
+"""
+        )
+
+        try:
+            with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
+                first = analyze_document_intelligence(first_path, "COI")
+                second = analyze_document_intelligence(second_path, "COI")
+                second_again = analyze_document_intelligence(second_path, "COI")
+                first_again = analyze_document_intelligence(first_path, "COI")
+        finally:
+            os.unlink(first_path)
+            os.unlink(second_path)
+
+        self.assertEqual(
+            first["extracted_data"]["general_liability_limit"],
+            "2000000",
+        )
+        self.assertEqual(first["extracted_data"]["expiration_date"], "2027-12-31")
+        self.assertEqual(
+            second["extracted_data"]["general_liability_limit"],
             "1000000",
         )
+        self.assertEqual(second["extracted_data"]["expiration_date"], "2028-06-30")
+        self.assertEqual(second["extracted_data"], second_again["extracted_data"])
+        self.assertEqual(first["extracted_data"], first_again["extracted_data"])
+
+    def test_mock_mode_coi_fails_cleanly_for_invalid_file(self):
+        path = self._write_temp_document(b"not a certificate")
+
+        try:
+            with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
+                result = analyze_document_intelligence(path, "COI")
+        finally:
+            os.unlink(path)
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["extracted_data"], {})
+        self.assertEqual(result["compliance"], {})
+
+    def test_mock_mode_coi_ignores_producer_contact_details(self):
+        path = self._write_temp_document(
+            b"""
+Certificate of Insurance
+Producer Email: producer@example.com
+Producer Phone: (999) 555-0199
+Policy EXP: 12/31/2027
+Commercial General Liability
+Each Occurrence $2,000,000
+"""
+        )
+
+        try:
+            with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
+                result = analyze_document_intelligence(path, "COI")
+        finally:
+            os.unlink(path)
+
+        self.assertTrue(result["success"])
+        self.assertIsNone(result["extracted_data"]["email"])
+        self.assertIsNone(result["extracted_data"]["phone"])
+
+    def test_mock_mode_coi_extracts_unlabeled_contact_inside_insured_block(self):
+        path = self._write_temp_document(
+            b"""
+Certificate of Insurance
+Named Insured
+Apex Concrete LLC
+contact@apexconcrete.com
+(407) 555-0132
+Policy EXP: 12/31/2027
+Commercial General Liability
+Each Occurrence $2,000,000
+"""
+        )
+
+        try:
+            with patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
+                result = analyze_document_intelligence(path, "COI")
+        finally:
+            os.unlink(path)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["extracted_data"]["email"], "contact@apexconcrete.com")
+        self.assertEqual(result["extracted_data"]["phone"], "+14075550132")
 
     def test_post_without_csrf_fails(self):
         with self.app.app_context():
@@ -424,6 +626,43 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             self.assertEqual(subcontractor.coi_expiration, expected_expiration)
             self.assertEqual(document.ai_status, "analyzed")
 
+    def test_valid_coi_analysis_accepts_expiration_and_coverage_aliases(self):
+        with self.app.app_context():
+            subcontractor_id, document_id = self.make_subcontractor_and_document()
+            analysis_result = self.valid_coi_analysis_result()
+            analysis_result["extracted_data"].pop("expiration_date")
+            analysis_result["extracted_data"].pop("general_liability_limit")
+            analysis_result["extracted_data"]["policy_exp"] = "09/01/2027"
+            analysis_result["extracted_data"][
+                "general_liability_each_occurrence"
+            ] = "$2,500,000"
+
+            result = self.analyze_with_mock_result(document_id, analysis_result)
+
+            subcontractor = db.session.get(Subcontractor, subcontractor_id)
+            document = db.session.get(Document, document_id)
+            evidence = coi_evidence_from_document(document)
+
+            self.assertTrue(result["success"])
+            self.assertEqual(
+                document.ai_extracted_data["policy_exp"],
+                "09/01/2027",
+            )
+            self.assertEqual(
+                document.ai_extracted_data["general_liability_each_occurrence"],
+                "$2,500,000",
+            )
+            self.assertTrue(evidence.validated)
+            self.assertEqual(
+                evidence.value["expiration_date"].isoformat(),
+                "2027-09-01",
+            )
+            self.assertEqual(evidence.value["coverage"], 2500000)
+            self.assertEqual(
+                subcontractor.coi_expiration.isoformat(),
+                "2027-09-01",
+            )
+
     def test_valid_coi_analysis_does_not_overwrite_manual_expiration(self):
         with self.app.app_context():
             manual_expiration = date.today() + timedelta(days=120)
@@ -442,6 +681,60 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             subcontractor = db.session.get(Subcontractor, subcontractor_id)
 
             self.assertEqual(subcontractor.coi_expiration, manual_expiration)
+
+    def test_valid_coi_analysis_fills_missing_subcontractor_contact(self):
+        with self.app.app_context():
+            subcontractor_id, document_id = self.make_subcontractor_and_document()
+
+            self.analyze_with_mock_result(
+                document_id,
+                self.valid_coi_analysis_result(
+                    email=" CONTACT@ApexConcrete.COM ",
+                    phone="(407) 555-0132",
+                ),
+            )
+
+            subcontractor = db.session.get(Subcontractor, subcontractor_id)
+
+            self.assertEqual(subcontractor.email, "contact@apexconcrete.com")
+            self.assertEqual(subcontractor.phone, "+14075550132")
+
+    def test_valid_coi_analysis_does_not_overwrite_manual_contact(self):
+        with self.app.app_context():
+            subcontractor_id, document_id = self.make_subcontractor_and_document(
+                email="owner@apexconcrete.com",
+                phone="+14075559999",
+            )
+
+            self.analyze_with_mock_result(
+                document_id,
+                self.valid_coi_analysis_result(
+                    email="new@apexconcrete.com",
+                    phone="407-555-0132",
+                ),
+            )
+
+            subcontractor = db.session.get(Subcontractor, subcontractor_id)
+
+            self.assertEqual(subcontractor.email, "owner@apexconcrete.com")
+            self.assertEqual(subcontractor.phone, "+14075559999")
+
+    def test_analysis_without_contact_does_not_clear_existing_contact(self):
+        with self.app.app_context():
+            subcontractor_id, document_id = self.make_subcontractor_and_document(
+                email="owner@apexconcrete.com",
+                phone="+14075559999",
+            )
+
+            self.analyze_with_mock_result(
+                document_id,
+                self.valid_coi_analysis_result(),
+            )
+
+            subcontractor = db.session.get(Subcontractor, subcontractor_id)
+
+            self.assertEqual(subcontractor.email, "owner@apexconcrete.com")
+            self.assertEqual(subcontractor.phone, "+14075559999")
 
     def test_invalid_analysis_leaves_subcontractor_expiration_null(self):
         with self.app.app_context():
@@ -638,6 +931,143 @@ class SafeDocumentAnalysisTest(unittest.TestCase):
             readiness = calculate_readiness(link)
 
             self.assertEqual(readiness["status"], READY)
+
+    def test_reanalyzing_new_same_name_coi_uses_current_file_and_updates_readiness(self):
+        with self.app.app_context(), patch.dict(os.environ, {"AI_MOCK_MODE": "true"}):
+            project = Project(
+                name="Coverage Project",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+                required_coverage=2_000_000,
+            )
+            subcontractor = Subcontractor(
+                name="Apex Concrete",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add_all([project, subcontractor])
+            db.session.flush()
+            link = ProjectSubcontractor(
+                project_id=project.id,
+                subcontractor_id=subcontractor.id,
+                coverage_limit=2_000_000,
+            )
+            db.session.add(link)
+            db.session.commit()
+
+            first_key = save_document_file(
+                self._file_storage(
+                    b"""
+Certificate of Insurance
+Policy EXP: 12/31/2027
+Commercial General Liability
+Each Occurrence $2,000,000
+General Aggregate $4,000,000
+TRADE / OPERATIONS: Concrete Contractor
+SUBCONTRACTOR EMAIL: contact@apexconcrete.com
+SUBCONTRACTOR PHONE: (407) 555-0132
+Workers Compensation Statutory
+""",
+                ),
+                "Certificate_of_Insurance.pdf",
+                sub_id=subcontractor.id,
+            )
+            first_doc = Document(
+                filename=first_key,
+                original_name="Certificate_of_Insurance.pdf",
+                document_type="COI",
+                sub_id=subcontractor.id,
+                uploaded_by=self.user_id,
+            )
+            db.session.add(first_doc)
+            db.session.commit()
+
+            first_result = analyze_and_save_document(first_doc.id)
+
+            self.assertTrue(first_result["success"])
+            self.assertRegex(
+                first_doc.filename,
+                rf"^subcontractors/{subcontractor.id}/[a-f0-9]{{32}}\.pdf$",
+            )
+            self.assertEqual(first_doc.original_name, "Certificate_of_Insurance.pdf")
+            self.assertEqual(
+                first_doc.ai_extracted_data["general_liability_limit"],
+                "2000000",
+            )
+            self.assertEqual(
+                first_doc.ai_extracted_data["email"],
+                "contact@apexconcrete.com",
+            )
+            self.assertEqual(first_doc.ai_extracted_data["phone"], "+14075550132")
+            self.assertEqual(subcontractor.role, "Concrete Contractor")
+            self.assertEqual(subcontractor.email, "contact@apexconcrete.com")
+            self.assertEqual(subcontractor.phone, "+14075550132")
+            self.assertEqual(
+                calculate_readiness(link)["status"],
+                READY,
+            )
+
+            subcontractor.email = "owner@apexconcrete.com"
+            subcontractor.phone = "+14075559999"
+            db.session.commit()
+
+            second_key = save_document_file(
+                self._file_storage(
+                    b"""
+Certificate of Insurance
+Date Issued: 01/01/2029
+Policy EXP: 06/30/2028
+Commercial General Liability
+Each Occurrence $1,000,000
+General Aggregate $9,000,000
+TYPE OF WORK: Roofing Contractor
+SUBCONTRACTOR EMAIL: replacement@apexconcrete.com
+SUBCONTRACTOR PHONE: +1 407 555 7777
+Workers Compensation Statutory
+""",
+                ),
+                "Certificate_of_Insurance.pdf",
+                sub_id=subcontractor.id,
+            )
+            second_doc = Document(
+                filename=second_key,
+                original_name="Certificate_of_Insurance.pdf",
+                document_type="COI",
+                sub_id=subcontractor.id,
+                uploaded_by=self.user_id,
+            )
+            db.session.add(second_doc)
+            db.session.commit()
+
+            second_result = analyze_and_save_document(second_doc.id)
+            readiness = calculate_readiness(link)
+
+            self.assertTrue(second_result["success"])
+            self.assertNotEqual(first_doc.filename, second_doc.filename)
+            self.assertEqual(
+                second_doc.ai_extracted_data["general_liability_limit"],
+                "1000000",
+            )
+            self.assertEqual(
+                second_doc.ai_extracted_data["expiration_date"],
+                "2028-06-30",
+            )
+            self.assertEqual(
+                second_doc.ai_extracted_data["email"],
+                "replacement@apexconcrete.com",
+            )
+            self.assertEqual(second_doc.ai_extracted_data["phone"], "+14075557777")
+            self.assertEqual(subcontractor.coi_expiration.isoformat(), "2028-06-30")
+            self.assertEqual(subcontractor.role, "Concrete Contractor")
+            self.assertEqual(subcontractor.email, "owner@apexconcrete.com")
+            self.assertEqual(subcontractor.phone, "+14075559999")
+            self.assertEqual(readiness["status"], BLOCKED)
+            self.assertTrue(
+                any(
+                    reason["code"] == "COVERAGE_INSUFFICIENT"
+                    for reason in readiness["reasons"]
+                )
+            )
 
 
 if __name__ == "__main__":

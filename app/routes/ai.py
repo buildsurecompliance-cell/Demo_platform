@@ -22,6 +22,7 @@ from app.extensions import db
 
 from app.services.document_analysis_service import (
     analyze_and_save_document,
+    reset_document_analysis,
 )
 from app.services.organizations import (
     project_scope_filter,
@@ -133,7 +134,7 @@ def analyze_document(doc_id):
 
         return _analysis_redirect_target(doc)
 
-    doc.ai_status = "analyzing"
+    reset_document_analysis(doc, "analyzing")
     db.session.commit()
 
     try:
@@ -149,7 +150,7 @@ def analyze_document(doc_id):
         )
 
         if failed_doc:
-            failed_doc.ai_status = "failed"
+            reset_document_analysis(failed_doc, "failed")
             failed_doc.ai_error = "Document analysis failed."
             db.session.commit()
 
@@ -166,7 +167,7 @@ def analyze_document(doc_id):
         return _analysis_redirect_target(failed_doc or doc)
 
     if not analysis["success"]:
-        doc.ai_status = "failed"
+        reset_document_analysis(doc, "failed")
         doc.ai_error = "Document analysis failed."
         db.session.commit()
 
