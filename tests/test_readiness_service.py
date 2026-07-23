@@ -733,7 +733,7 @@ class ReadinessServiceTest(unittest.TestCase):
             self.reason_codes(result),
         )
 
-    def test_manual_coverage_lower_than_ai_is_conservative(self):
+    def test_validated_ai_coverage_takes_priority_over_manual_default(self):
         document = self.make_coi_document(coverage=2000000)
         link = self.make_link(
             date(2026, 2, 1),
@@ -747,8 +747,8 @@ class ReadinessServiceTest(unittest.TestCase):
             today=date(2026, 1, 1),
         )
 
-        self.assertEqual(result["status"], BLOCKED)
-        self.assertIn(
+        self.assertEqual(result["status"], READY)
+        self.assertNotIn(
             "COVERAGE_INSUFFICIENT",
             self.reason_codes(result),
         )

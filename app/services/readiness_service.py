@@ -232,16 +232,6 @@ def _resolve_coverage_limit(coi_evidence, manual_coverage):
     if evidence_coverage is None:
         return manual_coverage
 
-    if manual_coverage is None:
-        return evidence_coverage
-
-    if evidence_coverage != manual_coverage:
-        logger.debug("Readiness detected conflicting COI coverage values")
-        return min(
-            evidence_coverage,
-            manual_coverage,
-        )
-
     return evidence_coverage
 
 

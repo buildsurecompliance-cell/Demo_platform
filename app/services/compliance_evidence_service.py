@@ -195,7 +195,7 @@ def _coi_evidence_from_document(document):
 
     logging_payload = {
         "document_id": getattr(document, "id", None),
-        "ai_extracted_data": extracted_data,
+        "extracted_keys": sorted(extracted_data.keys()),
         "normalized_expiration": expiration_date,
         "normalized_coverage": coverage,
         "confidence": confidence,
@@ -295,6 +295,31 @@ def extract_coi_expiration_date(extracted_data):
         if expiration:
             return expiration
 
+    coverage_expirations = []
+
+    for coverage_key in (
+        "general_liability",
+        "automobile_liability",
+        "umbrella_liability",
+        "workers_compensation",
+    ):
+        coverage = _safe_dict(extracted_data.get(coverage_key))
+        expiration = normalize_coi_expiration_date(
+            coverage.get("expiration_date")
+        )
+
+        if expiration:
+            coverage_expirations.append(expiration)
+
+    if coverage_expirations:
+        future_dates = [
+            expiration
+            for expiration in coverage_expirations
+            if expiration >= date.today()
+        ]
+
+        return min(future_dates or coverage_expirations)
+
     return None
 
 
@@ -317,6 +342,16 @@ def extract_coi_coverage(extracted_data):
 
         if coverage is not None:
             return coverage
+
+    general_liability = _safe_dict(
+        extracted_data.get("general_liability")
+    )
+    coverage = normalize_coverage_amount(
+        general_liability.get("each_occurrence")
+    )
+
+    if coverage is not None:
+        return coverage
 
     return None
 
@@ -346,6 +381,8 @@ def normalize_coi_expiration_date(value):
     for date_format in (
         "%m/%d/%Y",
         "%m/%d/%y",
+        "%m-%d-%Y",
+        "%m-%d-%y",
         "%Y-%m-%d",
         "%B %d, %Y",
         "%b %d, %Y",

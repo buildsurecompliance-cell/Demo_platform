@@ -5,7 +5,7 @@ import os
 import re
 import zlib
 
-from datetime import datetime
+from datetime import date, datetime
 
 from app.services.document_intelligence.document_router import (
     normalize_document_type,
@@ -488,6 +488,7 @@ def _date_pattern():
     return (
         r"([0-9]{4}-[0-9]{2}-[0-9]{2}|"
         r"[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|"
+        r"[0-9]{1,2}-[0-9]{1,2}-[0-9]{2,4}|"
         r"[A-Za-z]+\s+\d{1,2},\s+\d{4}|"
         r"[A-Za-z]{3}\s+\d{1,2},\s+\d{4})"
     )
@@ -542,60 +543,441 @@ def _extract_labeled_value(text, labels):
     return None
 
 
-def _extract_general_liability_each_occurrence(text):
+def _compact_label(value):
+    return re.sub(
+        r"[^a-z0-9]+",
+        " ",
+        value.lower(),
+    ).strip()
+
+
+def _line_date_candidates(text):
+    date_value = _date_pattern()
     lines = _lines(text)
-    stop_headings = (
-        "automobile liability",
-        "auto liability",
-        "workers compensation",
-        "workers' compensation",
-        "umbrella liability",
-        "excess liability",
+    candidates = []
+
+    for index, line in enumerate(lines):
+        for match in re.finditer(
+            date_value,
+            line,
+            flags=re.IGNORECASE,
+        ):
+            normalized = _normalize_coi_mock_date(match.group(1))
+
+            if normalized:
+                candidates.append(
+                    {
+                        "line_index": index,
+                        "line": line,
+                        "value": normalized,
+                    }
+                )
+
+    return candidates
+
+
+def _extract_policy_dates(text):
+    lines = _lines(text)
+    dates = _line_date_candidates(text)
+    expirations = []
+    effective_dates = []
+    expiration_markers = (
+        "policy exp",
+        "policy expiration",
+        "expiration date",
+        "policy exp date",
+        "exp date",
+    )
+    effective_markers = (
+        "policy eff",
+        "policy effective",
+        "effective date",
+        "eff date",
+    )
+    expiration_label_patterns = (
+        r"policy\s+exp(?:iration)?(?:\s+date)?",
+        r"expiration\s+date",
+        r"policy\s+exp\s+date",
+    )
+    effective_label_patterns = (
+        r"policy\s+eff(?:ective)?(?:\s+date)?",
+        r"effective\s+date",
     )
 
     for index, line in enumerate(lines):
-        normalized_line = line.lower()
+        normalized_line = _compact_label(line)
+
+        for marker_set, bucket in (
+            (expiration_markers, expirations),
+            (effective_markers, effective_dates),
+        ):
+            if not any(marker in normalized_line for marker in marker_set):
+                continue
+
+            label_patterns = (
+                expiration_label_patterns
+                if bucket is expirations
+                else effective_label_patterns
+            )
+            same_line_dates = []
+
+            for label_pattern in label_patterns:
+                for match in re.finditer(
+                    rf"\b{label_pattern}\b\s*[:#\-]?\s*{_date_pattern()}",
+                    line,
+                    flags=re.IGNORECASE,
+                ):
+                    normalized = _normalize_coi_mock_date(match.group(1))
+
+                    if normalized:
+                        same_line_dates.append(normalized)
+
+            if same_line_dates:
+                for value in same_line_dates:
+                    if value not in bucket:
+                        bucket.append(value)
+                continue
+
+            nearby_dates = [
+                item
+                for item in dates
+                if index <= item["line_index"] <= index + 4
+            ]
+
+            if not nearby_dates:
+                nearby_dates = [
+                    item
+                    for item in dates
+                    if max(0, index - 2) <= item["line_index"] <= index + 8
+                ]
+
+            for item in nearby_dates:
+                if item["value"] not in bucket:
+                    bucket.append(item["value"])
+
+    if not expirations:
+        for label in (
+            r"policy\s+exp(?:iration)?(?:\s+date)?",
+            r"policy\s+expires",
+            r"policy\s+end\s+date",
+            r"expiration\s+date",
+            r"policy\s+exp\s+date",
+        ):
+            value = _extract_labeled_date(text, (label,))
+
+            if value and value not in expirations:
+                expirations.append(value)
+
+    if not effective_dates:
+        for label in (
+            r"policy\s+eff(?:ective)?(?:\s+date)?",
+            r"effective\s+date",
+        ):
+            value = _extract_labeled_date(text, (label,))
+
+            if value and value not in effective_dates:
+                effective_dates.append(value)
+
+    effective_header_index = None
+    expiration_header_index = None
+
+    for index, line in enumerate(lines):
+        normalized_line = _compact_label(line)
 
         if (
-            "commercial general liability" not in normalized_line
-            and "general liability" not in normalized_line
-            and "cgl" not in normalized_line
+            effective_header_index is None
+            and "policy effective date" in normalized_line
+        ):
+            effective_header_index = index
+
+        if (
+            expiration_header_index is None
+            and "policy expiration date" in normalized_line
+        ):
+            expiration_header_index = index
+
+    if (
+        effective_header_index is not None
+        and expiration_header_index is not None
+        and expiration_header_index >= effective_header_index
+    ):
+        table_dates = [
+            item["value"]
+            for item in dates
+            if expiration_header_index < item["line_index"] <= expiration_header_index + 8
+        ]
+
+        if len(table_dates) >= 2:
+            effective_dates = [table_dates[0]]
+            expirations = [table_dates[1]]
+
+    if expirations and effective_dates:
+        effective_set = set(effective_dates)
+        filtered = [
+            value
+            for value in expirations
+            if value not in effective_set
+        ]
+
+        if filtered:
+            expirations = filtered
+
+    logger.debug(
+        "COI date candidates labels=%s expirations=%s effective_dates=%s",
+        {
+            "expiration": expiration_markers,
+            "effective": effective_markers,
+        },
+        expirations,
+        effective_dates,
+    )
+
+    return {
+        "effective_dates": effective_dates,
+        "expiration_dates": expirations,
+    }
+
+
+def _parse_iso_date(value):
+    normalized = normalize_coi_expiration_date(value)
+
+    if normalized:
+        return normalized
+
+    return None
+
+
+def _select_overall_expiration(expiration_dates):
+    parsed = [
+        _parse_iso_date(value)
+        for value in expiration_dates
+    ]
+    parsed = [
+        value
+        for value in parsed
+        if value
+    ]
+
+    if not parsed:
+        return None
+
+    future_dates = [
+        value
+        for value in parsed
+        if value >= date.today()
+    ]
+
+    selected = min(future_dates or parsed)
+
+    return selected.isoformat()
+
+
+def _amount_candidates(text, labels, *, search_lines_after=3):
+    amount = _amount_regex()
+    lines = _lines(text)
+    matches = []
+
+    for index, line in enumerate(lines):
+        normalized_line = _compact_label(line)
+
+        if not any(
+            re.search(label, normalized_line, flags=re.IGNORECASE)
+            for label in labels
         ):
             continue
 
-        block = []
-
-        for candidate in lines[index:index + 8]:
-            candidate_lower = candidate.lower()
-
-            if block and any(
-                heading in candidate_lower
-                for heading in stop_headings
-            ):
-                break
-
-            block.append(candidate)
-
-        block_text = "\n".join(block)
-
-        match = re.search(
-            rf"each\s+occurrence\s*[:#\-]?\s*({_amount_regex()})",
-            block_text,
+        window = " ".join(lines[index:index + search_lines_after + 1])
+        label_text = "|".join(labels)
+        labeled_match = re.search(
+            rf"(?:{label_text}).{{0,80}}?({amount})",
+            window,
             flags=re.IGNORECASE,
         )
 
-        if not match:
-            match = re.search(
-                rf"({_amount_regex()})\s*(?:per\s+)?each\s+occurrence",
-                block_text,
+        raw_amounts = [
+            match.group(0)
+            for match in re.finditer(
+                amount,
+                window,
                 flags=re.IGNORECASE,
             )
+            if "$" in match.group(0)
+            or re.search(
+                r"\b(?:m|million)\b",
+                match.group(0),
+                flags=re.IGNORECASE,
+            )
+        ]
 
-        if match:
-            amount = normalize_coverage_amount(match.group(1))
+        if labeled_match:
+            raw_amounts.insert(0, labeled_match.group(1))
 
-            if amount:
-                return str(int(amount))
+        for raw in raw_amounts:
+            if _looks_like_date(raw):
+                continue
+
+            normalized = normalize_coverage_amount(raw)
+
+            if normalized is not None and normalized >= 10_000:
+                matches.append(
+                    {
+                        "label": line,
+                        "raw": raw,
+                        "value": int(normalized),
+                    }
+                )
+
+    logger.debug(
+        "COI amount candidates labels=%s values=%s",
+        labels,
+        [
+            item["value"]
+            for item in matches
+        ],
+    )
+
+    return matches
+
+
+def _looks_like_date(value):
+    text = str(value or "").strip()
+
+    return bool(
+        re.fullmatch(
+            r"(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})",
+            text,
+        )
+    )
+
+
+def _first_amount(text, labels, *, search_lines_after=3):
+    candidates = _amount_candidates(
+        text,
+        labels,
+        search_lines_after=search_lines_after,
+    )
+
+    if candidates:
+        return candidates[0]["value"]
+
+    return None
+
+
+def _coi_coverage_payload(text, policy_dates):
+    expiration_dates = policy_dates["expiration_dates"]
+    effective_dates = policy_dates["effective_dates"]
+    selected_expiration = _select_overall_expiration(expiration_dates)
+    selected_effective = effective_dates[0] if effective_dates else None
+
+    general_liability = {
+        "each_occurrence": _first_amount(
+            text,
+            (
+                r"each occurrence",
+                r"each occ",
+            ),
+        ),
+        "general_aggregate": _first_amount(
+            text,
+            (
+                r"general aggregate",
+                r"gen l aggregate",
+                r"gen aggregate",
+            ),
+        ),
+        "products_completed_operations": _first_amount(
+            text,
+            (
+                r"products comp op agg",
+                r"products completed operations",
+                r"products comp",
+            ),
+        ),
+        "policy_number": _extract_labeled_value(
+            text,
+            (
+                r"policy\s+number",
+                r"policy\s+#",
+                r"policy\s+no\.?",
+            ),
+        ),
+        "effective_date": selected_effective,
+        "expiration_date": selected_expiration,
+    }
+    automobile_liability = {
+        "combined_single_limit": _first_amount(
+            text,
+            (
+                r"combined single limit",
+                r"csl",
+            ),
+        ),
+        "expiration_date": selected_expiration,
+    }
+    umbrella_liability = {
+        "each_occurrence": _first_amount(
+            text,
+            (
+                r"umbrella.*each occurrence",
+                r"excess.*each occurrence",
+            ),
+            search_lines_after=5,
+        ),
+        "aggregate": _first_amount(
+            text,
+            (
+                r"umbrella.*aggregate",
+                r"excess.*aggregate",
+                r"aggregate",
+            ),
+            search_lines_after=5,
+        ),
+        "expiration_date": selected_expiration,
+    }
+    workers_compensation = {
+        "each_accident": _first_amount(
+            text,
+            (
+                r"e l each accident",
+                r"each accident",
+            ),
+        ),
+        "disease_each_employee": _first_amount(
+            text,
+            (
+                r"disease ea employee",
+                r"disease each employee",
+            ),
+        ),
+        "disease_policy_limit": _first_amount(
+            text,
+            (
+                r"disease policy limit",
+                r"policy limit",
+            ),
+        ),
+        "expiration_date": selected_expiration,
+    }
+
+    return {
+        "general_liability": general_liability,
+        "automobile_liability": automobile_liability,
+        "umbrella_liability": umbrella_liability,
+        "workers_compensation": workers_compensation,
+    }
+
+
+def _extract_general_liability_each_occurrence(text):
+    amount = _first_amount(
+        text,
+        (
+            r"each occurrence",
+            r"each occ",
+        ),
+    )
+
+    if amount:
+        return str(amount)
 
     return None
 
@@ -818,21 +1200,15 @@ def _extract_contact_phone(text):
 
 
 def _extract_coi_data_from_text(text):
-    expiration_date = _extract_labeled_date(
-        text,
-        (
-            r"policy\s+exp(?:iration)?(?:\s+date)?",
-            r"policy\s+expires",
-            r"policy\s+end\s+date",
-            r"expiration\s+date",
-        ),
+    policy_dates = _extract_policy_dates(text)
+    coverage_payload = _coi_coverage_payload(text, policy_dates)
+    expiration_date = _select_overall_expiration(
+        policy_dates["expiration_dates"]
     )
-    effective_date = _extract_labeled_date(
-        text,
-        (
-            r"policy\s+eff(?:ective)?(?:\s+date)?",
-            r"effective\s+date",
-        ),
+    effective_date = (
+        policy_dates["effective_dates"][0]
+        if policy_dates["effective_dates"]
+        else None
     )
     general_liability = _extract_general_liability_each_occurrence(text)
     trade = _extract_trade(text)
@@ -877,9 +1253,46 @@ def _extract_coi_data_from_text(text):
     )
 
     if not expiration_date and not general_liability:
+        logger.info(
+            "COI extraction failed labels_found=%s date_candidates=%s amount_candidates=%s reason=missing_expiration_and_gl_each_occurrence",
+            {
+                "policy_exp": bool(policy_dates["expiration_dates"]),
+                "policy_eff": bool(policy_dates["effective_dates"]),
+                "each_occurrence": general_liability is not None,
+            },
+            policy_dates["expiration_dates"],
+            {
+                "general_liability_each_occurrence": general_liability,
+            },
+        )
         return None
 
     confidence = 0.92 if expiration_date and general_liability else 0.6
+    general_liability_payload = coverage_payload["general_liability"]
+    general_liability_payload["each_occurrence"] = (
+        int(general_liability)
+        if general_liability
+        else general_liability_payload.get("each_occurrence")
+    )
+    general_liability_payload["policy_number"] = (
+        general_liability_payload.get("policy_number")
+        or policy_number
+    )
+    general_liability_payload["effective_date"] = (
+        general_liability_payload.get("effective_date")
+        or effective_date
+    )
+    general_liability_payload["expiration_date"] = (
+        general_liability_payload.get("expiration_date")
+        or expiration_date
+    )
+
+    logger.info(
+        "COI extraction selected expiration=%s coverage_limit=%s confidence=%s",
+        expiration_date,
+        general_liability,
+        confidence,
+    )
 
     return {
         "document_type": "Certificate of Insurance",
@@ -890,8 +1303,14 @@ def _extract_coi_data_from_text(text):
         "effective_date": effective_date,
         "expiration_date": expiration_date,
         "general_liability_limit": general_liability,
+        "coverage_limit": general_liability,
+        "coverage_details": coverage_payload,
+        "general_liability": general_liability_payload,
+        "automobile_liability": coverage_payload["automobile_liability"],
+        "umbrella_liability": coverage_payload["umbrella_liability"],
         "auto_liability_limit": None,
-        "workers_compensation": workers_compensation,
+        "workers_compensation": coverage_payload["workers_compensation"],
+        "workers_compensation_confirmed": workers_compensation,
         "umbrella_limit": None,
         "additional_insured": False,
         "waiver_of_subrogation": False,
@@ -901,6 +1320,8 @@ def _extract_coi_data_from_text(text):
         "phone": phone,
         "confidence": confidence,
         "missing_fields": [],
+        "policy_expiration_dates": policy_dates["expiration_dates"],
+        "policy_effective_dates": policy_dates["effective_dates"],
         "notes": "Mock COI data parsed from supplied document text.",
     }
 

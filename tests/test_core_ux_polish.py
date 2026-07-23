@@ -84,7 +84,14 @@ class CoreUXPolishTest(unittest.TestCase):
                 ai_confidence=0.95,
                 ai_extracted_data={
                     "expiration_date": "2029-01-01",
-                    "general_liability_limit": 1_000_000,
+                    "general_liability_limit": 5_000_000,
+                    "coverage_limit": 5_000_000,
+                    "general_liability": {
+                        "each_occurrence": 5_000_000,
+                        "general_aggregate": 10_000_000,
+                        "products_completed_operations": 10_000_000,
+                        "expiration_date": "2029-01-01",
+                    },
                     "confidence": 0.95,
                 },
                 ai_compliance_result={
@@ -154,7 +161,7 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("$4.8M", body)
         self.assertIn("Required GL", body)
         self.assertIn("$2M", body)
-        self.assertIn("$1M", body)
+        self.assertIn("$5M", body)
         self.assertIn("+ New Project", body)
         self.assertIn("+ Add Subcontractor", body)
         self.assertNotIn(">Add Sub</a>", body)
@@ -168,17 +175,18 @@ class CoreUXPolishTest(unittest.TestCase):
         body = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("One or more subcontractors cannot work today.", body)
+        self.assertIn("This project is ready to mobilize.", body)
         self.assertIn("Document Intelligence Summary", body)
         self.assertIn(
             "Document analysis results do not replace final mobilization readiness.",
             body,
         )
         self.assertIn("Current GL", body)
-        self.assertIn("$1M", body)
+        self.assertIn("$5M", body)
         self.assertIn("Required GL", body)
         self.assertIn("$2M", body)
         self.assertIn("Coverage Gap", body)
+        self.assertIn("No gap", body)
         self.assertIn("Contract Extraction", body)
         self.assertIn("Preserved", body)
         self.assertIn("Applied", body)
@@ -213,11 +221,15 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("Expiration", body)
         self.assertIn("2029-01-01", body)
         self.assertIn("General Liability", body)
-        self.assertIn("$1M", body)
+        self.assertIn("Each Occurrence", body)
+        self.assertIn("General Aggregate", body)
+        self.assertIn("Products-Comp/OP Agg", body)
+        self.assertIn("$5M", body)
+        self.assertIn("$10M", body)
         self.assertIn("Confidence", body)
         self.assertIn("95%", body)
-        self.assertIn("BLOCKED", body)
-        self.assertIn("Coverage limit is below the project requirement.", body)
+        self.assertIn("READY", body)
+        self.assertNotIn("Coverage limit is below the project requirement.", body)
 
     def test_templates_do_not_call_business_services(self):
         for template_path in (

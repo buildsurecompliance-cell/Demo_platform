@@ -109,6 +109,7 @@ def _doc_status_label(status):
 def _coi_document_view_model(doc, sub, readiness_impacts):
     extracted = doc.ai_extracted_data or {}
     compliance = doc.ai_compliance_result or {}
+    general_liability = extracted.get("general_liability") or {}
 
     return {
         "document": doc,
@@ -123,6 +124,15 @@ def _coi_document_view_model(doc, sub, readiness_impacts):
         ),
         "general_liability": _money_label(
             extract_coi_coverage(extracted)
+        ),
+        "general_liability_each_occurrence": _money_label(
+            general_liability.get("each_occurrence")
+        ),
+        "general_liability_general_aggregate": _money_label(
+            general_liability.get("general_aggregate")
+        ),
+        "general_liability_products_completed_operations": _money_label(
+            general_liability.get("products_completed_operations")
         ),
         "confidence": _confidence_label(
             extracted.get("confidence")
@@ -207,13 +217,7 @@ def _conservative_coverage(evidence_coverage, manual_coverage):
     if evidence_coverage is None:
         return manual_coverage
 
-    if manual_coverage is None:
-        return evidence_coverage
-
-    return min(
-        float(evidence_coverage),
-        float(manual_coverage),
-    )
+    return evidence_coverage
 
 
 def allowed_file(filename):

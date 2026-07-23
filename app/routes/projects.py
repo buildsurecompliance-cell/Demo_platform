@@ -369,14 +369,6 @@ def _active_coverage_for_project_subcontractor(project_subcontractor):
             coverage = validated_evidence[0].value.get("coverage")
 
             if coverage:
-                manual_coverage = project_subcontractor.coverage_limit
-
-                if manual_coverage:
-                    return min(
-                        float(coverage),
-                        float(manual_coverage),
-                    )
-
                 return coverage
 
     return project_subcontractor.coverage_limit
