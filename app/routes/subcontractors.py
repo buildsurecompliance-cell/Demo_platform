@@ -45,6 +45,9 @@ from app.services.documents.storage import (
     delete_document_file,
     save_document_file,
 )
+from app.services.documents.types import (
+    SUBCONTRACTOR_DOCUMENT_TYPE,
+)
 from app.services.organizations import (
     get_current_organization,
     project_scope_filter,
@@ -215,10 +218,36 @@ def _active_coverage_for_subcontractor(sub):
 
 
 def _conservative_coverage(evidence_coverage, manual_coverage):
-    if evidence_coverage is None:
-        return manual_coverage
-
     return evidence_coverage
+
+
+def _analyze_uploaded_documents(document_ids):
+    all_succeeded = True
+
+    for document_id in document_ids:
+        try:
+            analysis = analyze_and_save_document(document_id)
+        except Exception as error:
+            db.session.rollback()
+            doc = db.session.get(Document, document_id)
+
+            if doc:
+                doc.ai_status = "failed"
+                doc.ai_error = "Document analysis failed."
+                db.session.commit()
+
+            logger.error(
+                "Automatic subcontractor document analysis failed document_id=%s error_type=%s",
+                document_id,
+                error.__class__.__name__,
+            )
+            all_succeeded = False
+            continue
+
+        if not analysis.get("success"):
+            all_succeeded = False
+
+    return all_succeeded
 
 
 def allowed_file(filename):
@@ -502,10 +531,7 @@ def add_sub():
             try:
                 original_name = file.filename
 
-                doc_type = (
-                    request.form.get("doc_type")
-                    or "Document"
-                )
+                doc_type = SUBCONTRACTOR_DOCUMENT_TYPE
 
                 existing_doc = (
                     Document.query
@@ -548,19 +574,34 @@ def add_sub():
                 )
                 flash(f"Error uploading {file.filename}", "danger")
 
+        uploaded_doc_ids = []
+
         try:
+            db.session.flush()
+            uploaded_doc_ids = [
+                doc.id
+                for doc in uploaded_docs
+            ]
             db.session.commit()
-
-            for doc in uploaded_docs:
-                analyze_and_save_document(doc.id)
-
-            flash("Subcontractor added successfully!", "success")
 
         except Exception as e:
             db.session.rollback()
             _cleanup_saved_documents(saved_storage_keys)
             logger.exception("Subcontractor create failed")
             flash("Error adding subcontractor.", "danger")
+            return redirect(url_for("dashboard.dashboard"))
+
+        if uploaded_doc_ids:
+            if _analyze_uploaded_documents(uploaded_doc_ids):
+                flash("Subcontractor added successfully!", "success")
+            else:
+                flash(
+                    "Subcontractor added, but automatic COI analysis could not be completed. "
+                    "You can retry from the documents page.",
+                    "warning",
+                )
+        else:
+            flash("Subcontractor added successfully!", "success")
 
         return redirect(url_for("dashboard.dashboard"))
 
@@ -668,10 +709,7 @@ def edit_sub(id):
             try:
                 original_name = file.filename
 
-                doc_type = (
-                    request.form.get("doc_type")
-                    or "Document"
-                )
+                doc_type = SUBCONTRACTOR_DOCUMENT_TYPE
 
                 existing_doc = (
                     Document.query
@@ -714,13 +752,15 @@ def edit_sub(id):
                 )
                 flash(f"Error uploading {file.filename}", "danger")
 
+        uploaded_doc_ids = []
+
         try:
+            db.session.flush()
+            uploaded_doc_ids = [
+                doc.id
+                for doc in uploaded_docs
+            ]
             db.session.commit()
-
-            for doc in uploaded_docs:
-                analyze_and_save_document(doc.id)
-
-            flash("Subcontractor updated successfully.", "success")
 
         except Exception as e:
             db.session.rollback()
@@ -730,6 +770,19 @@ def edit_sub(id):
                 sub.id,
             )
             flash("Error updating subcontractor.", "danger")
+            return redirect(url_for("dashboard.dashboard"))
+
+        if uploaded_doc_ids:
+            if _analyze_uploaded_documents(uploaded_doc_ids):
+                flash("Subcontractor updated successfully.", "success")
+            else:
+                flash(
+                    "Subcontractor updated, but automatic COI analysis could not be completed. "
+                    "You can retry from the documents page.",
+                    "warning",
+                )
+        else:
+            flash("Subcontractor updated successfully.", "success")
 
         return redirect(url_for("dashboard.dashboard"))
 

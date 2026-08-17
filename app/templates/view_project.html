@@ -271,12 +271,6 @@ View Documents
 <div class="ux-actions">
 <a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" class="ux-btn ux-btn-primary">Open</a>
 <a href="{{ url_for('documents.download_document', doc_id=doc.id) }}" class="ux-btn ux-btn-secondary">Download</a>
-{% if group.supports_analysis %}
-<form action="{{ url_for('ai.analyze_document', doc_id=doc.id) }}" method="POST">
-{{ csrf_input() }}
-<button type="submit" class="ux-btn ux-btn-success">Analyze</button>
-</form>
-{% endif %}
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document?');">
 {{ csrf_input() }}
 <button class="ux-btn ux-btn-danger" type="submit">Delete</button>

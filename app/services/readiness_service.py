@@ -182,26 +182,24 @@ def _append_coverage_reasons(
     if required_coverage is None:
         return
 
-    manual_coverage = _usable_number(
-        getattr(
-            project_subcontractor,
-            "coverage_limit",
-            None,
-        )
-    )
-
     coverage_limit = _resolve_coverage_limit(
         coi_evidence,
-        manual_coverage,
     )
     logger.info(
-        "Readiness coverage calculation required_coverage=%s manual_coverage=%s current_coverage=%s",
+        "Readiness coverage calculation required_coverage=%s current_coverage=%s",
         required_coverage,
-        manual_coverage,
         coverage_limit,
     )
 
     if coverage_limit is None:
+        _add_reason(
+            reasons,
+            _reason(
+                "COVERAGE_EVIDENCE_MISSING",
+                "Validated insurance coverage evidence is missing.",
+                BLOCKING,
+            )
+        )
         return
 
     if coverage_limit < required_coverage:
@@ -215,7 +213,7 @@ def _append_coverage_reasons(
         )
 
 
-def _resolve_coverage_limit(coi_evidence, manual_coverage):
+def _resolve_coverage_limit(coi_evidence):
     validated_evidence = [
         item
         for item in coi_evidence
@@ -223,14 +221,11 @@ def _resolve_coverage_limit(coi_evidence, manual_coverage):
     ]
 
     if not validated_evidence:
-        return manual_coverage
+        return None
 
     evidence_coverage = _usable_number(
         validated_evidence[0].value.get("coverage")
     )
-
-    if evidence_coverage is None:
-        return manual_coverage
 
     return evidence_coverage
 

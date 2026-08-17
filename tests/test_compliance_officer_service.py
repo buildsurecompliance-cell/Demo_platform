@@ -170,10 +170,11 @@ class ComplianceOfficerServiceTest(unittest.TestCase):
         )
 
     def test_coverage_insufficient_advice_is_blocked(self):
+        document = self.make_coi_document(coverage=500000)
         link = self.make_link(
             date.today() + timedelta(days=60),
-            coverage_limit=500000,
             required_coverage=1000000,
+            documents=[document],
         )
 
         advice = generate_compliance_advice(link)
@@ -209,10 +210,11 @@ class ComplianceOfficerServiceTest(unittest.TestCase):
         )
 
     def test_multiple_reasons_generate_multiple_actions(self):
+        document = self.make_coi_document(coverage=500000)
         link = self.make_link(
             date.today() + timedelta(days=10),
-            coverage_limit=500000,
             required_coverage=1000000,
+            documents=[document],
         )
 
         advice = generate_compliance_advice(link)

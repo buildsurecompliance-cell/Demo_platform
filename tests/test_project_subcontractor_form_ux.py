@@ -11,7 +11,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Project, ProjectSubcontractor, Subcontractor, User
+from app.models import Document, Project, ProjectSubcontractor, Subcontractor, User
 from app.services.organizations import create_default_organization_for_user
 from app.services.readiness_service import BLOCKED, READY, calculate_readiness
 
@@ -97,6 +97,38 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         return match.group(1).decode()
+
+    def add_valid_coi_document(self, coverage):
+        document = Document(
+            filename="coi.pdf",
+            original_name="coi.pdf",
+            document_type="COI",
+            sub_id=self.subcontractor_id,
+            uploaded_by=self.owner_id,
+            ai_status="analyzed",
+            ai_confidence=0.95,
+            ai_extracted_data={
+                "expiration_date": (
+                    date.today() + timedelta(days=60)
+                ).isoformat(),
+                "general_liability_each_occurrence": coverage,
+                "general_liability_limit": coverage,
+                "confidence": 0.95,
+            },
+            ai_compliance_result={
+                "status": "Ready",
+                "issues": [],
+                "warnings": [],
+                "confidence": 0.95,
+            },
+        )
+        subcontractor = db.session.get(
+            Subcontractor,
+            self.subcontractor_id,
+        )
+        subcontractor.documents.append(document)
+        db.session.flush()
+        return document
 
     def test_project_form_shows_required_coverage_options(self):
         self.login()
@@ -337,7 +369,7 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
 
         response = self.client.get("/add_sub")
         self.assertIn(
-            "BuildSure can extract the expiration date automatically.",
+            "BuildSure analyzes uploaded COIs automatically",
             response.get_data(as_text=True),
         )
 
@@ -446,15 +478,15 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             link = ProjectSubcontractor(
                 project_id=project.id,
                 subcontractor_id=self.subcontractor_id,
-                coverage_limit=1000000,
             )
             db.session.add(link)
             db.session.flush()
 
+            self.add_valid_coi_document(1000000)
             blocked = calculate_readiness(link)
             self.assertEqual(blocked["status"], BLOCKED)
 
-            link.coverage_limit = 2000000
+            self.add_valid_coi_document(2000000)
             db.session.flush()
             ready = calculate_readiness(link)
             self.assertEqual(ready["status"], READY)
@@ -491,17 +523,14 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             no_minimum_link = ProjectSubcontractor(
                 project_id=no_minimum_project.id,
                 subcontractor_id=self.subcontractor_id,
-                coverage_limit=1000000,
             )
             zero_link = ProjectSubcontractor(
                 project_id=zero_project.id,
                 subcontractor_id=self.subcontractor_id,
-                coverage_limit=1000000,
             )
             five_million_link = ProjectSubcontractor(
                 project_id=five_million_project.id,
                 subcontractor_id=self.subcontractor_id,
-                coverage_limit=2000000,
             )
             db.session.add_all(
                 [
@@ -515,6 +544,7 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             self.assertEqual(calculate_readiness(no_minimum_link)["status"], READY)
             self.assertEqual(calculate_readiness(zero_link)["status"], READY)
 
+            self.add_valid_coi_document(2000000)
             five_million = calculate_readiness(five_million_link)
             self.assertEqual(five_million["status"], BLOCKED)
             self.assertIn(
@@ -537,9 +567,10 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         sub_response = self.client.get("/add_sub")
         sub_body = sub_response.get_data(as_text=True)
         self.assertIn("Company Information", sub_body)
-        self.assertIn("Insurance Information", sub_body)
-        self.assertIn("How it works", sub_body)
-        self.assertIn("Settings", sub_body)
+        self.assertIn("Certificate of Insurance", sub_body)
+        self.assertIn("BuildSure analyzes uploaded COIs automatically", sub_body)
+        self.assertNotIn("Insurance Information", sub_body)
+        self.assertNotIn("Settings", sub_body)
         self.assertIn("aria-describedby", sub_body)
         self.assertNotIn("generate_compliance_advice", sub_body)
 

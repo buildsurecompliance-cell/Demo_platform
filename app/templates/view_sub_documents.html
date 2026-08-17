@@ -54,10 +54,6 @@ Not available
 <dd>{{ row.general_liability_general_aggregate }}</dd>
 <dt>Products-Comp/OP Agg</dt>
 <dd>{{ row.general_liability_products_completed_operations }}</dd>
-<dt>Confidence</dt>
-<dd>{{ row.confidence }}</dd>
-<dt>Evidence State</dt>
-<dd>{{ row.evidence_state }}</dd>
 </dl>
 </section>
 
@@ -104,10 +100,6 @@ Not available
 
 <div class="ux-actions mt-3">
 <a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" target="_blank" class="ux-btn ux-btn-primary">Open</a>
-<form action="{{ url_for('ai.analyze_document', doc_id=doc.id) }}" method="POST">
-{{ csrf_input() }}
-<button type="submit" class="ux-btn ux-btn-success">Analyze</button>
-</form>
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document?');">
 {{ csrf_input() }}
 <button class="ux-btn ux-btn-danger" type="submit">Delete</button>

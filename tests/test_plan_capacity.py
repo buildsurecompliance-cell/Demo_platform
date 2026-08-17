@@ -763,10 +763,10 @@ class PlanCapacityTest(unittest.TestCase):
             self.assertEqual(organization.plan_key, PROFESSIONAL)
             self.assertTrue(owner.paid)
 
-        dashboard = self.client.get("/dashboard")
-        dashboard_body = dashboard.get_data(as_text=True)
-        self.assertIn("of 50", dashboard_body)
-        self.assertIn("of 300", dashboard_body)
+        subscribe = self.client.get("/subscribe")
+        subscribe_body = subscribe.get_data(as_text=True)
+        self.assertIn("of 50", subscribe_body)
+        self.assertIn("of 300", subscribe_body)
 
     def test_owner_can_select_enterprise_and_remove_capacity_block(self):
         self.login()
@@ -793,10 +793,10 @@ class PlanCapacityTest(unittest.TestCase):
             self.assertEqual(organization.plan_key, ENTERPRISE)
             self.assertTrue(can_create_project(organization).allowed)
 
-        dashboard = self.client.get("/dashboard")
+        subscribe = self.client.get("/subscribe")
         self.assertIn(
             "of Unlimited",
-            dashboard.get_data(as_text=True),
+            subscribe.get_data(as_text=True),
         )
 
     def test_downgrade_preserves_data_and_blocks_only_new_creation(self):

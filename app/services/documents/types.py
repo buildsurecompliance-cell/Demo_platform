@@ -5,6 +5,14 @@ PROJECT_DOCUMENT_TYPES = (
 )
 
 DEFAULT_PROJECT_DOCUMENT_TYPE = PROJECT_DOCUMENT_TYPES[0]
+SUBCONTRACTOR_DOCUMENT_TYPE = "COI"
+
+AUTOMATIC_ANALYSIS_DOCUMENT_TYPES = frozenset(
+    {
+        "COI",
+        "Contract",
+    }
+)
 
 _PROJECT_DOCUMENT_TYPE_ALIASES = {
     "prime contract": "Contract",
@@ -30,3 +38,7 @@ def normalize_project_document_type(document_type):
         return _PROJECT_DOCUMENT_TYPE_ALIASES[value]
 
     return DEFAULT_PROJECT_DOCUMENT_TYPE
+
+
+def supports_automatic_analysis(document_type):
+    return document_type in AUTOMATIC_ANALYSIS_DOCUMENT_TYPES

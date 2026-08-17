@@ -33,9 +33,11 @@ class ProjectSubcontractor(db.Model):
         default=False
     )
 
+    # Legacy/manual field retained for compatibility and audit. Readiness must
+    # use validated COI evidence for actual insurance coverage.
     coverage_limit = db.Column(
         db.Float,
-        default=1000000
+        nullable=True,
     )
 
     created_at = db.Column(

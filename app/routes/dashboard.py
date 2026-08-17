@@ -12,7 +12,6 @@ from flask_login import (
 
 from app.decorators import subscription_required
 from app.models import (
-    Document,
     Project,
     ProjectSubcontractor,
     Subcontractor,
@@ -20,14 +19,13 @@ from app.models import (
 from sqlalchemy.orm import selectinload
 from app.services.organizations import (
     get_current_organization,
-    project_scope_filter,
     scoped_project_query,
     scoped_subcontractor_query,
-    subcontractor_scope_filter,
 )
-from app.services.plan_capacity import (
-    get_organization_plan,
-    get_organization_usage,
+from app.services.readiness_service import (
+    BLOCKED,
+    READY,
+    calculate_readiness,
 )
 
 dashboard_bp = Blueprint(
@@ -95,36 +93,69 @@ def _subcontractor_coverage_label(sub):
 
 
 def _readiness_label(status):
+    if status == "No Subcontractors Assigned":
+        return "NO SUBCONTRACTORS"
+
     if status == "Ready to Mobilize":
         return "READY"
 
     if status == "Pending Compliance":
-        return "PENDING"
+        return "NEEDS ATTENTION"
 
     return "BLOCKED"
 
 
-def _capacity_item(current, limit):
-    if limit is None:
-        return {
-            "text": f"{current} / Unlimited",
-            "percent": None,
-            "warning": False,
-        }
+def _dashboard_readiness_for_project(project):
+    if not project.subs:
+        return "NO SUBCONTRACTORS"
 
-    percent = int((current / limit) * 100) if limit else 0
+    saw_checking = False
+    saw_attention = False
 
-    return {
-        "text": f"{current} / {limit}",
-        "percent": min(percent, 100),
-        "warning": percent >= 80,
+    for link in project.subs:
+        readiness = calculate_readiness(link)
+
+        if readiness["status"] == READY:
+            continue
+
+        if _is_processing_readiness(readiness):
+            saw_checking = True
+            continue
+
+        if readiness["status"] == BLOCKED:
+            return "BLOCKED"
+
+        saw_attention = True
+
+    if saw_attention:
+        return "NEEDS ATTENTION"
+
+    if saw_checking:
+        return "CHECKING"
+
+    return "READY"
+
+
+def _is_processing_readiness(readiness):
+    codes = {
+        reason.get("code")
+        for reason in readiness.get("reasons", [])
     }
+
+    if "COI_DOCUMENT_PARTIAL" not in codes:
+        return False
+
+    return codes.issubset(
+        {
+            "COI_DOCUMENT_PARTIAL",
+            "COVERAGE_EVIDENCE_MISSING",
+        }
+    )
 
 
 def _project_row(project, status=None):
-    status = status or project.mobilization_status
-    readiness = _readiness_label(status)
-    compliance_score = project.compliance_score or 0
+    readiness = status or _dashboard_readiness_for_project(project)
+    compliance_score = project.compliance_score
 
     return {
         "project": project,
@@ -141,6 +172,9 @@ def _project_row(project, status=None):
 
 
 def _risk_from_score(score):
+    if score is None:
+        return "No Subcontractors"
+
     if score == 100:
         return "Low"
 
@@ -191,6 +225,40 @@ def _sub_status_label(sub):
         return "AT RISK"
 
     return "COMPLIANT"
+
+
+def _readiness_attention_items(projects):
+    items = []
+
+    for project in projects:
+        for link in project.subs:
+            if not link.subcontractor:
+                continue
+
+            readiness = calculate_readiness(link)
+            status = readiness["status"]
+
+            if status == READY:
+                continue
+
+            if _is_processing_readiness(readiness):
+                continue
+
+            reason = (
+                readiness["reasons"][0]["message"]
+                if readiness.get("reasons")
+                else "Compliance needs review."
+            )
+            items.append(
+                {
+                    "subcontractor": link.subcontractor,
+                    "project": project,
+                    "status": "BLOCKED" if status == BLOCKED else "NEEDS ATTENTION",
+                    "reason": reason,
+                }
+            )
+
+    return items
 
 
 # ==========================
@@ -269,7 +337,7 @@ def dashboard():
 
             at_risk_count += 1
 
-        else:
+        elif status == "compliant":
 
             compliant_count += 1
 
@@ -369,12 +437,6 @@ def dashboard():
             ):
                 continue
 
-        if (
-            risk_level
-            and project.risk_level != risk_level
-        ):
-            continue
-
         filtered_projects.append(
             project
         )
@@ -385,108 +447,33 @@ def dashboard():
     # PORTFOLIO METRICS
     # =========================
 
-    total_portfolio = 0
-
-    revenue_at_risk = 0
     ready_projects = 0
+    checking_projects = 0
     pending_projects = 0
     blocked_projects = 0
+    unassigned_projects = 0
     project_rows = []
 
     for project in projects:
 
-        contract_value = (
-            project.contract_value or 0
-        )
-
-        total_portfolio += contract_value
-
-        mobilization_status = project.mobilization_status
-        readiness = _readiness_label(
-            mobilization_status
-        )
+        readiness = _dashboard_readiness_for_project(project)
         project_rows.append(
             _project_row(
                 project,
-                mobilization_status,
+                readiness,
             )
         )
 
         if readiness == "READY":
             ready_projects += 1
-        elif readiness == "PENDING":
+        elif readiness == "CHECKING":
+            checking_projects += 1
+        elif readiness == "NEEDS ATTENTION":
             pending_projects += 1
+        elif readiness == "NO SUBCONTRACTORS":
+            unassigned_projects += 1
         else:
             blocked_projects += 1
-
-        if readiness != "READY":
-            revenue_at_risk += contract_value
-
-    # =========================
-    # AI DASHBOARD
-    # =========================
-
-    documents = (
-        Document.query
-        .join(Subcontractor)
-        .filter(
-            subcontractor_scope_filter(Subcontractor)
-        )
-        .all()
-    )
-
-    documents_analyzed = 0
-    blocked_documents = 0
-    pending_documents = 0
-    ready_documents = 0
-
-    total_score = 0
-    score_count = 0
-
-    for doc in documents:
-
-        if doc.ai_status != "analyzed":
-            continue
-
-        documents_analyzed += 1
-
-        result = doc.ai_compliance_result or {}
-
-        status = result.get("status")
-        score = result.get("score")
-
-        if status == "Blocked":
-            blocked_documents += 1
-
-        elif status == "Pending Renewal":
-            pending_documents += 1
-
-        else:
-            ready_documents += 1
-
-        if score is not None:
-            total_score += score
-            score_count += 1
-
-    average_ai_score = 0
-
-    if score_count:
-        average_ai_score = round(
-            total_score / score_count
-        )
-
-    capacity_plan = get_organization_plan(organization)
-    capacity_usage = get_organization_usage(organization)
-    capacity_view = {
-        "projects": _capacity_item(
-            capacity_usage.project_count,
-            capacity_plan.max_projects,
-        ),
-        "subcontractors": _capacity_item(
-            capacity_usage.subcontractor_count,
-            capacity_plan.max_subcontractors,
-        ),
-    }
 
     # =========================
     # TEMPLATE
@@ -507,20 +494,9 @@ def dashboard():
         at_risk_count=at_risk_count,
         compliant_count=compliant_count,
         ready_projects=ready_projects,
+        checking_projects=checking_projects,
         pending_projects=pending_projects,
         blocked_projects=blocked_projects,
-        total_portfolio=total_portfolio,
-        total_portfolio_label=_money_short(total_portfolio),
-        total_portfolio_full=_money_full(total_portfolio),
-        revenue_at_risk=revenue_at_risk,
-        revenue_at_risk_label=_money_short(revenue_at_risk),
-        revenue_at_risk_full=_money_full(revenue_at_risk),
-        documents_analyzed=documents_analyzed,
-        blocked_documents=blocked_documents,
-        pending_documents=pending_documents,
-        ready_documents=ready_documents,
-        average_ai_score=average_ai_score,
-        capacity_plan=capacity_plan,
-        capacity_usage=capacity_usage,
-        capacity_view=capacity_view,
+        unassigned_projects=unassigned_projects,
+        needs_attention=_readiness_attention_items(projects),
     )

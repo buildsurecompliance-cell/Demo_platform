@@ -106,7 +106,7 @@ class Project(db.Model):
         )
 
         if not self.subs:
-            return 100
+            return None
 
         total = 0
         compliant = 0
@@ -122,7 +122,7 @@ class Project(db.Model):
                 compliant += 1
 
         if total == 0:
-            return 100
+            return None
 
         return int(
             (compliant / total) * 100
@@ -136,6 +136,9 @@ class Project(db.Model):
     def risk_level(self):
 
         score = self.compliance_score
+
+        if score is None:
+            return "No Subcontractors"
 
         if score == 100:
             return "Low"
@@ -158,7 +161,7 @@ class Project(db.Model):
         )
 
         if not self.subs:
-            return "Ready to Mobilize"
+            return "No Subcontractors Assigned"
 
         statuses = []
 
@@ -178,6 +181,9 @@ class Project(db.Model):
 
         if PENDING in statuses:
             return "Pending Compliance"
+
+        if not statuses:
+            return "No Subcontractors Assigned"
 
         return "Ready to Mobilize"
 

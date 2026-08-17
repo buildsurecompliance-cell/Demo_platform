@@ -42,6 +42,7 @@ class BillingReadinessJobsTest(unittest.TestCase):
         status,
         *,
         current_period_end=None,
+        days_left=30,
     ):
         user = User(email=email, paid=False)
         user.set_password("password123")
@@ -57,7 +58,7 @@ class BillingReadinessJobsTest(unittest.TestCase):
             email=f"sub-{email}",
             user_id=user.id,
             organization_id=organization.id,
-            coi_expiration=date.today() + timedelta(days=30),
+            coi_expiration=date.today() + timedelta(days=days_left),
         )
         db.session.add(sub)
         db.session.commit()
@@ -93,6 +94,11 @@ class BillingReadinessJobsTest(unittest.TestCase):
             active_sub = db.session.get(Subcontractor, active_sub_id)
             blocked_sub = db.session.get(Subcontractor, blocked_sub_id)
             self.assertIsNotNone(active_sub.last_reminder_sent)
+            self.assertEqual(active_sub.last_reminder_threshold, 30)
+            self.assertEqual(
+                active_sub.last_reminder_expiration,
+                date.today() + timedelta(days=30),
+            )
             self.assertIsNone(blocked_sub.last_reminder_sent)
 
             active_org = db.session.get(
@@ -162,6 +168,123 @@ class BillingReadinessJobsTest(unittest.TestCase):
                 for call in send_email.call_args_list
             ]
             self.assertEqual(recipients, ["sub-active-after@example.com"])
+
+    def test_missed_reminder_day_uses_next_threshold(self):
+        with self.app.app_context():
+            sub_id, _, _ = self.create_subcontractor_for_subscription(
+                "missed@example.com",
+                STATUS_ACTIVE,
+                days_left=29,
+            )
+
+            with patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            self.assertEqual(send_email.call_count, 1)
+            sub = db.session.get(Subcontractor, sub_id)
+            self.assertEqual(sub.last_reminder_threshold, 30)
+
+    def test_reminder_threshold_is_idempotent(self):
+        with self.app.app_context():
+            sub_id, _, _ = self.create_subcontractor_for_subscription(
+                "idempotent@example.com",
+                STATUS_ACTIVE,
+                days_left=29,
+            )
+            sub = db.session.get(Subcontractor, sub_id)
+            sub.last_reminder_threshold = 30
+            sub.last_reminder_expiration = sub.coi_expiration
+            sub.last_reminder_sent = (
+                datetime.now(timezone.utc)
+                - timedelta(days=1)
+            )
+            db.session.commit()
+
+            with patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            send_email.assert_not_called()
+
+    def test_forty_five_days_recovers_sixty_day_threshold(self):
+        with self.app.app_context():
+            sub_id, _, _ = (
+                self.create_subcontractor_for_subscription(
+                    "forty-five@example.com",
+                    STATUS_ACTIVE,
+                    days_left=45,
+                )
+            )
+
+            with patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            self.assertEqual(send_email.call_count, 1)
+            sub = db.session.get(Subcontractor, sub_id)
+            self.assertEqual(sub.last_reminder_threshold, 60)
+            self.assertEqual(
+                sub.last_reminder_expiration,
+                date.today() + timedelta(days=45),
+            )
+
+    def test_renewed_coi_can_start_new_reminder_cycle(self):
+        with self.app.app_context():
+            sub_id, _, _ = self.create_subcontractor_for_subscription(
+                "renewed@example.com",
+                STATUS_ACTIVE,
+                days_left=30,
+            )
+
+            with patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            self.assertEqual(send_email.call_count, 1)
+
+            renewed_expiration = date.today() + timedelta(days=130)
+            sub = db.session.get(Subcontractor, sub_id)
+            sub.coi_expiration = renewed_expiration
+            db.session.commit()
+
+            with patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            send_email.assert_not_called()
+
+            class RenewalDate(date):
+                @classmethod
+                def today(cls):
+                    return renewed_expiration - timedelta(days=30)
+
+            with patch(
+                "app.services.notifications.reminder_service.date",
+                RenewalDate,
+            ), patch(
+                "app.services.notifications.reminder_service.send_email_reminder",
+                return_value=True,
+            ) as send_email:
+                check_and_send_auto_reminders_for_all_users()
+
+            self.assertEqual(send_email.call_count, 1)
+            sub = db.session.get(Subcontractor, sub_id)
+            self.assertEqual(sub.last_reminder_threshold, 30)
+            self.assertEqual(
+                sub.last_reminder_expiration,
+                renewed_expiration,
+            )
 
 
 if __name__ == "__main__":

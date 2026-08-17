@@ -153,12 +153,13 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("Compliance Dashboard", body)
         self.assertIn("Active Projects", body)
         self.assertIn("Ready", body)
-        self.assertIn("Pending", body)
+        self.assertIn("Checking", body)
+        self.assertIn("Needs Attention", body)
         self.assertIn("Blocked", body)
-        self.assertIn("Plan Capacity", body)
-        self.assertIn("Projects</strong>", body)
-        self.assertIn("Subcontractors</strong>", body)
-        self.assertIn("$4.8M", body)
+        self.assertNotIn("Plan Capacity", body)
+        self.assertNotIn("Document Intelligence Summary", body)
+        self.assertNotIn("Portfolio Value", body)
+        self.assertNotIn("Revenue at Risk", body)
         self.assertIn("Required GL", body)
         self.assertIn("$2M", body)
         self.assertIn("$5M", body)
@@ -166,6 +167,42 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("+ Add Subcontractor", body)
         self.assertNotIn(">Add Sub</a>", body)
         self.assertNotIn(">+ Project</a>", body)
+
+    def test_processing_document_is_checking_not_needs_attention(self):
+        with self.app.app_context():
+            project = Project(
+                name="Checking Project",
+                required_coverage=2_000_000,
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            sub = Subcontractor(
+                name="Checking Sub",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add_all([project, sub])
+            db.session.flush()
+            link = ProjectSubcontractor(
+                project_id=project.id,
+                subcontractor_id=sub.id,
+            )
+            doc = Document(
+                filename="subcontractors/1/checking.pdf",
+                original_name="checking.pdf",
+                document_type="COI",
+                sub_id=sub.id,
+                uploaded_by=self.user_id,
+                ai_status="not_analyzed",
+            )
+            db.session.add_all([link, doc])
+            db.session.commit()
+
+        self.login()
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn("CHECKING", body)
+        self.assertNotIn("Checking Sub</td>\n<td>Checking Project</td>", body)
 
     def test_project_view_shows_final_status_and_contract_extraction(self):
         project_id, _ = self.create_project_subcontractor()
@@ -202,7 +239,6 @@ class CoreUXPolishTest(unittest.TestCase):
         owner_index = body.index("<h3>Owner Requirements</h3>")
         scope_block = body[scope_index:owner_index]
 
-        self.assertIn("Not supported", scope_block)
         self.assertNotIn(">Analyze<", scope_block)
 
     def test_subcontractor_document_view_separates_intelligence_and_decision(self):
@@ -226,8 +262,8 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("Products-Comp/OP Agg", body)
         self.assertIn("$5M", body)
         self.assertIn("$10M", body)
-        self.assertIn("Confidence", body)
-        self.assertIn("95%", body)
+        self.assertNotIn("Confidence", body)
+        self.assertNotIn("Evidence State", body)
         self.assertIn("READY", body)
         self.assertNotIn("Coverage limit is below the project requirement.", body)
 

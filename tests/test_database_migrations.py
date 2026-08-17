@@ -392,7 +392,7 @@ class DatabaseMigrationTest(unittest.TestCase):
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertIn("Status: HEALTHY", result.output)
             self.assertIn("Missing tables: none", result.output)
-            self.assertIn("Migration head: b2c3d4e5f6a7", result.output)
+            self.assertIn("Migration head: d4e5f6a7b8c9", result.output)
 
     def test_db_health_cli_reports_unhealthy_unmigrated_schema(self):
         with self.temporary_unmigrated_app() as app:

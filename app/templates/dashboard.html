@@ -27,142 +27,57 @@
 <span class="ux-metric-label">Ready</span>
 </div>
 <div class="ux-metric">
+<span class="ux-metric-value">{{ checking_projects }}</span>
+<span class="ux-metric-label">Checking</span>
+</div>
+<div class="ux-metric">
 <span class="ux-metric-value">{{ pending_projects }}</span>
-<span class="ux-metric-label">Pending</span>
+<span class="ux-metric-label">Needs Attention</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ blocked_projects }}</span>
 <span class="ux-metric-label">Blocked</span>
 </div>
-</div>
-
-<div class="ux-grid">
 <div class="ux-metric">
-<span class="ux-metric-value">{{ expired_count }}</span>
-<span class="ux-metric-label">Expired COIs</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ at_risk_count }}</span>
-<span class="ux-metric-label">At Risk <=30 Days</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value" title="{{ total_portfolio_full }}">{{ total_portfolio_label }}</span>
-<span class="ux-metric-label">Portfolio Value</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value" title="{{ revenue_at_risk_full }}">{{ revenue_at_risk_label }}</span>
-<span class="ux-metric-label">Revenue at Risk</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ average_ai_score }}%</span>
-<span class="ux-metric-label">Average AI Score</span>
+<span class="ux-metric-value">{{ unassigned_projects }}</span>
+<span class="ux-metric-label">No Subcontractors</span>
 </div>
 </div>
 </section>
 
-<section class="ux-card" aria-labelledby="plan-usage">
+<section class="ux-card" aria-labelledby="needs-attention">
 <div class="ux-card-header">
 <div>
-<h2 id="plan-usage">Plan Capacity</h2>
-<p class="ux-help mb-0">{{ capacity_plan.name }} plan usage is shown separately from operational risk.</p>
+<h2 id="needs-attention">Needs Attention</h2>
+<p class="ux-help mb-0">Subcontractors that cannot work today or need compliance follow-up.</p>
 </div>
-</div>
-
-<div class="ux-grid-lg">
-<div class="ux-soft">
-<strong>Projects</strong>
-<div>{{ capacity_view.projects.text }}</div>
-<span class="ux-sr-only">{{ capacity_usage.project_count }} of {% if capacity_plan.max_projects is none %}Unlimited{% else %}{{ capacity_plan.max_projects }}{% endif %}</span>
-{% if capacity_view.projects.percent is not none %}
-<div class="ux-progress" aria-label="Project capacity {{ capacity_view.projects.percent }} percent used">
-<div class="ux-progress-bar" style="width:{{ capacity_view.projects.percent }}%"></div>
-</div>
-{% endif %}
-{% if capacity_view.projects.warning %}
-<small class="ux-status ux-status-warning mt-2">Capacity above 80%</small>
-{% endif %}
-</div>
-
-<div class="ux-soft">
-<strong>Subcontractors</strong>
-<div>{{ capacity_view.subcontractors.text }}</div>
-<span class="ux-sr-only">{{ capacity_usage.subcontractor_count }} of {% if capacity_plan.max_subcontractors is none %}Unlimited{% else %}{{ capacity_plan.max_subcontractors }}{% endif %}</span>
-{% if capacity_view.subcontractors.percent is not none %}
-<div class="ux-progress" aria-label="Subcontractor capacity {{ capacity_view.subcontractors.percent }} percent used">
-<div class="ux-progress-bar" style="width:{{ capacity_view.subcontractors.percent }}%"></div>
-</div>
-{% endif %}
-{% if capacity_view.subcontractors.warning %}
-<small class="ux-status ux-status-warning mt-2">Capacity above 80%</small>
-{% endif %}
-</div>
-</div>
-</section>
-
-<section class="ux-card" aria-labelledby="document-intelligence">
-<div class="ux-card-header">
-<div>
-<h2 id="document-intelligence">Document Intelligence Summary</h2>
-<p class="ux-help mb-0">Document analysis results do not replace final mobilization readiness.</p>
-</div>
-</div>
-<div class="ux-grid">
-<div class="ux-metric">
-<span class="ux-metric-value">{{ documents_analyzed }}</span>
-<span class="ux-metric-label">Documents Analyzed</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ ready_documents }}</span>
-<span class="ux-metric-label">Ready by Analysis</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ pending_documents }}</span>
-<span class="ux-metric-label">Pending by Analysis</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ blocked_documents }}</span>
-<span class="ux-metric-label">Blocked by Analysis</span>
-</div>
-</div>
-</section>
-
-<section class="ux-card" aria-labelledby="high-risk-cois">
-<div class="ux-card-header">
-<h2 id="high-risk-cois">High Risk COIs</h2>
 </div>
 
 <div class="ux-table-wrap">
 <table class="ux-table">
-<caption class="ux-sr-only">Subcontractors with expired or at-risk COIs</caption>
+<caption class="ux-sr-only">Subcontractors needing compliance attention</caption>
 <thead>
 <tr>
 <th scope="col">Company</th>
-<th scope="col">Expiration</th>
-<th scope="col">Days Left</th>
+<th scope="col">Project</th>
 <th scope="col">Status</th>
+<th scope="col">Issue</th>
 </tr>
 </thead>
 <tbody>
-{% set risk_subs = subs | selectattr("computed_status","ne","compliant") | list %}
-{% if risk_subs %}
-{% for sub in risk_subs %}
+{% if needs_attention %}
+{% for item in needs_attention %}
 <tr>
-<td>{{ sub.name }}</td>
-<td>{{ sub.coi_expiration.strftime("%m/%d/%Y") if sub.coi_expiration else "Not available" }}</td>
-<td>{{ sub.days_left if sub.days_left is not none else "Not available" }}</td>
+<td>{{ item.subcontractor.name }}</td>
+<td>{{ item.project.name }}</td>
 <td>
-{% if sub.computed_status == "expired" %}
-<span class="ux-status ux-status-expired">EXPIRED</span>
-{% elif sub.computed_status == "at_risk" %}
-<span class="ux-status ux-status-at-risk">AT RISK</span>
-{% else %}
-<span class="ux-status ux-status-neutral">REVIEW</span>
-{% endif %}
+<span class="ux-status ux-status-{% if item.status == 'BLOCKED' %}danger{% else %}warning{% endif %}">{{ item.status }}</span>
 </td>
+<td>{{ item.reason }}</td>
 </tr>
 {% endfor %}
 {% else %}
-<tr><td colspan="4"><div class="ux-empty">No high risk COIs.</div></td></tr>
+<tr><td colspan="4"><div class="ux-empty">No items need attention.</div></td></tr>
 {% endif %}
 </tbody>
 </table>
@@ -183,12 +98,6 @@
 <option value="expiring" {% if request.args.get('contract_status') == 'expiring' %}selected{% endif %}>Expiring Soon</option>
 <option value="expired" {% if request.args.get('contract_status') == 'expired' %}selected{% endif %}>Expired</option>
 </select>
-<select class="form-select" name="risk_level" aria-label="Risk level">
-<option value="">All Risk Levels</option>
-<option value="Low" {% if request.args.get('risk_level') == 'Low' %}selected{% endif %}>Low</option>
-<option value="Medium" {% if request.args.get('risk_level') == 'Medium' %}selected{% endif %}>Medium</option>
-<option value="High" {% if request.args.get('risk_level') == 'High' %}selected{% endif %}>High</option>
-</select>
 <button type="submit" class="ux-btn ux-btn-primary">Filter</button>
 <a href="{{ url_for('dashboard.dashboard') }}" class="ux-btn ux-btn-secondary">Reset</a>
 </form>
@@ -199,13 +108,10 @@
 <thead>
 <tr>
 <th scope="col">Project</th>
-<th scope="col">Contract Value</th>
 <th scope="col">Required GL</th>
 <th scope="col">Schedule / Days Left</th>
 <th scope="col">Subcontractors</th>
 <th scope="col">Readiness</th>
-<th scope="col">Risk</th>
-<th scope="col">Compliance</th>
 <th scope="col">Actions</th>
 </tr>
 </thead>
@@ -213,18 +119,10 @@
 {% for row in project_rows %}
 <tr>
 <td>{{ row.name }}</td>
-<td title="{{ row.contract_value_full }}">{{ row.contract_value }}</td>
 <td>{{ row.required_coverage }}</td>
 <td>{{ row.schedule }}</td>
 <td>{{ row.subcontractor_count }}</td>
-<td><span class="ux-status ux-status-{{ row.readiness|lower }}">{{ row.readiness }}</span></td>
-<td><span class="ux-status ux-status-{% if row.risk == 'High' %}danger{% elif row.risk == 'Medium' %}warning{% else %}success{% endif %}">{{ row.risk }}</span></td>
-<td>
-<span>{{ row.compliance_score }}%</span>
-<div class="ux-progress" aria-label="Compliance {{ row.compliance_score }} percent">
-<div class="ux-progress-bar" style="width:{{ row.compliance_score }}%"></div>
-</div>
-</td>
+<td><span class="ux-status ux-status-{{ row.readiness|lower|replace(' ', '-') }}">{{ row.readiness }}</span></td>
 <td>
 <div class="ux-actions">
 <a href="{{ url_for('projects.view_project', project_id=row.project.id) }}" class="ux-btn ux-btn-primary" aria-label="View {{ row.name }}">View</a>
@@ -237,7 +135,7 @@
 </td>
 </tr>
 {% else %}
-<tr><td colspan="9"><div class="ux-empty">No projects yet.</div></td></tr>
+<tr><td colspan="6"><div class="ux-empty">No projects yet.</div></td></tr>
 {% endfor %}
 </tbody>
 </table>
@@ -254,6 +152,7 @@
 <input type="text" class="form-control" name="search" placeholder="Search by company" value="{{ request.args.get('search','') }}" aria-label="Search subcontractors">
 <select class="form-select" name="status" aria-label="Subcontractor status">
 <option value="">All Status</option>
+<option value="missing" {% if request.args.get('status') == 'missing' %}selected{% endif %}>Missing</option>
 <option value="compliant" {% if request.args.get('status') == 'compliant' %}selected{% endif %}>Compliant</option>
 <option value="at_risk" {% if request.args.get('status') == 'at_risk' %}selected{% endif %}>At Risk</option>
 <option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>Expired</option>

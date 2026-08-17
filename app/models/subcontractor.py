@@ -71,6 +71,14 @@ class Subcontractor(db.Model):
         db.DateTime
     )
 
+    last_reminder_threshold = db.Column(
+        db.Integer
+    )
+
+    last_reminder_expiration = db.Column(
+        db.Date
+    )
+
     # ==========================
     # RELATIONSHIPS
     # ==========================
@@ -117,11 +125,16 @@ class Subcontractor(db.Model):
 
     @property
     def computed_status(self):
+        """Legacy COI date helper.
+
+        Operational readiness is project-contextual and must be calculated from
+        ProjectSubcontractor through the readiness service.
+        """
 
         days = self.days_left
 
         if days is None:
-            return "compliant"
+            return "missing"
 
         if days < 0:
             return "expired"

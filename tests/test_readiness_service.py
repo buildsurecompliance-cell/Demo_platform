@@ -490,9 +490,13 @@ class ReadinessServiceTest(unittest.TestCase):
         )
 
     def test_coverage_insufficient_still_blocks_with_profile(self):
+        document = self.make_coi_document(
+            expiration_date=(date.today() + timedelta(days=60)).isoformat(),
+            coverage=500000,
+        )
         link = self.make_link(
             date.today() + timedelta(days=60),
-            coverage_limit=500000,
+            documents=[document],
             required_coverage=1000000,
         )
 
@@ -1088,9 +1092,10 @@ class ReadinessServiceTest(unittest.TestCase):
         self.assertEqual(result["status"], READY)
 
     def test_insufficient_coverage_is_blocked_when_required(self):
+        document = self.make_coi_document(coverage=500000)
         link = self.make_link(
             date(2026, 2, 1),
-            coverage_limit=500000,
+            documents=[document],
             required_coverage=1000000,
         )
 
@@ -1117,7 +1122,11 @@ class ReadinessServiceTest(unittest.TestCase):
             today=date(2026, 1, 1),
         )
 
-        self.assertEqual(result["status"], READY)
+        self.assertEqual(result["status"], BLOCKED)
+        self.assertIn(
+            "COVERAGE_EVIDENCE_MISSING",
+            self.reason_codes(result),
+        )
         self.assertNotIn(
             "COVERAGE_INSUFFICIENT",
             self.reason_codes(result),
@@ -1138,9 +1147,10 @@ class ReadinessServiceTest(unittest.TestCase):
         self.assertEqual(result["status"], READY)
 
     def test_multiple_reasons_are_returned(self):
+        document = self.make_coi_document(coverage=500000)
         link = self.make_link(
             date(2026, 1, 15),
-            coverage_limit=500000,
+            documents=[document],
             required_coverage=1000000,
         )
 
@@ -1158,9 +1168,10 @@ class ReadinessServiceTest(unittest.TestCase):
         )
 
     def test_blocked_has_priority_over_pending(self):
+        document = self.make_coi_document(coverage=500000)
         link = self.make_link(
             date(2026, 1, 15),
-            coverage_limit=500000,
+            documents=[document],
             required_coverage=1000000,
         )
 
@@ -1234,7 +1245,7 @@ class ReadinessServiceTest(unittest.TestCase):
             "Not Cleared",
         )
 
-    def test_project_without_subcontractors_preserves_existing_status(self):
+    def test_project_without_subcontractors_is_not_ready(self):
         project = Project(
             name="Empty Project",
             user_id=1,
@@ -1242,7 +1253,7 @@ class ReadinessServiceTest(unittest.TestCase):
 
         self.assertEqual(
             project.mobilization_status,
-            "Ready to Mobilize",
+            "No Subcontractors Assigned",
         )
 
         self.assertEqual(

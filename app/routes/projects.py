@@ -47,6 +47,7 @@ from app.services.document_analysis_service import (
 from app.services.documents.types import (
     PROJECT_DOCUMENT_TYPES,
     normalize_project_document_type,
+    supports_automatic_analysis,
 )
 from app.services.compliance_officer import (
     generate_compliance_advice,
@@ -103,11 +104,6 @@ PROJECT_REQUIRED_COVERAGE_PRESETS = {
     "2000000": 2000000,
     "5000000": 5000000,
 }
-
-SUPPORTED_PROJECT_ANALYSIS_TYPES = {
-    "Contract",
-}
-
 
 def _money_short(value):
     amount = float(value or 0)
@@ -271,7 +267,6 @@ def _add_missing_project_links(project, subcontractor_ids):
             ProjectSubcontractor(
                 project_id=project.id,
                 subcontractor_id=subcontractor_id,
-                coverage_limit=0,
             )
         )
 
@@ -372,7 +367,7 @@ def _active_coverage_for_project_subcontractor(project_subcontractor):
             if coverage:
                 return coverage
 
-    return project_subcontractor.coverage_limit
+    return None
 
 
 def _project_summary_view_model(project):
@@ -409,7 +404,7 @@ def _document_type_view(doc_type, docs):
     return {
         "type": doc_type,
         "documents": docs,
-        "supports_analysis": doc_type in SUPPORTED_PROJECT_ANALYSIS_TYPES,
+        "supports_analysis": supports_automatic_analysis(doc_type),
         "empty_message": f"No {doc_type} uploaded yet.",
     }
 
@@ -645,7 +640,7 @@ def add_project():
                 db.session.add(doc)
                 db.session.flush()
 
-                if doc_type == "Contract":
+                if supports_automatic_analysis(doc_type):
                     created_contract_document_ids.append(doc.id)
 
                 next_versions[doc_type] += 1
@@ -801,11 +796,11 @@ def edit_project(project_id):
                 new_link = ProjectSubcontractor(
                     project_id=project.id,
                     subcontractor_id=sub_id,
-                    coverage_limit=0,
                 )
                 db.session.add(new_link)
 
         saved_storage_keys = []
+        uploaded_contract_documents = []
         file = request.files.get("file")
 
         if file and file.filename != "":
@@ -848,6 +843,9 @@ def edit_project(project_id):
 
                 db.session.add(new_doc)
 
+                if supports_automatic_analysis(doc_type):
+                    uploaded_contract_documents.append(new_doc)
+
         try:
             db.session.commit()
         except Exception as e:
@@ -867,7 +865,24 @@ def edit_project(project_id):
                 )
             )
 
-        flash("Project updated successfully!", "success")
+        uploaded_contract_document_ids = [
+            doc.id
+            for doc in uploaded_contract_documents
+        ]
+
+        if uploaded_contract_document_ids:
+            if _analyze_created_contract_documents(
+                uploaded_contract_document_ids
+            ):
+                flash("Project updated and contract analyzed successfully.", "success")
+            else:
+                flash(
+                    "Project updated, but automatic contract analysis could not be completed. "
+                    "You can retry from the project page.",
+                    "warning",
+                )
+        else:
+            flash("Project updated successfully!", "success")
 
         return redirect(
             url_for(
@@ -1078,7 +1093,17 @@ def upload_project_document(project_id):
             )
         )
 
-    flash("Document uploaded successfully!", "success")
+    if supports_automatic_analysis(doc_type):
+        if _analyze_created_contract_documents([new_doc.id]):
+            flash("Document uploaded and contract analyzed successfully.", "success")
+        else:
+            flash(
+                "Document uploaded, but automatic contract analysis could not be completed. "
+                "You can retry from the project page.",
+                "warning",
+            )
+    else:
+        flash("Document uploaded successfully!", "success")
 
     return redirect(
         url_for(

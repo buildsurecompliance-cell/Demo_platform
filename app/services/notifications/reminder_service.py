@@ -7,6 +7,7 @@ import logging
 
 from sqlalchemy.orm import joinedload
 
+from app.core.constants import REMINDER_DAYS
 from app.extensions import db
 
 from app.models import Subcontractor
@@ -18,18 +19,6 @@ from app.services.notifications.email_service import (
 
 
 logger = logging.getLogger(__name__)
-
-REMINDER_DAYS = {
-    90,
-    60,
-    45,
-    30,
-    15,
-    7,
-    3,
-    1,
-}
-
 
 # ==========================
 # AUTO REMINDER
@@ -76,12 +65,13 @@ def check_and_send_auto_reminders_for_all_users():
         if days_left < 0:
             continue
 
-        if days_left not in REMINDER_DAYS:
+        threshold = _reminder_threshold_for_days_left(days_left)
+
+        if threshold is None:
             continue
 
-        if sub.last_reminder_sent:
-            if sub.last_reminder_sent.date() == today:
-                continue
+        if _threshold_already_sent(sub, threshold, expiration):
+            continue
 
         subject = "COI Expiration Reminder"
 
@@ -107,13 +97,16 @@ BuildSure Compliance
             sub.last_reminder_sent = datetime.now(
                 timezone.utc
             )
+            sub.last_reminder_threshold = threshold
+            sub.last_reminder_expiration = expiration
 
             reminders_sent += 1
 
             logger.info(
-                "Reminder sent for subcontractor_id=%s days_left=%s",
+                "Reminder sent for subcontractor_id=%s days_left=%s threshold=%s",
                 sub.id,
                 days_left,
+                threshold,
             )
 
     if reminders_sent > 0:
@@ -129,3 +122,43 @@ BuildSure Compliance
         "Total reminders sent: %s",
         reminders_sent,
     )
+
+
+def _reminder_threshold_for_days_left(days_left):
+    if days_left < 0:
+        return None
+
+    eligible_thresholds = [
+        threshold
+        for threshold in sorted(REMINDER_DAYS)
+        if days_left <= threshold
+    ]
+
+    if not eligible_thresholds:
+        return None
+
+    return eligible_thresholds[0]
+
+
+def _threshold_already_sent(sub, threshold, expiration):
+    last_threshold = getattr(
+        sub,
+        "last_reminder_threshold",
+        None,
+    )
+    last_expiration = getattr(
+        sub,
+        "last_reminder_expiration",
+        None,
+    )
+
+    if last_threshold is not None:
+        return (
+            last_expiration == expiration
+            and last_threshold <= threshold
+        )
+
+    if not sub.last_reminder_sent:
+        return False
+
+    return sub.last_reminder_sent.date() == date.today()

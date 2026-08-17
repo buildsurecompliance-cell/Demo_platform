@@ -233,6 +233,35 @@ class DemoProjectGeneratorTest(unittest.TestCase):
                     coverage_limit=scenario.policy.general_liability_each_occurrence,
                 )
                 db.session.add(link)
+                db.session.add(
+                    Document(
+                        filename=f"{scenario_key}_coi.pdf",
+                        original_name=f"{scenario_key}_coi.pdf",
+                        document_type="COI",
+                        sub_id=sub.id,
+                        uploaded_by=user.id,
+                        ai_status="analyzed",
+                        ai_confidence=0.95,
+                        ai_extracted_data={
+                            "expiration_date": (
+                                scenario.policy.expiration_date.isoformat()
+                            ),
+                            "general_liability_each_occurrence": (
+                                scenario.policy.general_liability_each_occurrence
+                            ),
+                            "general_liability_limit": (
+                                scenario.policy.general_liability_each_occurrence
+                            ),
+                            "confidence": 0.95,
+                        },
+                        ai_compliance_result={
+                            "status": "Ready",
+                            "issues": [],
+                            "warnings": [],
+                            "confidence": 0.95,
+                        },
+                    )
+                )
                 db.session.flush()
                 statuses[scenario_key] = calculate_readiness(link)["status"]
 
