@@ -1,0 +1,130 @@
+{
+  "company": "Metro Roofing Austin Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9525-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:58.770391+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "15778faa817f073fb65caeed876bbbaa7485b02ae9d2f292f2c647d33089dd16"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing Austin Demo LLC",
+        "tax_id_last4": "9525"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:58.770397+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "068de63bba58ef1b263507a60970af98db4f0de0a010f8e32f24f553737755ca"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:58.770401+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "e7ffe80c365cc9e2af3a3d83b0f0cb3851583133b425f902a1e8defa9c03fd70"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:58.770404+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "2ef01e226454c097076b76cc6996bbd32566daf6cf63a13063f22cca17d9279d"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:58.770408+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "1d862a983578c4208e1c1334eb51fbcee9c9dfa1021407a0a0b5b46d4e1fb6a3"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9525"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:58.770413+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "bc95087a47112de8664d6c058947e97a686e9543b0224928882380ec319199aa"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing Austin Demo LLC",
+        "trade": "Roofing"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:58.770417+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "e9d6dd32778a9c3bf4237536d24908dfe525c76d3086a49dfe626f6e9d94d791"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing Austin Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:58.770421+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "1a6a01864de5074b21e8d7f869b11f531d0ff4b31dd8ca51c030473edff7db7b"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Roofing"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:58.770425+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "d352508c63bcfe2a9ebc36b44a8639e6a92939dc54f86a74082b588414ba38c4"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:58.770429+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "cd78e7a33d81df2959fd3202963a1bfb31a40aa10164ae65db0049cd7c9ad117"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:58.770379+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

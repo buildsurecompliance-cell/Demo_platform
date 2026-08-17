@@ -17,6 +17,7 @@ from app.security import register_security
 from app.routes import (
     ai_bp,
     auth_bp,
+    billing_bp,
     dashboard_bp,
     documents_bp,
     health_bp,
@@ -82,6 +83,7 @@ def create_app(config_object=None):
         }
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(billing_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(health_bp)

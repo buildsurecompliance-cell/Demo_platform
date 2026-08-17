@@ -1,0 +1,130 @@
+{
+  "company": "Apex Concrete Austin Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1857-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:57.180618+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "7cba39dde23afe7d0e9467311793349f6d7695599e3cab71aa6ade7de69e87d4"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Austin Demo LLC",
+        "tax_id_last4": "1857"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:57.180625+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "555e6c954ddaa30c6ad12b980885a5b0622c6dab869238326d0117548dcb2a4a"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:57.180629+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "cfbf0ed5dbd9e6a5d75ae8bbded48f21c9e1ec056125bd5ea04ebd571be90985"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:57.180633+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "4ef73140b182e0074f9debb1ef56d32ea0382ccaff879bc144edeb1cefd8aa43"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:57.180637+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "ead5761370b97f5a21e60edd5d0f00f4f795625542f596bf6a4cf401f9d4f12f"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1857"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:57.180640+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "45d47a2bf4365c0ef1aaf62b403171960d30e1c7aa15ada69741663a1b258c36"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Austin Demo LLC",
+        "trade": "Concrete"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:57.180644+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "92acdd9ff3088b6df84ff5d836063ebf4dd97390f190ab2ff03fdd7e77c8c784"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Austin Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:57.180648+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "cc0897d4b098fec2345b68a46a7d77ec868a6fe0287692a9469eeea0cdbcec1e"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Concrete"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:57.180652+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "2f98f4cf3e908629b25900fba1636b4032739f872dd94ead0c5f0cc0dcb9dca5"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:57.180656+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "64b1d97f805f864c744f845db470de1b564955a51516c31461a301e364a2c73d"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:57.180601+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

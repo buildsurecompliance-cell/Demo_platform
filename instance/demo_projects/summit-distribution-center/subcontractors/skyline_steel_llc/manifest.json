@@ -1,0 +1,130 @@
+{
+  "company": "Skyline Steel LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "08/01/2026",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-5551-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:44.004295+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "67d9c816d3d278293351c663ddbf4e4ca627536d19f565ca34789c53bfc12cd0"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel LLC",
+        "tax_id_last4": "5551"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:44.004302+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "2c27f2758407b2eea9c6ee732fa6973e1c20fbe2992ae244d2482e7e6c940da6"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:44.004306+00:00",
+      "page_count": 17,
+      "scenario": "pending",
+      "sha256": "3c9ef2c63b07a4d583ed1a267c6a5627ab7ab7f25eea436c7d65a415b5ab3c58"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.004310+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "0396b157bb68b4d1a20064d69a83fca9c17dd1a024d760b6cb2768105df688f0"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.004314+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "3eceb79748f0a1e8d1a6041bd244063204f98bc7e77a3dad7eb31a448e3c14a4"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-5551"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:44.004318+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "e846a6f0d27d15aeedb67b15a388ad2c4c243d381f3cd0d33d560268b767f628"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel LLC",
+        "trade": "Structural Steel"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:44.004322+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "43ad2e8abe7949fc59387ba6b96f0fc045084c9298c220419f0498021d4ab3d0"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:44.004326+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "de1068fd228a27ecd3b77dee9178ec95e3758007d24fc2f5d164977b53f5fe8d"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Structural Steel"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:44.004329+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "d6f6aa8d5a5cc8f678ecbe39f5feb27ac09c99a18a4739fc5aa4deccc3192188"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:44.004334+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "ac0b944849f482e4eb90e3eb488a8f42cbb35b6b3f0c53bec8843f1189fcef94"
+    }
+  ],
+  "expected_status": "PENDING",
+  "generated_at": "2026-07-18T01:04:44.004275+00:00",
+  "preset": "apex-concrete",
+  "scenario": "pending"
+}

@@ -20,6 +20,7 @@ from app.models import (
 )
 from app.extensions import db
 
+from app.decorators import subscription_required
 from app.services.document_analysis_service import (
     analyze_and_save_document,
     reset_document_analysis,
@@ -108,6 +109,7 @@ def _analysis_redirect_target(doc):
     methods=["POST"],
 )
 @login_required
+@subscription_required
 def analyze_document(doc_id):
 
     doc = db.session.get(

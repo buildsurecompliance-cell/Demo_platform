@@ -10,6 +10,7 @@ from flask_login import (
     current_user,
 )
 
+from app.decorators import subscription_required
 from app.models import (
     Document,
     Project,
@@ -198,6 +199,7 @@ def _sub_status_label(sub):
 
 @dashboard_bp.route("/dashboard")
 @login_required
+@subscription_required
 def dashboard():
     organization = get_current_organization()
 

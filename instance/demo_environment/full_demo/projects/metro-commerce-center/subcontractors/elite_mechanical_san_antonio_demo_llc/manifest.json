@@ -1,0 +1,130 @@
+{
+  "company": "Elite Mechanical San Antonio Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1986-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:48.649030+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "f6304532967e66b16f35be72cc4e2fd61c9ae6cc61046847ee947e9e42c709ee"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical San Antonio Demo LLC",
+        "tax_id_last4": "1986"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:48.649036+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "e380f8d610f3ec9cf697695bf97a1339b72e67d7d101b73071c992214d9688db"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:48.649041+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "3863180adb42ccf68c1b6168dfdc67cf476142809206fad7cf12536f9470d535"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:48.649045+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "004241582fce03c1960e880892c4173420e5b1a30d4fdefea51fd0b4f20b19f3"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:48.649049+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "7b94a12ece9422220ac7c458c8165c7b47d334e84ab62200eca4d9d1bbfed7a0"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1986"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:48.649053+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a49cf9aa8b4914ce101ab8b42add66eb3f6a2d1f1e0a5bccfc3d19c18027d5dc"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical San Antonio Demo LLC",
+        "trade": "Mechanical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:48.649057+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "0d09f1e04b438a73e27bfa2271daa5e033cb51f990447300687ba0fe284da841"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical San Antonio Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:48.649061+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "d57eef98ef6b51fda06b7c83357d9da8c2135b4f2304c517f4bebfcdb6c9aebb"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Mechanical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:48.649065+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "241b5ad2a80bdfb9839d17f2b570a79e27ee4e473e46dc36826964e500d0b309"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:48.649069+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "97f06cfa27a1396284eeab21690944b6375421666d40f8c033d39036b11966b0"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:48.649014+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

@@ -1,0 +1,3338 @@
+{
+  "preset": "full-demo",
+  "projects": [
+    {
+      "documents": [
+        {
+          "document_type": "Contract",
+          "expected_extracted_fields": {
+            "contract_value": 24300000,
+            "end_date": "01/15/2029",
+            "project_name": "Metro Commerce Center",
+            "required_coverage": 5000000,
+            "start_date": "08/01/2026"
+          },
+          "filename": "Prime_Contract.pdf",
+          "page_count": 1,
+          "sha256": "1734f62b24b40258e1267d0e0136ff6cd678a7ad5f99618e144d424e5b36b6c2"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 5000000
+          },
+          "filename": "Owner_Requirements.pdf",
+          "page_count": 9,
+          "sha256": "d61a0fbcecf787d032d81f64ef87f444278a144e2e37c0cf4cc2719997fa9bd4"
+        },
+        {
+          "document_type": "Scope",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Project_Scope.pdf",
+          "page_count": 1,
+          "sha256": "9a005ef5ffe2c795e04efc7ab4da085f2e4a2076759132fbd3259055a5884006"
+        },
+        {
+          "document_type": "General Conditions",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "General_Conditions.pdf",
+          "page_count": 1,
+          "sha256": "ad75ccfb3167f5e58ece7be9f17145aacc52414cd959de74561613b5f0950313"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 5000000
+          },
+          "filename": "Insurance_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "a0a93de9fbe4a7a98fd01c9d416353a8c450fd7a9e81594882955534ecb61127"
+        },
+        {
+          "document_type": "Site Logistics Plan",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Site_Logistics_Plan.pdf",
+          "page_count": 1,
+          "sha256": "2dac17511cae04e109b041af3857bb35840c58ea15805b17e9266dc849b6e858"
+        },
+        {
+          "document_type": "Project Schedule",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Project_Schedule.pdf",
+          "page_count": 1,
+          "sha256": "b65277af34b56bc7a431b7efb5faaa344502a447370c32cb109f9aa52373ad01"
+        },
+        {
+          "document_type": "Project Directory",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Project_Directory.pdf",
+          "page_count": 1,
+          "sha256": "f09986c43f371fc22274a382dd60a25205923579a1e7cd25859d9eb8e5322cde"
+        },
+        {
+          "document_type": "Mobilization Checklist",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Mobilization_Checklist.pdf",
+          "page_count": 1,
+          "sha256": "a7bcbf50b2deac1a339304dd78010c979b9d9ed6d5fbe0ab81b81e7f2918e892"
+        },
+        {
+          "document_type": "Safety Requirements",
+          "expected_extracted_fields": {
+            "project_name": "Metro Commerce Center"
+          },
+          "filename": "Safety_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "9b96e62151dcf83727806dc33cd75024422975505655c431d18d0e5fbef7b644"
+        }
+      ],
+      "project": {
+        "address": "1900 Commerce Crossing",
+        "architect": "Alamo Urban Design",
+        "city": "San Antonio",
+        "contract_value": 24300000,
+        "csi_divisions": [
+          "03 Concrete",
+          "04 Masonry",
+          "07 Thermal",
+          "09 Finishes",
+          "22 Plumbing",
+          "26 Electrical"
+        ],
+        "description": "Mixed commercial center with retail shell space, parking improvements and MEP coordination.",
+        "final_completion": "2029-03-01",
+        "key": "metro-commerce-center",
+        "mep_coordinator": "Samir Nadeem",
+        "name": "Metro Commerce Center",
+        "owner": "Metro Commerce Ventures",
+        "project_manager": "Rachel Dunn",
+        "required_insurance_limit": 5000000,
+        "safety_manager": "Nora Bennett",
+        "start_date": "2026-08-01",
+        "state": "TX",
+        "status": "Preconstruction",
+        "substantial_completion": "2029-01-15",
+        "superintendent": "Andre Collins",
+        "zip_code": "78205"
+      },
+      "scenario": "mixed",
+      "subcontractors": [
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "c301b42fd3e2279c9989218d8b424e99a50b4d6956b695fc814600185a2b06b1"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "ed4c385b515f56720e3d38e7131944d94c06bbb5c3bca453d7c8392c3321955e"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "a06eead350d509431fd384ca494c204654b4b606b95f0c9290e6c24ebd938d0c"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "d309d3ffed251b38ec481e1615c00992a07337e5f7eee96091ed0b40665531b3"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c3cc2c129b4dededb8d077a3bc06da40f1e9cb1dd52c563a2ae28ee21f89c4d1"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "a049a03d62c9e31bd72dba296f100eefecd741abd37650dd0fd95efd8baca8d0"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "ac4dfa06e65b11a80a26e7d3f74c44a895dca719106ba56b43f52b8f94b637eb"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "2b69fe28ad8baffda808493b8353e202c80f258fb4ec192ff3a08853e3b17e92"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "5b3e54cf0e8a52ff1a91494b9856086c477ba13f03e59b5b25bc4ab93d4bb971"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "da298e43fd662887551dfd5f2829e1cc4ca1a20c56cf89e0c6f933e645d02fa0"
+            }
+          ],
+          "name": "Apex Concrete San Antonio Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "74d89cd1409d9232170bcf57bf35b8c0d8a468212a02e345c0fe909e9546e97f"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "628b667c3d716afe93e5337a66cc75ca99663d5cc5876e9f25762c698f5e1773"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "086fdfcbc647d8b236005f50c38a67b0e92ccdb785fa4b7c3f27df60ee76f4ec"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "61c65ae7275320e534dc9582e0af25c923737b5024b25b0636611e0af4dfef84"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "1be1a371030c9815ce0116f7cc0462b56e220af85812c6f4a4c25da5d6e22feb"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "cfbadc1d48f7a32f5d28ad902de26790499ec60d96c452204570bd3929ec1b2e"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "ffbc30873bca26aa531dca518141522d8082c6ab2da375e0e8e4e981f79c94d9"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "58a8aa70df5dfd644933b8c8edbda6793af23275064685f5aaeb88d10837d1b6"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "fb25d049b8ffdf2b7d835fea35cd84280469a20c84453233cc1a33b1c44c2d3e"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "d7464dfbd6447469abe44fd73310eaf74b935d8e77d12545fe96aee839475687"
+            }
+          ],
+          "name": "Skyline Steel San Antonio Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "92d0f2621c7f0ac506db2415875bb7ab24f7a458bcdac9e938016d4af9e47966"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "0be9cba779d61a7554b9c7ea07321e6809afee8fc9e492a1a9d0a4140aac3ce1"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "d76e34f614581855b2d01dd9948a5fd328cc59e7763fe3777e98b9445029d2f6"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "8d0da8a28509f46519fb08d67507f13d69b13426b1fa2714c3693817ee532978"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "da1c5df74dfdfc0291925f41c2b9be234fb27d2ec23350e7ad5f9b58eb2f96f1"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "3ec047dbdefe3cc6098a820e0f361d9f0dee405bb72f2a454424a1e8ae329b4f"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "562a2c2b49d22675ef3e0daf5bbb9e9a2d9471bea108dc3146933981931a13f3"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "040b57b65b1d35f82805df5fe2500c59c63ea666576e6835cef2483baf6c5341"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "cac1558f1d0a4d2845e55a715c4253f461db5c5b6743e1d5cb1e3acad3b6f47d"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "ad35444e07451b01a081c323f89a8c0781cb378bb7a5702687f38de845968a76"
+            }
+          ],
+          "name": "Volt Electrical San Antonio Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "f6304532967e66b16f35be72cc4e2fd61c9ae6cc61046847ee947e9e42c709ee"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "e380f8d610f3ec9cf697695bf97a1339b72e67d7d101b73071c992214d9688db"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "3863180adb42ccf68c1b6168dfdc67cf476142809206fad7cf12536f9470d535"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "004241582fce03c1960e880892c4173420e5b1a30d4fdefea51fd0b4f20b19f3"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "7b94a12ece9422220ac7c458c8165c7b47d334e84ab62200eca4d9d1bbfed7a0"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "a49cf9aa8b4914ce101ab8b42add66eb3f6a2d1f1e0a5bccfc3d19c18027d5dc"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "0d09f1e04b438a73e27bfa2271daa5e033cb51f990447300687ba0fe284da841"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "d57eef98ef6b51fda06b7c83357d9da8c2135b4f2304c517f4bebfcdb6c9aebb"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "241b5ad2a80bdfb9839d17f2b570a79e27ee4e473e46dc36826964e500d0b309"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "97f06cfa27a1396284eeab21690944b6375421666d40f8c033d39036b11966b0"
+            }
+          ],
+          "name": "Elite Mechanical San Antonio Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "d3cae06669ea9704d0ebc48a46e732fd70bca3bd5e32f4a203dd80d7196a8795"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "a82bc25eb66be48ba9bb47254421f3ed5fdfd22a7ea9c18a72fa49af677a69ec"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "3f4da080b06e81cb2350cd659c5f2396e55b56eff8cbfccacf037125478396b4"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e50492b2848e4bff0631d9b7d5cb0bf21b9db13e2f1d3b45139613ab2340d0ec"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "bf3fbcbbad293d06db309dfd03cdd3d29a016a428406dee2f6baa75b89a567bf"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "fa9e6b5d1bbb40e69d3f23e1378d09ecbc2865e78e1f5ed23c58155191cfd049"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "32eb800e224e5efe35ac0040230ebbebeb669c9dde619bdb5c878d756a71ad60"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "9bf11be93d04dbe6345aa6c12c581dd99177bb5e13f1a01f14f231d8813cce65"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "b754ab61c9a9643ef87b22d27d2101db18e40cad5b314bc88795e35f46a22c26"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "a9eb6a5f2981dc9bb6566b79e92ed55ec1115fa905b90d06f06067b286a78bc3"
+            }
+          ],
+          "name": "Precision Fire Protection San Antonio Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "85394aaf511fedc0d9ce2ca738b71b13e4d6e4d5874e6d7f3cce64b79a06b5f6"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "2243eee6b9eab8a0be8a8638dc487f34dcc64af780eff2102ff43b10f37e938e"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "320866e2f43d6cf8d799374424d61dc872c3a98240bcc24c89c84768ad10df3b"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "21df7ef14250e2b7abe48b37b7d83221a51ea66c92e7a1b05f8af481130ade80"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "7aa58ed9e9331d63a1c753d9e926dfdce7fac0384cf13d69b51247e41dd81a0c"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "75b0933c033afb5853210fe7dc519e3f0261ddd6c4d246ec7412edb7619e458a"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "2d5192ff4a5f9efbe35ef07688f44f5fcef45018fa98190c87109eea4525ca63"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "226cc2b0e6a90a98f563672e13bfc3247519a154d06cda59bdc094fea35654b7"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "74594827d3d80e305d49bb4278b1f4dd842a83cec0a507ac04d8e216ca852373"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "33be2a527ce3d8e8b1ecb8e1d042571ad05ecaada2919befd9ed23c3714f0135"
+            }
+          ],
+          "name": "Titan Drywall San Antonio Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "b45426c4a4249cafaebb4963e77677e50a3be59e3d7ae6f39160e4795796ba5b"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "0e471a6c89fcb605abefe7b9ab51ebb1704f26f2e0810a6450d05eea7e497364"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "527aa2fdc8fccddfdc309e729ba0cc98cb25c34d0333d5ce839c64fb76ad7b1b"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c62b953519425f30a8771c1bf0dcfeca5d487f288dc823d2601ee2a0651450ce"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a413d8baae325a1efb9c938c439e52fa3ab98f5382ce7efbc67da795b23dcbc8"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "cff6fc14d20ea43f2b27e420005d63181fe7a6b0c56ee8698c685b3e300489fb"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "f3443928b465c6879fc90c041eb545f91072f4a760c9c5b09e1b304fd6abbf2a"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "8e4b4ba8f77b41a4fac8b1d5bbfd4cad0ccd9e0015742c89c86d1e8675aed174"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "9cd6d1c3f73143db2f88da925ff169601e28c467b8b6f27723f50f48ad61182d"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "0f9f839decd3c06dd39b73e0b95c8c305d57a55a4a9eecc89e7870102445bc27"
+            }
+          ],
+          "name": "Metro Roofing San Antonio Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "c912aa8f1683b9037fa7f22d381d175dbbae1bc612d79aa0845d02b7601ef4a0"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "fe60bc3d42fdc47d7472d2a28be423734b8a5d3188647f89e740bd9bbfc8e63a"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "d6c803e776ec66965c69c38ee7e44e6d46a6fd8f542a961be7dedd1b6ddf14cf"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "b60ca7a15191f929e2343812bb90e811339466ce5befc114e254e398df32f95a"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "3979b20d90d61f7453162ceb8c325d2c306d6a63473a82db694c98275f2d6b1a"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "db5ef3e99082150b603e6053de355e7ae37a866d373142ac4471a6d3068161a5"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "edc933ce55cd2275352f9635583fd9fb83b87afb70dd3bd8e86fe068ce01e6da"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "c4e2b7f301f2d697a917a9a40b5cdf9723548942d7d0af2d0b8a34deaf1bfad8"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "a1bba26fa3cdef5508e1bc2a521938817272e351e72f1c34b3e1cf03320df1e0"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "6e6b7231a7c2feeae61f6415346000987eb200516848541bbc1612e71a7e3a05"
+            }
+          ],
+          "name": "Diamond Flooring San Antonio Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        }
+      ]
+    },
+    {
+      "documents": [
+        {
+          "document_type": "Contract",
+          "expected_extracted_fields": {
+            "contract_value": 18750000,
+            "end_date": "03/31/2028",
+            "project_name": "Northgate Logistics Center",
+            "required_coverage": 2000000,
+            "start_date": "06/15/2026"
+          },
+          "filename": "Prime_Contract.pdf",
+          "page_count": 1,
+          "sha256": "5987e9b83f7790d8452d1340cf6a7d4dfc3e837f352794ba36726e3f91408b3a"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Owner_Requirements.pdf",
+          "page_count": 9,
+          "sha256": "48f9a5498c59c6d75423482a2886b6a5b703e4b939cf7cc446a47ecd29738502"
+        },
+        {
+          "document_type": "Scope",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Project_Scope.pdf",
+          "page_count": 1,
+          "sha256": "df5eba7c2490f3bf1b374d8295a7d11f1001c4cb1ba97a2ed94cbaaa37e101b2"
+        },
+        {
+          "document_type": "General Conditions",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "General_Conditions.pdf",
+          "page_count": 1,
+          "sha256": "0dd359446a4e6298d33eeaef4b9694c3b2bd4261dba892bfb0971f1b05290f8e"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Insurance_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "59fe45cd55468ed7c879f1c271e15380d3bf3e3c5a2dd8f9fbaa4ed4d5da2c75"
+        },
+        {
+          "document_type": "Site Logistics Plan",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Site_Logistics_Plan.pdf",
+          "page_count": 1,
+          "sha256": "5cee88c7cce66a10755c1bb32d901819a349bc1f8c6b271359edcec081a01555"
+        },
+        {
+          "document_type": "Project Schedule",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Project_Schedule.pdf",
+          "page_count": 1,
+          "sha256": "d60e0876f89190741b0e886040b608a128f3afe17d42e8ab5ae67130b5acff63"
+        },
+        {
+          "document_type": "Project Directory",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Project_Directory.pdf",
+          "page_count": 1,
+          "sha256": "d9aaa3401e3d4deba30a0c5dc99a98188af0b85d480b284f93c80278c8f1837a"
+        },
+        {
+          "document_type": "Mobilization Checklist",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Mobilization_Checklist.pdf",
+          "page_count": 1,
+          "sha256": "0f18df9c7590bf0a19349a218782440d2a4080e26eeab73dd183c2916fea9257"
+        },
+        {
+          "document_type": "Safety Requirements",
+          "expected_extracted_fields": {
+            "project_name": "Northgate Logistics Center"
+          },
+          "filename": "Safety_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "ef49118e5c2b966ff2c6560ffc2f5b5c4e96bf554c14fe209830ee8ec250c1b8"
+        }
+      ],
+      "project": {
+        "address": "2600 Northgate Loop",
+        "architect": "Lineweight Architects",
+        "city": "Fort Worth",
+        "contract_value": 18750000,
+        "csi_divisions": [
+          "03 Concrete",
+          "05 Metals",
+          "07 Thermal",
+          "08 Openings",
+          "32 Exterior Improvements"
+        ],
+        "description": "Logistics center with concrete paving, dock equipment and high-bay warehouse areas.",
+        "final_completion": "2028-05-15",
+        "key": "northgate-logistics-center",
+        "mep_coordinator": "Tara Simmons",
+        "name": "Northgate Logistics Center",
+        "owner": "Northgate Industrial Partners",
+        "project_manager": "Jenna Walsh",
+        "required_insurance_limit": 2000000,
+        "safety_manager": "Victor Chen",
+        "start_date": "2026-06-15",
+        "state": "TX",
+        "status": "Planning",
+        "substantial_completion": "2028-03-31",
+        "superintendent": "Diego Flores",
+        "zip_code": "76177"
+      },
+      "scenario": "mixed",
+      "subcontractors": [
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "b901e2992454dcbb88fa667c4183b362f9420498370465ce1f36324491a94f4b"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "69381bdc0dfb25b99f6957bc7bb331508b3d65bf4d2473849da4ef66063da67e"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "43f8232ce7738a822b4b2cee2e3432c91d61693d90cbf2bff066e25842b14c3a"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "0d59231dc395eab5285820a939269316d1b200d3cc744ffe0f6ee4fde1f98966"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "25b8fdf6fa7408c350efe1b5c82f70f553a23feddc47230299a69379df17ff48"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "0ac826913b91a4841c44423436d487f6635ed23d5a632e86588351711ec788b3"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "3a71b5067207e4635b5773e721fefc09e845d6d753eff2872fde3a86bb6c9154"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "751a71812b5ee9357e74131904d4899a8ca66afde5b936573eee77c1899b108e"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "95069a0eb8c152f8eb50f5e95b6fc4c4ea66b8a94ca88c7a521078ae161a8094"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "abaa12e4681e8cad7cd6e1f3d5f61995b2d0ab41e1c0ad41bd1f3a256e76e39d"
+            }
+          ],
+          "name": "Apex Concrete Fort Worth Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "c1ac3f5f2b294d7ea6487622f8ec6cc9e42edc8e287b0b5927671f4060f4227e"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "4ed6569175312194d5e59a764571d79c93b04b1e6cb8b14c194c3db50ae01267"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "02c580bf8bca1e0239d439e53703ee358f5fb846ef456fd86e0580f677ea6b5e"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "24a66a3a958c79fc53847a96eeb6717d53bc3ecc3dfdcc5bec00e087d2f1099e"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "be846eb3102d87987a191ea6de69ebc201a2a9f274bb64d798bac9921ab205fa"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "452512212fde0e4178131007be57a6df48630372be2bd1c945996ef89b3c92fe"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "32a4f46af5abbea0b304239641e60744d3400fdbd0eee8ab2cd4ea28b43b4c0f"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "f9d154764a86e68af3908035d26e7721eea8803c3493387c42e76a1f81c574c7"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "bb6ce1598e8e88a539b4fb60d0512e31062bc5b5e7611fd401f47dbfc8e3ffad"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "6faa677ba4239f2877dc9be7814b83d3a98bb9eb1f7d84d56642946a29d85a58"
+            }
+          ],
+          "name": "Skyline Steel Fort Worth Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "4585ea0c51abde907d0f2bd0217de185c58f6b3fb569f47802fcdbf8ae1dc2c2"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "be5ffc89625b9dd5bc05c8303e1b3c73168f7307108ee37fb11f047994838c73"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "db1b4f234267f5ccf8f2213f2be11376c60db0a86ac64bc68a166ad3338a86b1"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "6140667e37720ff10b2c6a02ac405e1840ffce60ceba511263ad4d1f17fe775c"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e60cfe4bbd6c8d5ed699347407dc8042e81ce8aac30221cec1d3a6e71b7da5a2"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "7d26b7b5898c31bafff301ad990f133d09c4269e5057a92f579187de4d2df72e"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "c5cb265a391787744a6271221a86e6613c4d54d61d87378f24c2cc8dbbe5db92"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "7c1b8a72b972f9e9bcd63bbe3c1083834d500f7f04c422824dd221e5b649c331"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "490194cedd33ea76fe8e7c8de3d24b9ed8798167d963ebcf957bb967a17c912e"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "734ef0ee64e8fef512b3159521f70f9f82589189cdefb760d6bb5e2d300436e0"
+            }
+          ],
+          "name": "Volt Electrical Fort Worth Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "ba71343e27c6a35bed8c564ef38ff833bdf363fecfdc38efca6aba04b48c32c2"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "d7952fd9adb3e4224b667db7bb9c0c67aab6134fb779db4fe5f163409b80da6b"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "8040c058f02a5462ba879c2247f19210a8d2c48bd6055a477e8fbcb92da864a6"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e116c555b817fed092a022e26f88d2fc2121af1c4aff45bbba2ebdbca622cb54"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e660a073cd1f28d1e54a809510d7edf6e52727089f2fdcac8efa5bacc276e7eb"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "82c053231b05bdbbaa3634531f7eaea74c8aa5508fdfb79bfc681fd49dc8d494"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "1a9372452029c2906386049bec2fb37efb676d05f63127f76e4892b3550c8307"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "5dcfd9eaccd20a265b5baa61405145b3fa10fd363fe949e38ddb72074aa44fe5"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "2b2ebfd058e1cab22e75ecec729e8540e35d103dc010bbc410ffa15859662eb1"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "0066f458bc24c20681b70cfc8ef76ca0fe3197abb022ed0fd7ee4eb3f2a20e2e"
+            }
+          ],
+          "name": "Elite Mechanical Fort Worth Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "e62cff970fc448c0b28517ffc9918bd48a4ec73a5a470d758e6c04259b66ddc2"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "c22040b760fdfe7958864cbea4056666855c675263142514724d24cf2b9a4602"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "68651e148f3f1be28e7e65ad0ebf40db75c7f0f893ce87aa0ae5f12d7c8fedb2"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "f8c1c404c039a29e991a69f7a0727ab5f93d24ae0d3d0f6e1b1abea2a469a731"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "865fa1146789226a24320f63054105057c06ef2c006dced1f370c511ba8da2c8"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "c05b428d8795e67bb7074b7983439973b837cda832ca76562819555d76b3dad2"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "0d562a6185726b02327b24f5f09555fcbd3c420ea6b0c60021d5fa2d6c7f94bf"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "be3a8cb8ffe7ef7eb3c0edb75b6c0a74f97dabc788af5c0d7aff383c029996c8"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "d223426fb589e382790ec9e06c612fa0df841cecc24c0bcb6d39e07c45c4ceae"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "94bee501d497c0d9181c5817b1c8010110399540b48fe954554ef3f843a3b8dc"
+            }
+          ],
+          "name": "Precision Fire Protection Fort Worth Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "e5ea61e6435ea4ac8907128d2a71c1fd841599c941466f33f9f9e3633c230ac9"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "65024fed9663c0f62cf70ef0323e8453c111649349fa5f8efcce0ae54181f3d2"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "6a3674a0102153cff3bcf8a8ff40422861a5a2b32e98c4f80ed16911a287c0c4"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "b671fa7898724e489318f05747b510f68117216b505c68e06eb2a661d494512b"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c66b9e086399a1e765b1f64bc78e3f122401364811acf70511e4bc820488049d"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "700759b83feb3bbe0ad815424b4a7406971b5c54d114e1d60ec9477a32d0ee28"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "c20932a516bc1d96ad30871438d046788316c48b8b3574608b4ac8d4e483deba"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "81ea5e77efabb3a98dafee27887671b41f3caf590dc31e23af4d3b60522fa670"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "79d02ba64ada485d8a622e21587a11fbca151e3695d32a58a453e1712fca9d33"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "34f9d2c636a785cf44013d51d8a2cfad21354b2cae17ddd9b3cc06a33ba40362"
+            }
+          ],
+          "name": "Titan Drywall Fort Worth Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "19228725eb2620a5952c0e4772176058597a66d1eb9043d7e389e78959085c72"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "9a6c79a1e8aa8628e7e02a1b9d4c39ee96811b3015b68332d4072c728ba16002"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "b68b2d4f96ad62dff274d083d54aace7a183e9b55695c43910ee6e060101da71"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "4a85d70bd4fee17f08cb66c22143e221154e88a370bd9455994b8171c51f93ee"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "83b39985d73bcd6e962517c7f70132f9e038737d657fd1e362210ab424699ef6"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "96c42d5832dc7723e6c07a741e74218fd4e5b35c77b3142e62cde38bb36d7cbf"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "7010bebe1c821f963dabbb0aa258001dadcddd269a506af1a91ab11b8bfd4eab"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "c3a02a5fcce923fcb2fb6a94f4ee0ca7340e266df46ca3b3bb9b0ceff6b6489b"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "d1e4539950f41c2c7ee70ccf8439daf413c6140860db7539af9fa2ec4b23ddb9"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "d567909ab2a0ac28a6efec2cd01aef21820eb99fef55a24b0494e90a8169b706"
+            }
+          ],
+          "name": "Metro Roofing Fort Worth Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "b82f01df3dab8d336307e8ea90c285b64a6bd6b9f8171e332c06456e81a89f87"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "ca52ca68408361faa0e63570b60426cf5e00d2b7deb4a66564c05d325db5e703"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "c44db7db3f8865b41580d50da8b3494e2aa02477f67f895c642cefdc45d4067d"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c9daabb7e7be643131b3675f5af7181f720f83a701d4189181ee261692d03190"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c3f8419322a6f99665b24584b6446b7f00cfd24d1971bbad10cdb73fae3c6508"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "9cd39dbd7e981e16a8fa17ae2b84267e617b2808124beabbdd2143834d67d637"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "7d166eebc31e54834d87ea832e0ff35d6558bff66b5c0dd615937b516d00dbf1"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "0743471fc667848c8f9e19a7dfc3d6ffeab9578ab84cf3730aeed99018588ba5"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "47e29d282659da9c3a2ba4c4971bf91c9440ca1a5fe3d787092b332b67bc17c7"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "5d00543a11140717313fc432750e241a6285a8de68ac23ccda82483eb4b6f201"
+            }
+          ],
+          "name": "Diamond Flooring Fort Worth Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        }
+      ]
+    },
+    {
+      "documents": [
+        {
+          "document_type": "Contract",
+          "expected_extracted_fields": {
+            "contract_value": 8200000,
+            "end_date": "06/30/2027",
+            "project_name": "Riverside Office Building",
+            "required_coverage": 2000000,
+            "start_date": "02/10/2026"
+          },
+          "filename": "Prime_Contract.pdf",
+          "page_count": 1,
+          "sha256": "4c42c97eb09939d803776659a2b3f901e88893e36fea63cf40af65c657d135eb"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Owner_Requirements.pdf",
+          "page_count": 9,
+          "sha256": "e13eed93544c3c5ba34b1da084aeb9a3869741bb9419206000743ce9304310f1"
+        },
+        {
+          "document_type": "Scope",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Project_Scope.pdf",
+          "page_count": 1,
+          "sha256": "0e8460560778732ad3ff2fa69e334a0361669d742d7f32ce2c505ae91bc4b55d"
+        },
+        {
+          "document_type": "General Conditions",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "General_Conditions.pdf",
+          "page_count": 1,
+          "sha256": "ffb092367d7a1a3c37f190505a4b3a48f23ffd9101eece92fa73db99c043fd3f"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Insurance_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "1dc89f08388f7c9b3ec38cbfcb8278b352ab31c1dde37dadda41e7c5ee050327"
+        },
+        {
+          "document_type": "Site Logistics Plan",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Site_Logistics_Plan.pdf",
+          "page_count": 1,
+          "sha256": "cb5c6879934f5e8210bbea06d40bfe8a57603d646f7d820b31f39a9e686a69df"
+        },
+        {
+          "document_type": "Project Schedule",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Project_Schedule.pdf",
+          "page_count": 1,
+          "sha256": "7b3bb5efcca8fec0713f7a78e39a6866c94327e6176af9d8fccf334f68953457"
+        },
+        {
+          "document_type": "Project Directory",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Project_Directory.pdf",
+          "page_count": 1,
+          "sha256": "22805bf73f8401c54648a47b04554279fd087d822925435d243fc1b6d5fdfdbd"
+        },
+        {
+          "document_type": "Mobilization Checklist",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Mobilization_Checklist.pdf",
+          "page_count": 1,
+          "sha256": "c7a4bb415aa28a329c313108bc9944537a91cdf78ad5ce6162fde47757d9bb5f"
+        },
+        {
+          "document_type": "Safety Requirements",
+          "expected_extracted_fields": {
+            "project_name": "Riverside Office Building"
+          },
+          "filename": "Safety_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "756d91b1922cf7a4993384b23f61dfa586aca0633d09a5a1006a239f23208a8c"
+        }
+      ],
+      "project": {
+        "address": "1110 Bayou Bend Avenue",
+        "architect": "Harper Lane Studio",
+        "city": "Houston",
+        "contract_value": 8200000,
+        "csi_divisions": [
+          "03 Concrete",
+          "06 Wood",
+          "08 Openings",
+          "09 Finishes",
+          "26 Electrical"
+        ],
+        "description": "Mid-rise office renovation and shell improvements near the river district.",
+        "final_completion": "2027-08-01",
+        "key": "riverside-office-building",
+        "mep_coordinator": "Sarah Kim",
+        "name": "Riverside Office Building",
+        "owner": "Riverside Development Group",
+        "project_manager": "Evan Miles",
+        "required_insurance_limit": 2000000,
+        "safety_manager": "Monica Grant",
+        "start_date": "2026-02-10",
+        "state": "TX",
+        "status": "Active",
+        "substantial_completion": "2027-06-30",
+        "superintendent": "Carlos Vega",
+        "zip_code": "77019"
+      },
+      "scenario": "mixed",
+      "subcontractors": [
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "947172678e2898b9a1109025ae29e6032c6d43dff6b32446780737847b8f6559"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "2acda3cb6c0baa45ae777f0bf33332e7c18d5367ff526cd21f0598c560f93050"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "e667a3a40d2b672954bbf8741159c5b9336e0641d0928faba8afa4462017cc5e"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "b106c655fcc785293ceab94a8a9d779e5690f993a986e23d47b6590fb90cf819"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "512fa26bb3fc74cbd815bdbf1cd2243aa0e28861d1821cf6bb20c0d4ce4bcacc"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "d257cbc71da0931fecfef61e3564d630511743e4f6a3301defd2e630dfafea6a"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "0df3a90da071be80d2e6670fe8bc2843e0f6cf5ada85851e65d217b22bd86af1"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "a598536f19af62f58d53df387c3aa2d698a0daabb9cd6a114027ce8f7b197109"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "9031ffc6bb1dedc9fe83edb3a935840656ddb8826bcd32f71d01c3da497a62f6"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "4f41ecd584a3e33d9feb19d6f1de7cf72bcdf5ded7a1f48a3d77190b7b6ca441"
+            }
+          ],
+          "name": "Apex Concrete Houston Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "699fa1e148944e0971fae78ee40d0742eb623754bb004c487fa8061c47eb95c0"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "bdc1875a6a8624f5b3c846346c1a656d9e5723652f8354632e2b1f9e67b952f1"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "9c0698db40676505db84e93e06aec7d9450c4e1cbd97e9af8db40a28be9741ed"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "ec3382d43fba211d80f0958e25b5b90aa8f75ab47cd107f113c0e54cce5a0838"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "598c602f8a598e2501f2fd742c36acd187596ec9e8f20eb5b0c2f6aebf4fa5e6"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "f2cc6049561c96fb398da4863e518f7ede137ec574257c3233be6d4da7d60260"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "ad2d35ca49e76aac07e3efca1782371a2ddb7148e1e19d08fe9c73149ec7ed06"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "7c74035135ffe9625f500c861a204940f0994a669825b29e7d60b8d1d11cac32"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "c2a0dd53cb3f7ffebfeb4dec3dbab22d0e8dff2e6e497f1a0980c4c00b5585d4"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "6f51214c5f909ec708e297341785f8e19df572482d2cdb465e539fb28c4d6696"
+            }
+          ],
+          "name": "Skyline Steel Houston Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "8cc3396ee28e89e1c286bf7ba369121464e343b7deb6d427e4669e42d7c2d4a5"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "9c8e5d45df3641256a46919f98c17c0c5456d32a4276cc8f223491d064f551cf"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "4a954f864de6448998f993e0092c6d341b1cded1421d216eb5ed6bc74f5c8f71"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "49872d06fabcb2b6791168d44e5456875f284a185dd9e86476ca3bb1296dc363"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "0d182f2b4c5adfdd3a5dd710f24dd79f848b29d32412bd799e7d4d8f02c4a9bc"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "b3b0d0756231af59894d3e88c6f1613481a982cfb578b5a389e2a018b437e0e8"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "a7c78a4276f54694ac44677fe082486d0395a531b4bd758debb465e6802bb35b"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "5fef66acda0039d2ba551a64d4a1ecf0746b294dc7bbc2b3eb6c3db42b3ab2b8"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "40161b4cb36dc49b51d7f1526db713ee9d5325c97bcc7ed2aaacaaba85f69dd9"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "feb76ed72f6361367417d565544e93cdd78bfd3b6ed1ee590d0827004dc18897"
+            }
+          ],
+          "name": "Volt Electrical Houston Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "3b47b4d8aef1a1247ac133282c1eee2f56aaedf8de779906602184531e10c15a"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "9a7b5e499d0abf129edca5683f4007d2a79cae6093f4e86422f92e53bd4c1dca"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "7c435545bece33e5f22962cb004a5046afd885c2464cacc82bab6d7ed99ac439"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "8e92eedb8d91f7de5961f9f19d15057a0673105b31ef04b67dfda734595ffdf5"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a63f52971ccc00182b107d92e8688db3167fc486218fef13d67e2672cbbd86d3"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "a0a652c04dfdf25e361b2ba7398cfc5aa134eda41ece3eaed5ba8c55adc80223"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "cb6a1021e24b6d5149e0957ee92a50a9489cfb94d4abf52317101c216822fdd2"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "b3b085d15eca7276df02b5f2070c7533bb0f6aa60d1f39e097c0669fdd7496b3"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "62ae0ad3b3ed3c38c85239405e429b5f923e8d6f336f47bef3172be305c1d730"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "b3001369768f87fd8c73209461cb5d5d70bfe2e7810d8dcd73588522cfefd97d"
+            }
+          ],
+          "name": "Elite Mechanical Houston Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "3b4556cc7a997fa7cd9bf865a9ce7347fba8aea515dc1e5b7ce44cb64fbc5db1"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "a713d762b10a3ef1b88c5db88337689b79f7a31f92d1a046e8672778bd70835f"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "485f3fcf6e07c026c907fc33b600a0b43ffa32d0d869fe95c19d438bbdf86efa"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "55fbe4990f4ee865eebb358bea78954fc6c05bd50ea1bbec62603742ddf1852d"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a64ad1c415fe3ad15ede9fd713c9fa4c0ab4bd6348038b93f72e53a035cabd48"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "421c30977d91b1f73ec4f127297d8ab1b8d5fae6ffe0d860619d7e814e3f6ddf"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "233a46d509102e3561c9ffe14bf8cfc6014b1f19c9160f4078de76de411d0133"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "bb20aabe6db6ff28ec5b982f794a1f8d93dae852d24bedd9f810578b85ab0931"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "2d9b392a346c54890d946dc94e367089d1337e72500188550ab5080b6e7c539a"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "44ca9a644d9cc2a4adf0add141aae12732ac6326813ea653a7b26dd3522cf724"
+            }
+          ],
+          "name": "Precision Fire Protection Houston Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "d7abb16d776f1d743ef086762c903b5388ae4d583cf55b6826e1b9da3921651d"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "b70974f63503441a6c3e98d9ddc6fc172b13099297ab948a21d718b75721f41f"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "0b0d90e4747978a067a138a2aa74ddd3c792840763c9038399e3e57ee9100afd"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "35b60387086a91616fb8187d782b2cb1e3cdef0bd772b8e7cf46d038051d99dd"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c9fe7c02a1d9ffa8c6d87dc0104ec3469f8758b9a3a964aee97ed54c6f2411a5"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "fb940066bed1b2bd0db2a79634c6fb0b0cd9bf2718b2f8766220d3a485b4b3aa"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "a96320009a81fad91be0667b7bbf119f695c6f50714b1a14cf52fd0d1437efd7"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "548d4c008ad70de8d83ac7c4b07ce74336c88a72a479aff18f3e360fc9ddb622"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "f7b34323be13c1b06e4bbd37a7a9e42464fcff8496f455ca20ccfbeeb838bb7f"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "4e8d2c714f30536df24e7a7552558c13b0f404242ba459ad655005a0e0a14897"
+            }
+          ],
+          "name": "Titan Drywall Houston Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "94b2c0f7b11f64ab5266229ec38f6761f314f895ad153667816627479b89b544"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "83dafcea611decb14a549349b518d6387986c6002714405f8b1f0ac18120cffb"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "d670b010d01becdac1d77a2ca69544db221ce41e7646a4658f01ae38cfd1e5c1"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "6896c5326d7d7428041b630ab307823603364594a654c46509fe0b59cad5f49f"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "7d7c09d1b6c62792a2ae679246a48f3ee54aa8fe352739c8359aa0cd503fe32c"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "f096752460f186d38cbefcfa576296872a22a1f68c14b607c95bf975e08a662f"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "18856b5d3f87f8c56e801b7fa9ec92b91eab26371117b236101025addeb560b3"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "05c4322f3e8c993c5edeccd96d9a6c6b35eaac5a2bbb537e3586e653f156a7f0"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "edfee62089a8da4f614804a3974f638443d29fcbaf8ac6e77ef60fab9aadeac5"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "eb4db9a21dbf68ef30d3e881bba1befeca1b81fd7ccbf7b64b1eb88e633a786b"
+            }
+          ],
+          "name": "Metro Roofing Houston Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "29c8a7918eea5b43300de851e160132dfe8c2614772a121041180ec7d2cb85e4"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "69d95c9c0cc59d9d21b72eaf246a3e121944a3f5ac9c8cf8ed766ce57a98ef49"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "2176036baa8e549991e0636b46c9fb3cee00b3994705c4c11c09bb45188e9747"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "445c95683fad74cf954a9547882378c2b11309b2cbd814bd9b1e34cd75ac52c0"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "1691ffe2cc4f447e24980e15bfc810e14643fdc9301de57f21e2e1d71f7b76de"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "1f11eab5d4fbe70db8bf991190bf5e16665245b6e3ee6eae874d5bc7ec249e1e"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "131224c8e1a4694e41276049c98c6f5edc627f1034d8f96c25de65c05b6e950b"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "b065aeb9394ed804c8e39319873a8042563fc50a6916a438bb7cdba1f2284098"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "a96c9f25ce492d4f416e57500d774b0fb1a5b7e374be3f72ac81464fb77aa4af"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "91c8d5defc1204b50dc4daebee1cc856e4f2e7c245c65d7e41cdad0d11395807"
+            }
+          ],
+          "name": "Diamond Flooring Houston Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        }
+      ]
+    },
+    {
+      "documents": [
+        {
+          "document_type": "Contract",
+          "expected_extracted_fields": {
+            "contract_value": 14500000,
+            "end_date": "10/31/2027",
+            "project_name": "Summit Distribution Center",
+            "required_coverage": 2000000,
+            "start_date": "03/01/2026"
+          },
+          "filename": "Prime_Contract.pdf",
+          "page_count": 1,
+          "sha256": "9f0a2e415795b36b41ad737300635da1727ef52549fb0e562fcbb1559e13be0c"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Owner_Requirements.pdf",
+          "page_count": 9,
+          "sha256": "b4a07a9d3c849d72ce106c4ac00d851672ab82cbc6b4b9151c2bfdc53ff7b664"
+        },
+        {
+          "document_type": "Scope",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Project_Scope.pdf",
+          "page_count": 1,
+          "sha256": "8b083de67741fd4112e2157bf39ce478299daf1bb4350e8b2928b41448d0eb03"
+        },
+        {
+          "document_type": "General Conditions",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "General_Conditions.pdf",
+          "page_count": 1,
+          "sha256": "ad145c1bd5552beecca9c474df066deb8e2fe945bd27f5024511d87b6f662be4"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 2000000
+          },
+          "filename": "Insurance_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "afc91ed1ce4839e785ae72a9654e0640f0639513b91ad2a231b179b43318a6d3"
+        },
+        {
+          "document_type": "Site Logistics Plan",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Site_Logistics_Plan.pdf",
+          "page_count": 1,
+          "sha256": "d12fc68af92c1d7bce7e7225dd5425cdaf658ae22277eab94dc90fdf7c56e551"
+        },
+        {
+          "document_type": "Project Schedule",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Project_Schedule.pdf",
+          "page_count": 1,
+          "sha256": "ad9d8ac2943a2ecbb76ecd9dcccbce377a9ef75853d5a15783baffac58b7dcd1"
+        },
+        {
+          "document_type": "Project Directory",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Project_Directory.pdf",
+          "page_count": 1,
+          "sha256": "dd9865513566b8a3401f8da566963270af8990c937280043544d77d19682da62"
+        },
+        {
+          "document_type": "Mobilization Checklist",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Mobilization_Checklist.pdf",
+          "page_count": 1,
+          "sha256": "1815ab67d96aabd130fa61db7e2f44e4a25247831f4466ef2abfb2cd9ca540b9"
+        },
+        {
+          "document_type": "Safety Requirements",
+          "expected_extracted_fields": {
+            "project_name": "Summit Distribution Center"
+          },
+          "filename": "Safety_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "1844fe99b26f93308166b95e806eba0901883efb9d9b6205a1423c7f0371fc54"
+        }
+      ],
+      "project": {
+        "address": "4200 Logistics Parkway",
+        "architect": "Mason Bell Architecture",
+        "city": "Dallas",
+        "contract_value": 14500000,
+        "csi_divisions": [
+          "03 Concrete",
+          "05 Metals",
+          "07 Thermal",
+          "21 Fire Suppression",
+          "26 Electrical"
+        ],
+        "description": "New regional distribution facility with warehouse, office and loading operations.",
+        "final_completion": "2027-12-15",
+        "key": "summit-distribution-center",
+        "mep_coordinator": "Owen Patel",
+        "name": "Summit Distribution Center",
+        "owner": "Summit Logistics Holdings LLC",
+        "project_manager": "Rebecca Stone",
+        "required_insurance_limit": 2000000,
+        "safety_manager": "Dana Fields",
+        "start_date": "2026-03-01",
+        "state": "TX",
+        "status": "Active",
+        "substantial_completion": "2027-10-31",
+        "superintendent": "Luis Herrera",
+        "zip_code": "75261"
+      },
+      "scenario": "mixed",
+      "subcontractors": [
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "7e5a06965a0384593afafb0aec05f6bed710e5f2f7fd4a4dbd359d21149a0066"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "bd1542d123f97488063ed01668460842850df56019cad413abf69e4dcaec9d1e"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "74359be961f216e7c838bce45c84ffe562552182fa79d30739590594d214c2e8"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "3f9ff955eed75ca06c22b1fa47ae0f6ebc5e2b4fc3e34a7c272bf638ba751e6c"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "2f59ce4456eb0e9827c5f74a7c93bb4ae9fbbbf5f4153ac8a05258c9d659de99"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "4af00a40696753b576c878c11d93c2d032e9d8435b18aae204897029e8ce9d6a"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "b64c2fd2f392f02179581bab40a091e7cd6ec1689fdfab8b073f7ef544a8dc8e"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "64229481422d39bb403a0e2a4fedf90fc81324050577b1c808808b0e6414b6fc"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "af070a3c9d01c95ea18330b9856b30c075fa5c1ab6b8ffb95c1f4e7ae2d6c499"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "420be6fe6756bf6b534e0f6ed628c935a575507f0cf1a02d420f192a4c9ef4a0"
+            }
+          ],
+          "name": "Apex Concrete Dallas Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "e5c93a4930eb91c0712373541669ed04b932374cfd072f76e12c43cdee186086"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "91bebb0ed5c7ba33fc722c9af71b1f2a204a716e288d282b431cff19356e94a8"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "04e5fc1e2e800ba897466872e7caa6e45cae8b6e1784d4746e5a75dae121130b"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "b7012712a79cfaa5128abeccd147744d8e8e7b95fff78ed091beeba35e97ea00"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a9c9cbd81e89fb7735f3d1972380913f60aa13a5c76ccfa42ca21a39d706fa7a"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "1efb43ca7bcf716bcf98e170c22d9a99fa5c96955c8b836f3fe7a0bf0a1baa1a"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "bdf54b9d551d9da8bc9d34f722ed7cb0ee77987adf530bf294d56b7a820694e5"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "6bfe328dad59dc43f24730e8d0cb003664f5a876bc76a953ca17716b9e318497"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "ea17ab047b93ff5ddb4cc6d62dddb0569211fa054aa4f114ce0783f5072ab156"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "38c70a07689e77a7a5817b27711481e95876280f5f1eb394f7ed81a8afd915b2"
+            }
+          ],
+          "name": "Skyline Steel Dallas Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "a9aaf9b0cd17e3dc13d3f9d57693e78e7c3681686505849916e43ce0127d73cd"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "b974df42c130906cd82f8a139a69633460a96c9a13b246dac3f58ab6650261b1"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "1f9bbc6d0750479a83c157b9e381bb1334591afa154cea582ac4136270e76d68"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "50c0695a739d3bac2b85fb6fd4f9ac391dabc9c8c58025714db4b1c7465e4f38"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "980b2bd98249d4e729180a4733e227c1d401238c92114e4091fe35b9fe51cbcc"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "99259fb71ec0af621d6f1626eefcfabb78a9f716172e27488b071ad4d574f7b7"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "d6182502a0dcc3474772adf310cc6b32af60ed6563a22920b90884ba7521b6a0"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "5a0414a99ce4cd1b895d9611ac60d3b661df12ff5706e9066fc6112a80a71257"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "4fa6dfdb5d0b1fc4a1abfeac49e2b362afe7d0a11374d9541b72c04721e527c7"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "1b881c4cb4e2acc0a9f39c96e283955d90723805243216a1cd61a0525973d264"
+            }
+          ],
+          "name": "Volt Electrical Dallas Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "22221a5e604b9267e1de2e6efea5a822f190ddef2b5364d0691c62b3419af3ba"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "9fc0d7bb69bb15ea73104129b56b3037912e17fd106942a458046dc2b06ac78d"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "14f6ae7e6611a64924a2cadd46ebb2276c5b7fa93a2924459276f40986a69e5b"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a9a3f3ff9de7703bf71615dbd87a78574c7fb9f92979c0fa9dd79cf803345350"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "080bc5088b9112304e826abeee30dc7710da33800a24d68052f3fca65daa5c13"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "be299c59f92563ef993705a5637a795d958cc575ce704899c2900c0dbb87710b"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "3caa7328b8ea4c663b235ef17d4b1f946961bd3f0eb49c243f3478fd3b98be38"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "f43437316584ab22260de4d494ac14532ea9433539a57d1d25a9ee05db4f2f55"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "2887fad4989fcb71134c0f789fe6e35a130aa6effcecd7b569dcc13c234518d3"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "f605bd2d75aa633b85bdd5596253bbaf1b29c6f3255be561ac1c85d1fd603f69"
+            }
+          ],
+          "name": "Elite Mechanical Dallas Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "f4290608e50329cd89efe29c6f062acd88ddae58cc693f649f781cb2c3267efe"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "0fd54a9969dd574691315143e58d65cbd264a221814340d0adaf714594dd2239"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "297e22afc05eb9c0d2507fbc0851c4bea9e3d1f7afeb74b4c794f260dce52f37"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "79ec7d544752dcfdaebb05c517b85678197be6385d1c28cb8a91eec1bf7b316e"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "b480e2268e93dcc9def48e23ec4aff0ec38610c8bbb2e0e729a32c2c3037f6cd"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "38d40f526a5ccf27004c5c2d094a0ed82c071dd5eeda3eb55ca31127a3632a32"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "21d658ed11928241e7f48144dbb510b492eed6ae99e6073b07661246adc49155"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "6eac0c0a83daa386fef1bde0bac1039a721cf2c689ec56f5b1b331189e54cb4f"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "50c7ab461d8f8913b13eaa35d188e2e9ab90dda6cc663848ab3d8b52cc71801e"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "6b7273b2b355cb132656c617a53f6cd68b628114443a910892c8420befe623e3"
+            }
+          ],
+          "name": "Precision Fire Protection Dallas Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "870bf49dceda16e04ae8b28790537adea6334f597d62aaf731c541340c0aae00"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "34d7e624aee3c115b5f562867a911446738911f190fe0323992ce79f6fcce7be"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "18d924bb95ac0923407585258231ca2977029f84f3b4bb6509fee7cfe2b23415"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "70e4adc4fd5fe78fde19935848aea5d0d01bd3a4467e78f3b95da9ac6c6b5f11"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "fb7f3bac020293e47e6d27151138a59aca9a96e196b88154b1addc6bc5d57f4a"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "0d7cd0fe561d72dc480ba23522052c0c1e007498c660035c1b7791f717892cf9"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "dfe925c2edf8c3d8189e1561b1b884d9318d2179ad6baf8b2a2dd3179ec6554e"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "7f6129e20ac46fcea0f06a761557fde572e86c95cd23e5fff968753c49c7371f"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "0a73f04a0a53a9fabe4963d4ec8e2c92000843acace45b6723e3a46f83578574"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "0c03c728b60e2372f78fd453b4be43985336e960fc16621e2135ef4d8f2a44fa"
+            }
+          ],
+          "name": "Titan Drywall Dallas Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "7b747216b7c67a92cabbb6fa7c2cc4d6b3fb189a09a8a2259bc248c73bbaf838"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "6480b52b5de79f5d440b874caa37dba6c56b6153e8b2b42fa5353438f2c32464"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "9c093dcd1f3ecaa108f9d5a69862d9a603858fddcf4247b418a61d9136095544"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "8b2bed0e1113dacf08ad55c27014b2ccf38abb9cb54ae8211d2ad289aada5d20"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "0c100fb87cd3d1024993bd3fcd0fe7374a88e926f51b5ee7ef75d6aa5784a67b"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "ecc08cd084c556e01a6b17bb7d017730c776274b43517287bc2aee69a0f8c821"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "912cbd58cdeec946d14c2e6fa7f1478cb1fe0f0204dba439262bc9e61b131427"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "3eb398d3e335ddcf9f567b948e472d4ae498362ca3ab23cb3211b29c93c88da5"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "59028cac709314a238e6461a792fe05e57edc872e84b0700e431ce27aeada063"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "366ba48655f5d77edb484d910c46902d53d3554a7fd71fdaf75408dd2821a463"
+            }
+          ],
+          "name": "Metro Roofing Dallas Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "81fd3091540b866e1755f4ce5f975233736d8331bab83ee1e2f55ba43dc8ea3e"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "e5a92ac91f66240e71276b9b090a0ebc39cf09a00b62cf9531c695f1faa1ebf9"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "ba84bbe6a1ec4dc248bbccf71679ec69c2ad7525ecd6281f5c54dc3686b7539a"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "c201db0c8595575abae0b3bf5d99ba0190e080482c6d6b1ff1fc6698d43b0043"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "306066bd859394821a38d83954b48ed77fdcadac21ef297ee027f66e00e594cd"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "c29d37add94a84dcc930d29027525bd53a09be8b4bf2c44e63a0c2938c87430d"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "e36a910d2ee69c75a2a7f556873a8939a868106b07a6827058a2dc8a33755b1b"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "ccbd867ffd459c72e0cae19625ff36d3f94cc8118a4a65c4ef4648a4b622dbc9"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "b14c14c082b40075d87f1492586448af6529a502b15d7f202a7ba22fca2d558b"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "56f99ce2b3055945ccda9ab7f7216e860f1342f6a3d571dea5e1c416701b6386"
+            }
+          ],
+          "name": "Diamond Flooring Dallas Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        }
+      ]
+    },
+    {
+      "documents": [
+        {
+          "document_type": "Contract",
+          "expected_extracted_fields": {
+            "contract_value": 32000000,
+            "end_date": "12/31/2028",
+            "project_name": "Westside Medical Center",
+            "required_coverage": 5000000,
+            "start_date": "05/01/2026"
+          },
+          "filename": "Prime_Contract.pdf",
+          "page_count": 1,
+          "sha256": "06ea3f3fcf6621a7dad588b8f47e4013d307752dce25de690269f78af6190d36"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 5000000
+          },
+          "filename": "Owner_Requirements.pdf",
+          "page_count": 9,
+          "sha256": "c85d7e8d327d5cb7fbbdefc5fdca881eb5096d80d74eace8bd85ba8268eb65b8"
+        },
+        {
+          "document_type": "Scope",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Project_Scope.pdf",
+          "page_count": 1,
+          "sha256": "a55706574ec2f121fb2448bfacf79dd7b1508fcb7543ffc433fbc86554e39df0"
+        },
+        {
+          "document_type": "General Conditions",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "General_Conditions.pdf",
+          "page_count": 1,
+          "sha256": "c0a269f03cd754906c2b9a5256a8cb72b72dbe5aa42c8619cdd8f9e1e3188bb0"
+        },
+        {
+          "document_type": "Owner Requirements",
+          "expected_extracted_fields": {
+            "required_coverage": 5000000
+          },
+          "filename": "Insurance_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "bd2ec280d4ccb7b012a09975d32e0d535b68dfe9d702514452e1948d98fa9782"
+        },
+        {
+          "document_type": "Site Logistics Plan",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Site_Logistics_Plan.pdf",
+          "page_count": 1,
+          "sha256": "ba373cf8a61469eacaddfe78a6cec1260ab1f186456031237f93b06e3e8ad5e9"
+        },
+        {
+          "document_type": "Project Schedule",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Project_Schedule.pdf",
+          "page_count": 1,
+          "sha256": "f237904f0d0af72eb78ca2ea9384d0899536aab1b212a56e6ff64db38df5b6df"
+        },
+        {
+          "document_type": "Project Directory",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Project_Directory.pdf",
+          "page_count": 1,
+          "sha256": "749705bb00d9a2184cc93c5a4df027bd2c5e8e02871c4c7a0d1c6576573ea966"
+        },
+        {
+          "document_type": "Mobilization Checklist",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Mobilization_Checklist.pdf",
+          "page_count": 1,
+          "sha256": "963dd3199447dff33275952d83ca3afd225bd7d864fc64c1646daf3903f9092b"
+        },
+        {
+          "document_type": "Safety Requirements",
+          "expected_extracted_fields": {
+            "project_name": "Westside Medical Center"
+          },
+          "filename": "Safety_Requirements.pdf",
+          "page_count": 1,
+          "sha256": "76a00650342fd0c534156b3afaf439de74db747cca83a0797f3de3a20ec90e13"
+        }
+      ],
+      "project": {
+        "address": "8701 Medical Center Drive",
+        "architect": "Cedar Hill Design Group",
+        "city": "Austin",
+        "contract_value": 32000000,
+        "csi_divisions": [
+          "03 Concrete",
+          "07 Thermal",
+          "09 Finishes",
+          "22 Plumbing",
+          "23 HVAC",
+          "26 Electrical"
+        ],
+        "description": "Medical office and outpatient procedure expansion with strict site access requirements.",
+        "final_completion": "2029-02-15",
+        "key": "westside-medical-center",
+        "mep_coordinator": "Priya Shah",
+        "name": "Westside Medical Center",
+        "owner": "Westside Health Partners",
+        "project_manager": "Natalie Brooks",
+        "required_insurance_limit": 5000000,
+        "safety_manager": "Helen Ortiz",
+        "start_date": "2026-05-01",
+        "state": "TX",
+        "status": "Preconstruction",
+        "substantial_completion": "2028-12-31",
+        "superintendent": "Marcus Reed",
+        "zip_code": "78735"
+      },
+      "scenario": "mixed",
+      "subcontractors": [
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "7cba39dde23afe7d0e9467311793349f6d7695599e3cab71aa6ade7de69e87d4"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "555e6c954ddaa30c6ad12b980885a5b0622c6dab869238326d0117548dcb2a4a"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "cfbf0ed5dbd9e6a5d75ae8bbded48f21c9e1ec056125bd5ea04ebd571be90985"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "4ef73140b182e0074f9debb1ef56d32ea0382ccaff879bc144edeb1cefd8aa43"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "ead5761370b97f5a21e60edd5d0f00f4f795625542f596bf6a4cf401f9d4f12f"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "45d47a2bf4365c0ef1aaf62b403171960d30e1c7aa15ada69741663a1b258c36"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "92acdd9ff3088b6df84ff5d836063ebf4dd97390f190ab2ff03fdd7e77c8c784"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "cc0897d4b098fec2345b68a46a7d77ec868a6fe0287692a9469eeea0cdbcec1e"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "2f98f4cf3e908629b25900fba1636b4032739f872dd94ead0c5f0cc0dcb9dca5"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "64b1d97f805f864c744f845db470de1b564955a51516c31461a301e364a2c73d"
+            }
+          ],
+          "name": "Apex Concrete Austin Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "563155a9dc0d906aaeafe7f109d508382d567564546c234725c0bb5d01d7c912"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "d66c39febcbd1c44ede7aa69dbfc9fe2564145146070a30d0845856417538a5d"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "68b8e4a3c285abdd87ec3f677c5803afd2978770d7d3b53d641552572fb7c4a9"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "4c8612cd5df9da9a3ff90446f927c23a37552fc31f2806ab22cc545d7d1fba0f"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "bdabdda14b0236338573da2665ffe8ccbaba60811c51706a3e9f38713cc50176"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "8a6e06666e2e39fd32f50ea31077820ec9c11e2d794d541b24940ad94e8f4c6a"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "661254663e70f67a093cbc1f62bf495857331eea4754ed6a9273b96e1e111a77"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "682f7678aded19f93e38a0cf081a1512cb7be95ac4182daa4d80f16fc5f454e9"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "e375015fbe718bd40fea419b4cf35d172f0642064b60ac1fcaf39b484a6dacb7"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "49b9c98e6e6ee4312fd8ddc9d2cb15c7749b010430a4036212c852c7d470047d"
+            }
+          ],
+          "name": "Skyline Steel Austin Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "d148f24d96e407a6b4a1355e7d52a7ef7c7ac97bb499123a15a5621b6067f365"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "5f576e460d8a5c449d633e0a39dcbc185008395295acff64832c0d8cf0bf400a"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "213d5a76f281b018ecc52a0ec6bacb146f24290ed59e36a246bf0aa2bcfbd60d"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "129f70038e487b22e6bbea4ee897bcc2de24cd52ba8777d002a626ced7ab2639"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "4c1fe6ec91c04922c9d98c17db055981f333bc53eb05c00be4e43e9186c3a272"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "8d6d5fae2b3e6f3cc3482ebb31a705923c1e1afe2a3378d70af8e7635c9aa641"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "4a786cf6934cdd4e830c86f5fb97dba3a19fa683ec1de914b4ea4da839e969dd"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "af9fd1815c2d369554a184e827fe9cc82692709c1275519f2b2584449082fa10"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "3204d6bbeca25233280005d24dae48120cbcd0a90212a4e7c8304ad9059a3ef0"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "64f6416f2dec7cd623c45200d1585d65d59c93d9bfe3a58604bcd51b4f2b7d01"
+            }
+          ],
+          "name": "Volt Electrical Austin Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "a46f6e904eab3ce210e258a4c1c3b0934602ac3b61f677a0ee7fad3c56644246"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "a5fe7226a6060160c3ff57f43269430e040bb376c9c3ceb562f4503750aa38a0"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "93128c1fc22cc97f4ee63b92f00644bc19b1af39aee0f5b07e398b61d94e2083"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "65c4d0358fd31c844d8e32e2277e027574017cb24845e7909e431eaf02d74040"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e1ba2289555a27cde6560d5bbbef7d29814fc691edf5ee03e565a91eb25d5d3a"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "80a726eb35a8f4cb259696794e830537b5a30047f0089a2c0b9e65b4037dacb5"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "1ffdfada2ab97283ee4c88542ce52954d0d97faeb5237a69af1834f888ab4d6e"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "76c908471337b76e9dab9f6ef81d1a6fa0bf2a997a130ed55a2b889af022d447"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "b37e3bdea3cc9bc5a0d5f380effdb5a4937374d93f0688ceaf4764c17b0ecf8e"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "157d468175ee8b1bb005f3869dc18280f065fad3b48c001019f6730c3872b1ab"
+            }
+          ],
+          "name": "Elite Mechanical Austin Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "4fef996fb5544b79e175db051f0bacda591e74c61acd5997c7a46d4f51d5f6f9"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "e60f04b5352262fd139635545ad7e22fd7dcff64d3454c313e0139cf4d31549b"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "8e6fd1dd39aa6fb1c7c4bca54fac0e21fe3a03c3a1c885f99e26358f2e53716e"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "d6e0cda9c2fa5a129dfd11577dd501ba69628cacab586caaba9015cb7be97cde"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "49a677818689d4ac8a6ceb53a308adc11b5dc37ea5faf51fd344c895b1e873aa"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "98e88064446b4d7722261e156118ef52f1cc84d3db5570809d39f0e15c20853e"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "a266e820624d72b41603441c0546cab4aa83d233cbdb510b3ba98cfd19731bba"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "e0cc6202e728278b0133432a07cb316096444b776da10aa86edbdca81e3ea90c"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "e850429f4f92eaf06e3240c8edee3c273efc39099dffab6c921a45f40b75a43b"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "6b8ce13f4264ab6b7fa0351977da4eff458f81f11143a1d5b90344e0e6e54bec"
+            }
+          ],
+          "name": "Precision Fire Protection Austin Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "16c704c903d7658881e818dcd6846d111e5172381ec73a6812b3cb1b8fe04690"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "3b072659b9102608c9c41314c1d5aba0c8589efea9e21e4088bf1829ec8f4b28"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "1ee695cc1bf9196cfb406861f003ea211351f4fec93cc68a500bb693be5af99a"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "a53edd9e4620a40acb9f454fa626f0807d56585d741084d59ec350eb7008e1d0"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "34fdbb3a59650af0fc2121f2cabde467fbc567db240c0c3b3a014755d90b58ab"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "2f55bed3e62c930f23ccec382a310cf2834dc89081656aaa77e5245c1f1266c7"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "0410f18bde5067ded49a99ff50bdb2e7784289a8df2b1e7e25d69ee64c62b5e6"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "dc90e972ff5766705d2e52a74a021c7c6f0d8f16259f49e8ed43027ddcbb381a"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "1d372a266ff8e8e6d60b389e8fe9cd6fa9ebe33e46f4875134e6b7701355e086"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "b5fbe1c6296b62de587051e15fd96a939b69a9c5fbbd19c252a787aa2a39c341"
+            }
+          ],
+          "name": "Titan Drywall Austin Demo LLC",
+          "scenario": "pending",
+          "status": "PENDING"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "15778faa817f073fb65caeed876bbbaa7485b02ae9d2f292f2c647d33089dd16"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "068de63bba58ef1b263507a60970af98db4f0de0a010f8e32f24f553737755ca"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "e7ffe80c365cc9e2af3a3d83b0f0cb3851583133b425f902a1e8defa9c03fd70"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "2ef01e226454c097076b76cc6996bbd32566daf6cf63a13063f22cca17d9279d"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "1d862a983578c4208e1c1334eb51fbcee9c9dfa1021407a0a0b5b46d4e1fb6a3"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "bc95087a47112de8664d6c058947e97a686e9543b0224928882380ec319199aa"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "e9d6dd32778a9c3bf4237536d24908dfe525c76d3086a49dfe626f6e9d94d791"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "1a6a01864de5074b21e8d7f869b11f531d0ff4b31dd8ca51c030473edff7db7b"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "d352508c63bcfe2a9ebc36b44a8639e6a92939dc54f86a74082b588414ba38c4"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "cd78e7a33d81df2959fd3202963a1bfb31a40aa10164ae65db0049cd7c9ad117"
+            }
+          ],
+          "name": "Metro Roofing Austin Demo LLC",
+          "scenario": "blocked",
+          "status": "BLOCKED"
+        },
+        {
+          "documents": [
+            {
+              "document_type": "COI",
+              "filename": "Certificate_of_Insurance.pdf",
+              "page_count": 1,
+              "sha256": "b33a3c2f2eb023426e16676ff3d640ed3be93170fdf4205c4cba40a3ab6009ab"
+            },
+            {
+              "document_type": "W9",
+              "filename": "W9_Demo.pdf",
+              "page_count": 1,
+              "sha256": "190523464af18a6f59c91ebc7e3a00950422de8455412d8264bf09bef38c7617"
+            },
+            {
+              "document_type": "Safety Manual",
+              "filename": "Safety_Manual.pdf",
+              "page_count": 17,
+              "sha256": "6fde78e18e3a4a24c1704832aaf04be3eed887f119673b7601305cfe67074d3a"
+            },
+            {
+              "document_type": "EMR Letter",
+              "filename": "EMR_Verification_Letter.pdf",
+              "page_count": 1,
+              "sha256": "634e959c4111f17ba264cc620133cd8678e994a4b10e74a787aad9a4aec60709"
+            },
+            {
+              "document_type": "OSHA Letter",
+              "filename": "OSHA_Compliance_Letter.pdf",
+              "page_count": 1,
+              "sha256": "e628f5593612a085ee27494d70bd13eadda062bf0ab5557b8d960a887fc61e1e"
+            },
+            {
+              "document_type": "Contractor License",
+              "filename": "Contractor_License.pdf",
+              "page_count": 1,
+              "sha256": "e449d73e27a82572422cd2b361485b2858f3c64f58afedadd25be804c9592219"
+            },
+            {
+              "document_type": "Vendor Form",
+              "filename": "Vendor_Information_Form.pdf",
+              "page_count": 1,
+              "sha256": "fcb3d36183da351b07515ab448943673f8986d3633acc7c3a988c81a55d77396"
+            },
+            {
+              "document_type": "Company Profile",
+              "filename": "Company_Profile.pdf",
+              "page_count": 4,
+              "sha256": "1e38c5a65882639656b43f59de60ddb514a9b88d190a1fa8466bf34473fd1725"
+            },
+            {
+              "document_type": "Scope",
+              "filename": "Scope_of_Work.pdf",
+              "page_count": 1,
+              "sha256": "a6345ec589daff6f26064dc3185c4823b190109e845f2976b5dc0a445bc12f6d"
+            },
+            {
+              "document_type": "Subcontract Agreement",
+              "filename": "Subcontract_Agreement.pdf",
+              "page_count": 4,
+              "sha256": "339c6a8712ce67cf295d3d7426c11539a324e22833461843dee43cd531a46b4c"
+            }
+          ],
+          "name": "Diamond Flooring Austin Demo LLC",
+          "scenario": "ready",
+          "status": "READY"
+        }
+      ]
+    }
+  ],
+  "scenario": "mixed",
+  "statistics": {
+    "BLOCKED": 10,
+    "PENDING": 10,
+    "READY": 20
+  }
+}

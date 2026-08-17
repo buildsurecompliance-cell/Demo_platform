@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card bg-dark text-light border-secondary">
+        <div class="card-body">
+            <h1 class="h3 fw-bold">Checkout Submitted</h1>
+            <p class="mb-3">
+                Stripe is processing your subscription. Access and plan changes are applied after BuildSure receives the billing confirmation.
+            </p>
+            <a class="btn btn-success" href="{{ url_for('auth.subscribe') }}">
+                Back to Plans
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

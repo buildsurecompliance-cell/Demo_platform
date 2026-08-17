@@ -1,0 +1,130 @@
+{
+  "company": "Elite Mechanical LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1986-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:44.596458+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "f2dfc212156344674b5efcf6217abfc522d120e9e510dfef39a0fa6849ee30d4"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical LLC",
+        "tax_id_last4": "1986"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:44.596466+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "95fabb73e1eb0875e743566091bf5528e1e1b32871251fb9b90ba4059d9684ae"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:44.596470+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "298f20ceb0d2fcd50c2fcf2d4b15672d42df40d622c089d4e11ab522e6109d91"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.596474+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "5d0a5d191578a348013c14ee8eebe06a46dab0f33c0d2fc0786e0330bd8e97d8"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.596478+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "69ea615c0b07259e6a533a30e3bdd13edfe81b1620a74bf129644f32f047e875"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1986"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:44.596482+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a5139f623b163352f1c0df0b914ec7d70a0a9284f8f38fb3d6c55122a4ec68d2"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical LLC",
+        "trade": "Mechanical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:44.596486+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a6acef02a292a6b680b018d2d351f9411e6c76913729687ccea309307e080178"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:44.596490+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "35946c4e69a537ea395e5a974ee448467971b84579d010a6c95710dfe9b7490f"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Mechanical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:44.596493+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "9817247a435d1d8f148293347fe9e6d5bb83e58d5a5f78512267904d28265e34"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:44.596497+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "0e49b3095d14413ad27e1099a3106b16bea879831cb9547ac957e34ce8a154b1"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:44.596439+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

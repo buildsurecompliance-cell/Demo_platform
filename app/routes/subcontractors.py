@@ -21,6 +21,7 @@ from flask_login import (
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 
+from app.decorators import subscription_required
 from app.extensions import db
 
 from app.models import (
@@ -372,6 +373,7 @@ def _render_edit_sub(
 
 @subcontractors_bp.route("/sub/<int:sub_id>/documents")
 @login_required
+@subscription_required
 def view_sub_documents(sub_id):
 
     sub = Subcontractor.query.filter_by(
@@ -405,6 +407,7 @@ def view_sub_documents(sub_id):
 
 @subcontractors_bp.route("/add_sub", methods=["GET", "POST"])
 @login_required
+@subscription_required
 def add_sub():
 
     organization = get_current_organization()
@@ -566,6 +569,7 @@ def add_sub():
 
 @subcontractors_bp.route("/edit_sub/<int:id>", methods=["GET", "POST"])
 @login_required
+@subscription_required
 def edit_sub(id):
 
     sub = Subcontractor.query.filter_by(
@@ -734,6 +738,7 @@ def edit_sub(id):
 
 @subcontractors_bp.route("/delete_sub/<int:id>", methods=["POST"])
 @login_required
+@subscription_required
 def delete_sub(id):
 
     sub = Subcontractor.query.filter_by(

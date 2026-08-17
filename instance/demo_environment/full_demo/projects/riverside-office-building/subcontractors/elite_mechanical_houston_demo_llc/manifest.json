@@ -1,0 +1,130 @@
+{
+  "company": "Elite Mechanical Houston Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1986-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:53.574770+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "3b47b4d8aef1a1247ac133282c1eee2f56aaedf8de779906602184531e10c15a"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical Houston Demo LLC",
+        "tax_id_last4": "1986"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:53.574777+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "9a7b5e499d0abf129edca5683f4007d2a79cae6093f4e86422f92e53bd4c1dca"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:53.574781+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "7c435545bece33e5f22962cb004a5046afd885c2464cacc82bab6d7ed99ac439"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:53.574785+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "8e92eedb8d91f7de5961f9f19d15057a0673105b31ef04b67dfda734595ffdf5"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:53.574789+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a63f52971ccc00182b107d92e8688db3167fc486218fef13d67e2672cbbd86d3"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1986"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:53.574794+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a0a652c04dfdf25e361b2ba7398cfc5aa134eda41ece3eaed5ba8c55adc80223"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical Houston Demo LLC",
+        "trade": "Mechanical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:53.574798+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "cb6a1021e24b6d5149e0957ee92a50a9489cfb94d4abf52317101c216822fdd2"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Elite Mechanical Houston Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:53.574802+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "b3b085d15eca7276df02b5f2070c7533bb0f6aa60d1f39e097c0669fdd7496b3"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Mechanical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:53.574806+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "62ae0ad3b3ed3c38c85239405e429b5f923e8d6f336f47bef3172be305c1d730"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:53.574810+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "b3001369768f87fd8c73209461cb5d5d70bfe2e7810d8dcd73588522cfefd97d"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:53.574755+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

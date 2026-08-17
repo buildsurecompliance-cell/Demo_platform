@@ -21,6 +21,7 @@ from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
 from app.models import (
+    BillingEvent,
     Document,
     Organization,
     OrganizationInvitation,
@@ -28,6 +29,7 @@ from app.models import (
     Project,
     ProjectSubcontractor,
     Subcontractor,
+    Subscription,
     User,
 )
 from app.services.organizations import create_default_organization_for_user
@@ -35,6 +37,7 @@ from app.services.organizations import create_default_organization_for_user
 
 EXPECTED_TABLES = {
     "alembic_version",
+    "billing_event",
     "document",
     "organization",
     "organization_invitation",
@@ -42,10 +45,12 @@ EXPECTED_TABLES = {
     "project",
     "project_subcontractor",
     "subcontractor",
+    "subscription",
     "user",
 }
 
 MODEL_TABLES = {
+    "billing_event",
     "document",
     "organization",
     "organization_invitation",
@@ -53,6 +58,7 @@ MODEL_TABLES = {
     "project",
     "project_subcontractor",
     "subcontractor",
+    "subscription",
     "user",
 }
 
@@ -386,7 +392,7 @@ class DatabaseMigrationTest(unittest.TestCase):
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertIn("Status: HEALTHY", result.output)
             self.assertIn("Missing tables: none", result.output)
-            self.assertIn("Migration head: 9d1e2f3a4b5c", result.output)
+            self.assertIn("Migration head: b2c3d4e5f6a7", result.output)
 
     def test_db_health_cli_reports_unhealthy_unmigrated_schema(self):
         with self.temporary_unmigrated_app() as app:
@@ -1009,6 +1015,436 @@ class DatabaseMigrationTest(unittest.TestCase):
                     ).scalar_one(),
                     1,
                 )
+
+    def test_billing_event_migration_adds_idempotency_table(self):
+        with self.temporary_migrated_app_from_revision("2b4c6d8e0f12") as app:
+            with app.app_context():
+                upgrade(directory="migrations")
+
+                inspector = inspect(db.engine)
+                self.assertIn("billing_event", inspector.get_table_names())
+
+                columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("billing_event")
+                }
+                self.assertEqual(
+                    set(columns.keys()),
+                    {
+                        "id",
+                        "provider",
+                        "external_event_id",
+                        "event_type",
+                        "status",
+                        "organization_id",
+                        "subscription_id",
+                        "processed_at",
+                        "error_message",
+                        "attempt_count",
+                        "last_attempt_at",
+                        "created_at",
+                    },
+                )
+                self.assertFalse(columns["provider"]["nullable"])
+                self.assertFalse(columns["external_event_id"]["nullable"])
+                self.assertFalse(columns["event_type"]["nullable"])
+                self.assertFalse(columns["status"]["nullable"])
+                self.assertFalse(columns["attempt_count"]["nullable"])
+                self.assertTrue(columns["last_attempt_at"]["nullable"])
+                self.assertTrue(columns["organization_id"]["nullable"])
+                self.assertTrue(columns["subscription_id"]["nullable"])
+
+                unique_constraints = {
+                    constraint["name"]
+                    for constraint in inspector.get_unique_constraints(
+                        "billing_event"
+                    )
+                }
+                self.assertIn(
+                    "uq_billing_event_provider_external_event_id",
+                    unique_constraints,
+                )
+
+                indexes = {
+                    index["name"]
+                    for index in inspector.get_indexes("billing_event")
+                }
+                self.assertIn("ix_billing_event_provider", indexes)
+                self.assertIn("ix_billing_event_external_event_id", indexes)
+                self.assertIn("ix_billing_event_event_type", indexes)
+                self.assertIn("ix_billing_event_status", indexes)
+
+                foreign_keys = {
+                    tuple(foreign_key["constrained_columns"]):
+                    foreign_key["referred_table"]
+                    for foreign_key in inspector.get_foreign_keys(
+                        "billing_event"
+                    )
+                }
+                self.assertEqual(
+                    foreign_keys[("organization_id",)],
+                    "organization",
+                )
+                self.assertEqual(
+                    foreign_keys[("subscription_id",)],
+                    "subscription",
+                )
+
+    def test_stripe_sync_metadata_migration_adds_nullable_sync_columns(self):
+        with self.temporary_migrated_app_from_revision("5e6f7a8b9c01") as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (8301, 'stripe-sync-migration@example.com', 'hash', 0, 'UTC')
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization
+                            (id, name, plan_key, created_at, updated_at)
+                        VALUES
+                            (8401, 'Stripe Sync Migration Org', 'STARTER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization_membership
+                            (organization_id, user_id, role, created_at)
+                        VALUES
+                            (8401, 8301, 'OWNER', CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO subscription (
+                            id,
+                            organization_id,
+                            provider,
+                            status,
+                            cancel_at_period_end,
+                            created_at,
+                            updated_at
+                        )
+                        VALUES (
+                            8501,
+                            8401,
+                            'internal',
+                            'active',
+                            0,
+                            CURRENT_TIMESTAMP,
+                            CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO billing_event (
+                            provider,
+                            external_event_id,
+                            event_type,
+                            status,
+                            organization_id,
+                            subscription_id,
+                            created_at
+                        )
+                        VALUES (
+                            'stripe',
+                            'evt_existing',
+                            'customer.subscription.updated',
+                            'received',
+                            8401,
+                            8501,
+                            CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+                db.session.commit()
+
+                organization_id = 8401
+                subscription_id = 8501
+
+                upgrade(directory="migrations")
+
+                inspector = inspect(db.engine)
+                subscription_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("subscription")
+                }
+                billing_event_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("billing_event")
+                }
+
+                for column_name in (
+                    "stripe_event_created_at",
+                    "stripe_event_id",
+                    "stripe_last_synced_at",
+                    "stripe_sync_error",
+                ):
+                    self.assertIn(column_name, subscription_columns)
+                    self.assertTrue(subscription_columns[column_name]["nullable"])
+
+                self.assertIn("attempt_count", billing_event_columns)
+                self.assertIn("last_attempt_at", billing_event_columns)
+                self.assertFalse(billing_event_columns["attempt_count"]["nullable"])
+                self.assertTrue(billing_event_columns["last_attempt_at"]["nullable"])
+
+                sync_indexes = {
+                    index["name"]
+                    for index in inspector.get_indexes("subscription")
+                }
+                self.assertIn(
+                    "ix_subscription_stripe_event_created_at",
+                    sync_indexes,
+                )
+                self.assertIn("ix_subscription_stripe_event_id", sync_indexes)
+
+                self.assertEqual(
+                    db.session.get(Organization, organization_id).plan_key,
+                    "STARTER",
+                )
+                self.assertEqual(
+                    db.session.get(Subscription, subscription_id).id,
+                    subscription_id,
+                )
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT attempt_count
+                            FROM billing_event
+                            WHERE external_event_id = 'evt_existing'
+                            """
+                        )
+                    ).scalar_one(),
+                    0,
+                )
+
+                downgrade(directory="migrations", revision="5e6f7a8b9c01")
+                inspector = inspect(db.engine)
+                subscription_columns = {
+                    column["name"]
+                    for column in inspector.get_columns("subscription")
+                }
+                billing_event_columns = {
+                    column["name"]
+                    for column in inspector.get_columns("billing_event")
+                }
+
+                self.assertNotIn("stripe_event_created_at", subscription_columns)
+                self.assertNotIn("stripe_event_id", subscription_columns)
+                self.assertNotIn("stripe_last_synced_at", subscription_columns)
+                self.assertNotIn("stripe_sync_error", subscription_columns)
+                self.assertNotIn("attempt_count", billing_event_columns)
+                self.assertNotIn("last_attempt_at", billing_event_columns)
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT plan_key
+                            FROM organization
+                            WHERE id = :organization_id
+                            """
+                        ),
+                        {"organization_id": organization_id},
+                    ).scalar_one(),
+                    "STARTER",
+                )
+
+                upgrade(directory="migrations")
+                inspector = inspect(db.engine)
+                self.assertIn(
+                    "stripe_event_id",
+                    {
+                        column["name"]
+                        for column in inspector.get_columns("subscription")
+                    },
+                )
+
+    def test_subscription_cancel_at_migration_is_reversible(self):
+        with self.temporary_migrated_app(revision="a1b2c3d4e5f6") as app:
+            with app.app_context():
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO user
+                            (id, email, password_hash, paid, timezone)
+                        VALUES
+                            (9301, 'cancel-at-migration@example.com', 'hash', 0, 'UTC')
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization
+                            (id, name, plan_key, created_at, updated_at)
+                        VALUES
+                            (9302, 'Cancel At Org', 'PROFESSIONAL',
+                             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO organization_membership
+                            (organization_id, user_id, role, created_at)
+                        VALUES
+                            (9302, 9301, 'OWNER', CURRENT_TIMESTAMP)
+                        """
+                    )
+                )
+                db.session.execute(
+                    text(
+                        """
+                        INSERT INTO subscription (
+                            id,
+                            organization_id,
+                            provider,
+                            status,
+                            cancel_at_period_end,
+                            created_at,
+                            updated_at
+                        )
+                        VALUES (
+                            9303,
+                            9302,
+                            'stripe',
+                            'active',
+                            0,
+                            CURRENT_TIMESTAMP,
+                            CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+                db.session.commit()
+                subscription_id = 9303
+
+                upgrade(directory="migrations")
+
+                inspector = inspect(db.engine)
+                subscription_columns = {
+                    column["name"]: column
+                    for column in inspector.get_columns("subscription")
+                }
+                self.assertIn("cancel_at", subscription_columns)
+                self.assertTrue(subscription_columns["cancel_at"]["nullable"])
+                self.assertIn(
+                    "ix_subscription_cancel_at",
+                    {
+                        index["name"]
+                        for index in inspector.get_indexes("subscription")
+                    },
+                )
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT id
+                            FROM subscription
+                            WHERE id = :subscription_id
+                            """
+                        ),
+                        {"subscription_id": subscription_id},
+                    ).scalar_one(),
+                    subscription_id,
+                )
+
+                downgrade(directory="migrations", revision="a1b2c3d4e5f6")
+
+                inspector = inspect(db.engine)
+                self.assertNotIn(
+                    "cancel_at",
+                    {
+                        column["name"]
+                        for column in inspector.get_columns("subscription")
+                    },
+                )
+                self.assertEqual(
+                    db.session.execute(
+                        text(
+                            """
+                            SELECT id
+                            FROM subscription
+                            WHERE id = :subscription_id
+                            """
+                        ),
+                        {"subscription_id": subscription_id},
+                    ).scalar_one(),
+                    subscription_id,
+                )
+
+                upgrade(directory="migrations")
+                inspector = inspect(db.engine)
+                self.assertIn(
+                    "cancel_at",
+                    {
+                        column["name"]
+                        for column in inspector.get_columns("subscription")
+                    },
+                )
+
+    def test_billing_event_migration_downgrade_preserves_subscription_data(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                user = User(email="billing-migration@example.com", paid=False)
+                user.set_password("password123")
+                db.session.add(user)
+                db.session.flush()
+                organization = create_default_organization_for_user(user)
+                db.session.flush()
+                db.session.add(
+                    BillingEvent(
+                        provider="stripe",
+                        external_event_id="evt_test",
+                        event_type="customer.subscription.updated",
+                        organization_id=organization.id,
+                        subscription_id=organization.subscription.id,
+                    )
+                )
+                db.session.commit()
+
+                organization_id = organization.id
+                subscription_id = organization.subscription.id
+
+                downgrade(directory="migrations", revision="2b4c6d8e0f12")
+
+                inspector = inspect(db.engine)
+                self.assertNotIn("billing_event", inspector.get_table_names())
+                self.assertIn("organization", inspector.get_table_names())
+                self.assertIn("subscription", inspector.get_table_names())
+                self.assertEqual(
+                    db.session.get(Organization, organization_id).id,
+                    organization_id,
+                )
+                self.assertEqual(
+                    db.session.get(Subscription, subscription_id).id,
+                    subscription_id,
+                )
+
+    def test_billing_event_migration_can_upgrade_again_after_downgrade(self):
+        with self.temporary_migrated_app() as app:
+            with app.app_context():
+                downgrade(directory="migrations", revision="2b4c6d8e0f12")
+                upgrade(directory="migrations")
+
+                inspector = inspect(db.engine)
+                self.assertIn("billing_event", inspector.get_table_names())
 
     def test_migration_downgrade_base_removes_schema(self):
         with self.temporary_migrated_app() as app:

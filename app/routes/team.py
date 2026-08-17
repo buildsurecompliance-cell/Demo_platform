@@ -14,6 +14,10 @@ from flask_login import (
 )
 
 from app.extensions import db
+from app.decorators import (
+    ensure_subscription_access,
+    subscription_blocked_response,
+)
 from app.models import (
     ORGANIZATION_ROLES,
     ROLE_ADMIN,
@@ -29,6 +33,7 @@ from app.services.organizations import (
     list_members,
     pending_invitations,
 )
+from app.services.subscription_service import SubscriptionAccessError
 
 
 team_bp = Blueprint(
@@ -54,6 +59,14 @@ def team():
     if request.method == "POST":
         if not can_manage:
             abort(403)
+
+        try:
+            access_result = ensure_subscription_access()
+        except SubscriptionAccessError as error:
+            return subscription_blocked_response(error.decision)
+
+        if hasattr(access_result, "status_code"):
+            return access_result
 
         try:
             invitation, token = create_invitation(

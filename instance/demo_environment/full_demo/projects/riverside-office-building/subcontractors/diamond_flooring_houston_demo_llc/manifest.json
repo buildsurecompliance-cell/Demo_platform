@@ -1,0 +1,130 @@
+{
+  "company": "Diamond Flooring Houston Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9516-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:54.565662+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "29c8a7918eea5b43300de851e160132dfe8c2614772a121041180ec7d2cb85e4"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Houston Demo LLC",
+        "tax_id_last4": "9516"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:54.565671+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "69d95c9c0cc59d9d21b72eaf246a3e121944a3f5ac9c8cf8ed766ce57a98ef49"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:54.565675+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "2176036baa8e549991e0636b46c9fb3cee00b3994705c4c11c09bb45188e9747"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:54.565679+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "445c95683fad74cf954a9547882378c2b11309b2cbd814bd9b1e34cd75ac52c0"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:54.565683+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "1691ffe2cc4f447e24980e15bfc810e14643fdc9301de57f21e2e1d71f7b76de"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9516"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:54.565686+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "1f11eab5d4fbe70db8bf991190bf5e16665245b6e3ee6eae874d5bc7ec249e1e"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Houston Demo LLC",
+        "trade": "Flooring"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:54.565690+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "131224c8e1a4694e41276049c98c6f5edc627f1034d8f96c25de65c05b6e950b"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Houston Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:54.565694+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "b065aeb9394ed804c8e39319873a8042563fc50a6916a438bb7cdba1f2284098"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Flooring"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:54.565698+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "a96c9f25ce492d4f416e57500d774b0fb1a5b7e374be3f72ac81464fb77aa4af"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:54.565701+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "91c8d5defc1204b50dc4daebee1cc856e4f2e7c245c65d7e41cdad0d11395807"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:54.565635+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

@@ -180,6 +180,17 @@ class RailwayStagingTest(unittest.TestCase):
             "RATELIMIT_ENABLED",
             "LOGIN_RATE_LIMIT",
             "REGISTER_RATE_LIMIT",
+            "BILLING_PROVIDER",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_PUBLISHABLE_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "STRIPE_STARTER_PRICE_ID",
+            "STRIPE_PROFESSIONAL_PRICE_ID",
+            "STRIPE_CHECKOUT_MODE",
+            "BILLING_SUCCESS_URL",
+            "BILLING_CANCEL_URL",
+            "BILLING_PORTAL_RETURN_URL",
+            "BILLING_EVENT_PROCESSING_TIMEOUT_SECONDS",
         }
         actual_names = {
             line.split("=", 1)[0]
@@ -219,6 +230,17 @@ class RailwayStagingTest(unittest.TestCase):
             "RATELIMIT_ENABLED",
             "LOGIN_RATE_LIMIT",
             "REGISTER_RATE_LIMIT",
+            "BILLING_PROVIDER",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_PUBLISHABLE_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "STRIPE_STARTER_PRICE_ID",
+            "STRIPE_PROFESSIONAL_PRICE_ID",
+            "STRIPE_CHECKOUT_MODE",
+            "BILLING_SUCCESS_URL",
+            "BILLING_CANCEL_URL",
+            "BILLING_PORTAL_RETURN_URL",
+            "BILLING_EVENT_PROCESSING_TIMEOUT_SECONDS",
         }
 
         self.assertEqual(actual_names, allowed_names)

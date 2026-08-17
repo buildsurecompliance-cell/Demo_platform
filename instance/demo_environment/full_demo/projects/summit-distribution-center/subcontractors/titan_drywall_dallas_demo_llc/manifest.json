@@ -1,0 +1,130 @@
+{
+  "company": "Titan Drywall Dallas Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "08/01/2026",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-4877-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:56.308374+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "870bf49dceda16e04ae8b28790537adea6334f597d62aaf731c541340c0aae00"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Titan Drywall Dallas Demo LLC",
+        "tax_id_last4": "4877"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:56.308380+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "34d7e624aee3c115b5f562867a911446738911f190fe0323992ce79f6fcce7be"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:56.308384+00:00",
+      "page_count": 17,
+      "scenario": "pending",
+      "sha256": "18d924bb95ac0923407585258231ca2977029f84f3b4bb6509fee7cfe2b23415"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:56.308387+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "70e4adc4fd5fe78fde19935848aea5d0d01bd3a4467e78f3b95da9ac6c6b5f11"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:56.308391+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "fb7f3bac020293e47e6d27151138a59aca9a96e196b88154b1addc6bc5d57f4a"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-4877"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:56.308395+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "0d7cd0fe561d72dc480ba23522052c0c1e007498c660035c1b7791f717892cf9"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Titan Drywall Dallas Demo LLC",
+        "trade": "Drywall"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:56.308399+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "dfe925c2edf8c3d8189e1561b1b884d9318d2179ad6baf8b2a2dd3179ec6554e"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Titan Drywall Dallas Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:56.308403+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "7f6129e20ac46fcea0f06a761557fde572e86c95cd23e5fff968753c49c7371f"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Drywall"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:56.308406+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "0a73f04a0a53a9fabe4963d4ec8e2c92000843acace45b6723e3a46f83578574"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:56.308410+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "0c03c728b60e2372f78fd453b4be43985336e960fc16621e2135ef4d8f2a44fa"
+    }
+  ],
+  "expected_status": "PENDING",
+  "generated_at": "2026-07-18T01:04:56.308362+00:00",
+  "preset": "apex-concrete",
+  "scenario": "pending"
+}

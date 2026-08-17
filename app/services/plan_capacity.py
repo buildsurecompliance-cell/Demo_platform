@@ -6,12 +6,21 @@ from types import MappingProxyType
 from app.extensions import db
 
 
-STARTER = "STARTER"
-PROFESSIONAL = "PROFESSIONAL"
-ENTERPRISE = "ENTERPRISE"
+PLAN_STARTER = "STARTER"
+PLAN_PROFESSIONAL = "PROFESSIONAL"
+PLAN_ENTERPRISE = "ENTERPRISE"
+
+STARTER = PLAN_STARTER
+PROFESSIONAL = PLAN_PROFESSIONAL
+ENTERPRISE = PLAN_ENTERPRISE
+
+RESOURCE_PROJECT = "project"
+RESOURCE_SUBCONTRACTOR = "subcontractor"
 
 PROJECT_LIMIT_REACHED = "PROJECT_LIMIT_REACHED"
 SUBCONTRACTOR_LIMIT_REACHED = "SUBCONTRACTOR_LIMIT_REACHED"
+INVALID_PLAN = "INVALID_PLAN"
+INVALID_RESOURCE = "INVALID_RESOURCE"
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +31,6 @@ class PlanDefinition:
     name: str
     max_projects: int | None
     max_subcontractors: int | None
-    unlimited_users: bool = True
 
 
 @dataclass(frozen=True)
@@ -32,14 +40,17 @@ class OrganizationUsage:
 
 
 @dataclass(frozen=True)
-class CapacityCheck:
+class CapacityResult:
     allowed: bool
     resource: str
     current: int
     limit: int | None
     plan_key: str
     reason_code: str | None = None
-    message: str = ""
+    message: str | None = None
+
+
+CapacityCheck = CapacityResult
 
 
 @dataclass(frozen=True)
@@ -57,23 +68,28 @@ class PlanCapacityError(Exception):
     def __init__(self, check):
         super().__init__(check.message)
         self.check = check
+        self.resource = check.resource
+        self.current = check.current
+        self.limit = check.limit
+        self.plan_key = check.plan_key
+        self.reason_code = check.reason_code
 
 
 _PLAN_DEFINITIONS = {
-    STARTER: PlanDefinition(
-        key=STARTER,
+    PLAN_STARTER: PlanDefinition(
+        key=PLAN_STARTER,
         name="Starter",
         max_projects=10,
         max_subcontractors=25,
     ),
-    PROFESSIONAL: PlanDefinition(
-        key=PROFESSIONAL,
+    PLAN_PROFESSIONAL: PlanDefinition(
+        key=PLAN_PROFESSIONAL,
         name="Professional",
         max_projects=50,
         max_subcontractors=300,
     ),
-    ENTERPRISE: PlanDefinition(
-        key=ENTERPRISE,
+    PLAN_ENTERPRISE: PlanDefinition(
+        key=PLAN_ENTERPRISE,
         name="Enterprise",
         max_projects=None,
         max_subcontractors=None,
@@ -82,6 +98,10 @@ _PLAN_DEFINITIONS = {
 
 PLAN_DEFINITIONS = MappingProxyType(_PLAN_DEFINITIONS)
 PLAN_KEYS = tuple(PLAN_DEFINITIONS.keys())
+LIMITED_RESOURCES = (
+    RESOURCE_PROJECT,
+    RESOURCE_SUBCONTRACTOR,
+)
 
 
 def _require_organization(organization):
@@ -100,12 +120,26 @@ def validate_plan_key(plan_key):
     return normalized
 
 
+def validate_resource(resource):
+    normalized = (resource or "").strip().lower()
+
+    if normalized not in LIMITED_RESOURCES:
+        raise ValueError("Invalid capacity resource.")
+
+    return normalized
+
+
+def get_plan_definition(plan_key):
+    return PLAN_DEFINITIONS[
+        validate_plan_key(plan_key)
+    ]
+
+
 def get_organization_plan(organization):
     organization = _require_organization(organization)
-    plan_key = validate_plan_key(
+    return get_plan_definition(
         organization.plan_key
     )
-    return PLAN_DEFINITIONS[plan_key]
 
 
 def get_organization_usage(organization):
@@ -140,7 +174,7 @@ def get_plan_selection_options(organization):
             display_name=plan.name,
             max_projects=plan.max_projects,
             max_subcontractors=plan.max_subcontractors,
-            unlimited_users=plan.unlimited_users,
+            unlimited_users=True,
             current_plan=current_plan.key,
             is_current=plan.key == current_plan.key,
         )
@@ -148,9 +182,59 @@ def get_plan_selection_options(organization):
     ]
 
 
-def _capacity_check(plan, resource, current, limit):
+def get_plan_limit(organization, resource):
+    plan = get_organization_plan(organization)
+    resource = validate_resource(resource)
+
+    if resource == RESOURCE_PROJECT:
+        return plan.max_projects
+
+    return plan.max_subcontractors
+
+
+def _usage_for_resource(usage, resource):
+    if resource == RESOURCE_PROJECT:
+        return usage.project_count
+
+    if resource == RESOURCE_SUBCONTRACTOR:
+        return usage.subcontractor_count
+
+    raise ValueError("Invalid capacity resource.")
+
+
+def _limit_for_resource(plan, resource):
+    if resource == RESOURCE_PROJECT:
+        return plan.max_projects
+
+    if resource == RESOURCE_SUBCONTRACTOR:
+        return plan.max_subcontractors
+
+    raise ValueError("Invalid capacity resource.")
+
+
+def _resource_label(resource):
+    if resource == RESOURCE_PROJECT:
+        return "projects"
+
+    if resource == RESOURCE_SUBCONTRACTOR:
+        return "subcontractors"
+
+    return resource
+
+
+def _limit_reason_code(resource):
+    if resource == RESOURCE_PROJECT:
+        return PROJECT_LIMIT_REACHED
+
+    if resource == RESOURCE_SUBCONTRACTOR:
+        return SUBCONTRACTOR_LIMIT_REACHED
+
+    return INVALID_RESOURCE
+
+
+def _capacity_result(plan, resource, current, limit):
     if limit is None:
-        return CapacityCheck(
+        return CapacityResult(
             allowed=True,
             resource=resource,
             current=current,
@@ -159,7 +243,7 @@ def _capacity_check(plan, resource, current, limit):
         )
 
     if current < limit:
-        return CapacityCheck(
+        return CapacityResult(
             allowed=True,
             resource=resource,
             current=current,
@@ -167,69 +251,86 @@ def _capacity_check(plan, resource, current, limit):
             plan_key=plan.key,
         )
 
-    plural_resource = (
-        "projects"
-        if resource == "project"
-        else "subcontractors"
-    )
-    reason_code = (
-        PROJECT_LIMIT_REACHED
-        if resource == "project"
-        else SUBCONTRACTOR_LIMIT_REACHED
-    )
-
-    return CapacityCheck(
+    return CapacityResult(
         allowed=False,
         resource=resource,
         current=current,
         limit=limit,
         plan_key=plan.key,
-        reason_code=reason_code,
+        reason_code=_limit_reason_code(resource),
         message=(
             f"Your {plan.name} plan allows up to "
-            f"{limit} {plural_resource}."
+            f"{limit} {_resource_label(resource)}."
         ),
     )
 
 
-def can_create_project(organization):
+def check_capacity(organization, resource):
+    resource = validate_resource(resource)
     plan = get_organization_plan(organization)
     usage = get_organization_usage(organization)
-    return _capacity_check(
+
+    return _capacity_result(
         plan=plan,
-        resource="project",
-        current=usage.project_count,
-        limit=plan.max_projects,
+        resource=resource,
+        current=_usage_for_resource(usage, resource),
+        limit=_limit_for_resource(plan, resource),
+    )
+
+
+def can_create_project(organization):
+    return check_capacity(
+        organization,
+        RESOURCE_PROJECT,
     )
 
 
 def can_create_subcontractor(organization):
-    plan = get_organization_plan(organization)
-    usage = get_organization_usage(organization)
-    return _capacity_check(
-        plan=plan,
-        resource="subcontractor",
-        current=usage.subcontractor_count,
-        limit=plan.max_subcontractors,
+    return check_capacity(
+        organization,
+        RESOURCE_SUBCONTRACTOR,
     )
 
 
-def require_project_capacity(organization):
-    check = can_create_project(organization)
+def require_capacity(organization, resource):
+    check = check_capacity(
+        organization,
+        resource,
+    )
 
     if not check.allowed:
         raise PlanCapacityError(check)
 
     return check
+
+
+def require_project_capacity(organization):
+    return require_capacity(
+        organization,
+        RESOURCE_PROJECT,
+    )
 
 
 def require_subcontractor_capacity(organization):
-    check = can_create_subcontractor(organization)
+    return require_capacity(
+        organization,
+        RESOURCE_SUBCONTRACTOR,
+    )
 
-    if not check.allowed:
-        raise PlanCapacityError(check)
 
-    return check
+def ensure_project_capacity(organization):
+    return require_project_capacity(organization)
+
+
+def ensure_subcontractor_capacity(organization):
+    return require_subcontractor_capacity(organization)
+
+
+def get_capacity(organization, resource):
+    return check_capacity(
+        organization,
+        resource,
+    )
 
 
 def set_organization_plan(organization, plan_key):

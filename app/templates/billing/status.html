@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Billing Status</h1>
+            <p class="text-muted mb-0">
+                Read-only billing diagnostics for {{ organization.name }}.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('auth.subscribe') }}">
+            Plans
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5 fw-bold">Subscription</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <strong>Plan</strong>
+                    <div>{{ current_plan.name }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Provider</strong>
+                    <div>{{ subscription.provider if subscription else "None" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Status</strong>
+                    <div>{{ subscription.status if subscription else "None" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Current period end</strong>
+                    <div>{{ subscription.current_period_end.strftime("%Y-%m-%d") if subscription and subscription.current_period_end else "Not available" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Trial end</strong>
+                    <div>{{ subscription.trial_end.strftime("%Y-%m-%d") if subscription and subscription.trial_end else "Not available" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Scheduled cancellation</strong>
+                    <div>{{ "Yes" if access_decision.cancellation_scheduled else "No" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Cancellation date</strong>
+                    <div>{{ access_decision.cancel_at.strftime("%Y-%m-%d") if access_decision.cancel_at else "Not available" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Customer linked</strong>
+                    <div>{{ masked_customer_id if masked_customer_id else "No" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Subscription linked</strong>
+                    <div>{{ masked_subscription_id if masked_subscription_id else "No" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Last Stripe sync</strong>
+                    <div>{{ subscription.stripe_last_synced_at.strftime("%Y-%m-%d %H:%M UTC") if subscription and subscription.stripe_last_synced_at else "Not available" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Last sync result</strong>
+                    <div>{{ subscription.stripe_sync_error if subscription and subscription.stripe_sync_error else "OK" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Operational access</strong>
+                    <div>{{ "Allowed" if access_decision.allowed else "Blocked" }}</div>
+                </div>
+                <div class="col-md-4">
+                    <strong>Stripe configuration</strong>
+                    <div>{{ "Ready" if stripe_config.ready else "Degraded" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if can_reconcile %}
+    <form method="POST" action="{{ url_for('billing.reconcile') }}">
+        {{ csrf_input() }}
+        <button class="btn btn-primary" type="submit">
+            Reconcile Stripe Subscription
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -69,5 +69,19 @@ class Organization(db.Model):
         lazy="selectin",
     )
 
+    subscription = db.relationship(
+        "Subscription",
+        back_populates="organization",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    billing_events = db.relationship(
+        "BillingEvent",
+        back_populates="organization",
+        lazy=True,
+    )
+
     def __repr__(self):
         return f"<Organization {self.id} {self.name}>"

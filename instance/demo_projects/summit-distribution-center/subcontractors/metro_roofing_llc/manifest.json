@@ -1,0 +1,130 @@
+{
+  "company": "Metro Roofing LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9525-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:45.477005+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "c970366f99d309d094eb56720e91bb1ee350454d3e219aa087412a71ce7e7bae"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing LLC",
+        "tax_id_last4": "9525"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:45.477012+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "62ff8b52770ce3e1bc76106d1b0ef5a84815e1d3d29cdad5b768460751e026ab"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:45.477017+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "14baacdfdcaf8dc7dca00bbd5530e6756f7075e801835da9ab6c8350dcddac63"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:45.477021+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "adfa7d0768678e8c023e7af518b69a67e3bb9c0badcdd4d87cbaac4f520c919b"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:45.477025+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "65e7623a86ecf16c626a842c5f008e4083f15636fde5ea0a14be84119db00bed"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9525"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:45.477029+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "66fc1b23cfbccc2abbd291ad4c57e5978ec4092304823ccd5497fda41cc72ab1"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing LLC",
+        "trade": "Roofing"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:45.477033+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "ba7ee24599ba5fc8034275d95e46fc2f7a17228429ca0fa0edcae56d06230f8e"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:45.477037+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "f70c817b51b47fd6193a6a22bdd413d63c4a453b6d75e7f3c032a2711b89f02a"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Roofing"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:45.477040+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "52cfee4832fb7c37289cda776cadaf909950fb2700e2a6ddf6d3bf34c0fb06e1"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:45.477044+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "b53f7a32259f1a1a9514ea32ccc7fc12bf608e6248a0cff21433158751f50e5f"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:45.476988+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

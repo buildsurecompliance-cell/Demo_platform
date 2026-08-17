@@ -1,0 +1,130 @@
+{
+  "company": "Diamond Flooring Fort Worth Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9516-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:52.206694+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "b82f01df3dab8d336307e8ea90c285b64a6bd6b9f8171e332c06456e81a89f87"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Fort Worth Demo LLC",
+        "tax_id_last4": "9516"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:52.206699+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "ca52ca68408361faa0e63570b60426cf5e00d2b7deb4a66564c05d325db5e703"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:52.206703+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "c44db7db3f8865b41580d50da8b3494e2aa02477f67f895c642cefdc45d4067d"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:52.206707+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "c9daabb7e7be643131b3675f5af7181f720f83a701d4189181ee261692d03190"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:52.206710+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "c3f8419322a6f99665b24584b6446b7f00cfd24d1971bbad10cdb73fae3c6508"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9516"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:52.206713+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "9cd39dbd7e981e16a8fa17ae2b84267e617b2808124beabbdd2143834d67d637"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Fort Worth Demo LLC",
+        "trade": "Flooring"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:52.206717+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "7d166eebc31e54834d87ea832e0ff35d6558bff66b5c0dd615937b516d00dbf1"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring Fort Worth Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:52.206721+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "0743471fc667848c8f9e19a7dfc3d6ffeab9578ab84cf3730aeed99018588ba5"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Flooring"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:52.206725+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "47e29d282659da9c3a2ba4c4971bf91c9440ca1a5fe3d787092b332b67bc17c7"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:52.206728+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "5d00543a11140717313fc432750e241a6285a8de68ac23ccda82483eb4b6f201"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:52.206682+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

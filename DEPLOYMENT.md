@@ -225,6 +225,164 @@ Monitor security events in application logs:
 Logs must not include passwords, CSRF tokens, session cookies, API keys, or full
 document contents.
 
+## Stripe Billing
+
+Stripe is optional at boot. The app must import and answer `/health` even when
+Stripe environment variables are not configured.
+
+Configure billing with:
+
+```text
+BILLING_PROVIDER=stripe
+STRIPE_SECRET_KEY=<stripe-secret-key>
+STRIPE_PUBLISHABLE_KEY=<stripe-publishable-key>
+STRIPE_WEBHOOK_SECRET=<stripe-webhook-secret>
+STRIPE_STARTER_PRICE_ID=price_starter
+STRIPE_PROFESSIONAL_PRICE_ID=price_professional
+BILLING_SUCCESS_URL=https://your-domain/billing/checkout/success
+BILLING_CANCEL_URL=https://your-domain/billing/checkout/canceled
+BILLING_PORTAL_RETURN_URL=https://your-domain/subscribe
+STRIPE_CHECKOUT_MODE=subscription
+BILLING_EVENT_PROCESSING_TIMEOUT_SECONDS=300
+```
+
+Do not commit real Stripe keys or price IDs. Enterprise is not a self-service
+checkout plan. Plan changes are applied only from validated Stripe webhook
+events, using exact price ID mapping. Checkout success pages do not activate
+access by themselves.
+
+Use Stripe Test Mode values for staging. Test secret keys and publishable keys
+must come from Railway Variables or the local environment, never from committed
+files. The webhook secret is separate from the secret key, and Stripe Price IDs
+are separate from Product IDs. `BILLING_EVENT_PROCESSING_TIMEOUT_SECONDS`
+controls when a stuck `processing` webhook event may be retried; the default is
+300 seconds.
+
+Stripe webhooks may arrive more than once and out of order. BuildSure applies
+commercial state only from a validated current Stripe subscription snapshot.
+`BillingEvent` records idempotency and retry history, while
+`Subscription.stripe_event_created_at`, `Subscription.stripe_event_id`, and
+`Subscription.stripe_last_synced_at` prevent older events from overwriting newer
+state. Events with missing or invalid Stripe timestamps are rejected and may be
+retried after correction.
+
+Invoice events are treated as secondary signals. They retrieve the current
+Stripe Subscription and apply the same snapshot validation as subscription
+events. Do not infer plan, status, or access from invoice amount, description,
+or metadata.
+
+Owners and admins can inspect local billing diagnostics at `/billing/status`.
+The page does not call Stripe, does not expose raw webhook payloads, and masks
+external customer/subscription IDs. Manual reconciliation is available through
+`POST /billing/reconcile`; it requires CSRF and owner/admin access and uses the
+same snapshot validation as the webhook.
+
+For local Stripe Test Mode forwarding, use the Stripe CLI only with test keys:
+
+```bash
+stripe login
+stripe listen --forward-to localhost:5000/billing/webhook/stripe
+```
+
+Do not commit the CLI-provided webhook secret. See `BILLING_RUNBOOK.md` for
+failure handling and manual test scenarios.
+
+### Stripe Test Mode Setup
+
+Create Stripe resources only in Test Mode:
+
+- Product: `BuildSure Starter`.
+- Product: `BuildSure Professional`.
+- One active recurring monthly Price for each Product.
+- Quantity must remain fixed at `1`.
+- Do not create Enterprise self-service billing.
+- Do not enable metered usage, seats, usage billing, coupons, taxes, or trials
+  unless those commercial decisions are reviewed separately.
+
+Local test values belong in `.env.test.local`, which is ignored by Git through
+the `.env.*` rule. Do not place Test Mode secrets, webhook secrets, full Price
+IDs, Customer IDs, Subscription IDs, checkout URLs, portal URLs, or card data in
+versioned files.
+
+Minimum local Test Mode variables:
+
+```text
+BILLING_PROVIDER=stripe
+STRIPE_SECRET_KEY=<test-secret-key>
+STRIPE_PUBLISHABLE_KEY=<test-publishable-key>
+STRIPE_WEBHOOK_SECRET=<local-cli-webhook-secret>
+STRIPE_STARTER_PRICE_ID=<starter-test-price-id>
+STRIPE_PROFESSIONAL_PRICE_ID=<professional-test-price-id>
+BILLING_SUCCESS_URL=http://localhost:5000/billing/checkout/success
+BILLING_CANCEL_URL=http://localhost:5000/billing/checkout/canceled
+BILLING_PORTAL_RETURN_URL=http://localhost:5000/billing/status
+BILLING_EVENT_PROCESSING_TIMEOUT_SECONDS=300
+```
+
+Before running any external Stripe validation, explicitly opt in:
+
+```text
+STRIPE_E2E_ENABLED=true
+```
+
+Without that value, the validation scripts abort before calling Stripe.
+
+Validate Test Mode configuration with:
+
+```powershell
+.\venv\Scripts\python.exe scripts\validate_stripe_test_configuration.py
+.\venv\Scripts\python.exe scripts\stripe_test_mode_smoke.py
+```
+
+Both commands confirm Test Mode resources, active recurring monthly Prices,
+active Products, unique Starter/Professional Price IDs, and masked reporting.
+They must never operate on `livemode=True` resources.
+
+Prepare optional local E2E records only against an isolated local database:
+
+```powershell
+$env:BILLING_E2E_PREPARE_ENABLED="true"
+$env:BILLING_E2E_OWNER_PASSWORD="<local-temporary-password>"
+.\venv\Scripts\python.exe scripts\billing_e2e_prepare.py
+```
+
+Generate a safe local report with:
+
+```powershell
+$env:BILLING_E2E_REPORT_ENABLED="true"
+.\venv\Scripts\python.exe scripts\billing_e2e_report.py
+```
+
+The report reads local state only. It does not call Stripe and masks external
+identifiers.
+
+### Stripe Test Mode E2E Matrix
+
+Complete this matrix during manual Test Mode validation. Mark a row `BLOCKED`
+when external infrastructure or credentials are unavailable; do not mark `PASS`
+without evidence.
+
+| Scenario | Expected result | Evidence to record |
+| --- | --- | --- |
+| Config Test Mode | Stripe resources have `livemode=False` | masked Price/Product IDs |
+| Starter Checkout | Starter Subscription active after signed webhook | BillingEvent status, plan_key |
+| Success page | Does not activate local access | local status before webhook |
+| Webhook signature | Unsigned/invalid requests rejected | HTTP status |
+| Professional | plan_key becomes PROFESSIONAL after webhook | masked Price ID |
+| Customer reuse | Same Customer reused for same Organization | masked Customer ID |
+| Second subscription | No concurrent active Subscription created | Stripe Dashboard + local IDs |
+| Portal | Owner/admin access only | route status |
+| Cancel at period end | Access remains through current period | local access decision |
+| Immediate cancel | Access blocked, data preserved | local access decision |
+| Payment failure | Remote Subscription snapshot applied | status and period end |
+| Duplicate event | BillingEvent not reapplied | attempt count/status |
+| Failed retry | Retry succeeds without duplicate BillingEvent | attempt count/status |
+| Out-of-order | Older event ignored | reason code |
+| Reconciliation | Drift corrected from validated snapshot | before/after report |
+| Multi-tenancy | A and B remain isolated | masked tenant/customer evidence |
+| Downgrade capacity | Existing data preserved; new creates limited | capacity report |
+| User.paid | Remains unchanged | local report |
+
 ## Railway Staging
 
 Railway staging uses the official WSGI entrypoint:
@@ -440,15 +598,21 @@ Plan Capacity V1 is intentionally narrow:
 
 Users, team memberships, documents, AI analysis, Compliance Officer advice,
 storage, and features remain unlimited in this version. Do not add prices,
-Stripe identifiers, subscription IDs, trial state, or card data to the codebase
-for this foundation.
+card data, checkout behavior, or live Stripe calls to the codebase for this
+foundation.
 
-`User.paid` remains as a legacy compatibility flag for the current simulated
-subscription/login flow. It does not control Organization capacity and must not
-be used to grant individual quota. Invited users with Organization membership
-must not be blocked solely because their individual legacy `paid` flag is
-false. Future Stripe integration should update `Organization.plan_key` through
-the central plan capacity service or a reviewed admin path.
+`User.paid` remains only as a legacy compatibility column. It does not control
+Organization capacity, login, operational access, or subscription recovery.
+Invited users with Organization membership must not be blocked solely because
+their individual legacy `paid` flag is false. Future Stripe integration should
+update `Organization.plan_key` through the central plan capacity service or a
+reviewed admin path.
+
+Commercial plan display data is centralized in `app/services/plan_catalog.py`.
+The catalog uses internal billing lookup keys, not real Stripe price IDs. Do
+not commit live Stripe prices, checkout links, customer IDs, subscription IDs,
+or secrets. Provider price IDs should be introduced only in the dedicated
+Stripe sprint through environment configuration and strict lookup mapping.
 
 The plan migration backfills existing Organizations to `STARTER` and makes
 `plan_key` required. Existing Projects, Subcontractors, memberships, links, and
@@ -470,16 +634,75 @@ The `/subscribe` route serves two purposes in this transitional version:
 - unauthenticated users can start account creation;
 - authenticated users can view Organization plans.
 
-Plan cards are rendered from the central plan capacity registry. Do not
-hardcode plan limits in templates. `Organization.plan_key` remains the only
-source of truth for capacity. `User.paid` is legacy compatibility state and
-must not change plan capacity.
+Plan cards are rendered from the central plan catalog. Do not hardcode plan
+limits in templates. `Organization.plan_key` remains the only source of truth
+for capacity. `User.paid` is legacy compatibility state and must not change
+plan capacity or operational access.
 
 Direct plan changes are allowed only in development/testing so staging smoke
 tests can exercise STARTER, PROFESSIONAL, and ENTERPRISE capacity behavior. In
 production, direct POST changes are blocked and the UI should tell users to
-contact BuildSure. There is no automated billing, checkout, Stripe customer,
-subscription ID, payment status, or price stored in code for this V1.
+contact BuildSure. There is no automated billing, checkout, payment collection,
+or live Stripe integration in this V1.
 
 All plans include the same core compliance features. They differ only by
 Project and Subcontractor capacity; team members remain unlimited.
+
+## Subscription State
+
+BuildSure stores subscription state per Organization in the `subscription`
+table. Existing Organizations are backfilled as `provider=internal` and
+`status=active` to preserve current access while Stripe is not integrated.
+
+Subscription state controls operational access only. It does not change
+`Organization.plan_key`, does not change capacity limits, and does not create
+per-user billing. `Organization.plan_key` remains the effective plan for
+capacity, and `plan_capacity.py` remains limited to Project and Subcontractor
+counts.
+
+Supported provider values are `internal` and `stripe`. The `stripe` value is
+structural preparation only; the application must not import the Stripe SDK or
+call Stripe APIs until the dedicated Stripe sprint.
+
+Billing provider events are prepared through the `billing_event` table for
+future webhook idempotency. Events are unique by `(provider, external_event_id)`
+and store only safe metadata: provider, external event ID, event type, status,
+optional Organization/Subscription references, timestamps, and safe error
+messages. Do not store raw webhook payloads or secrets in this table.
+
+Past due Organizations receive a configurable grace period:
+
+```text
+SUBSCRIPTION_GRACE_PERIOD_DAYS=7
+```
+
+Production should not allow Organizations without a Subscription record. The
+configuration flag `ALLOW_LEGACY_ORGANIZATIONS_WITHOUT_SUBSCRIPTION` exists
+only as explicit compatibility scaffolding and should remain false in staging
+and production.
+
+Operational routes are protected by the explicit `subscription_required`
+decorator rather than a global `before_request` gate. Keep these categories
+outside the operational gate:
+
+- login, logout, register, and account recovery;
+- `/health`;
+- `/subscribe`, pricing, billing, reactivation, and future payment recovery;
+- invitation acceptance and Organization/session recovery routes;
+- future webhooks and system callbacks.
+
+Protected routes include the dashboard, Projects, Subcontractors, private
+Documents, manual document analysis, compliance/readiness views, reminders, and
+other internal operational actions. Project creation checks Subscription access
+before Project capacity. Subcontractor creation checks Subscription access
+before Subcontractor capacity.
+
+Blocked HTML requests render a safe subscription-access page without external
+billing IDs. Blocked JSON/API-style requests return a `403` payload with
+`error=subscription_access_denied`, the reason code, status, message, and ISO
+dates when applicable.
+
+Automatic reminders are also subscription-aware. Organizations without
+operational access are skipped by the reminder job without changing their
+Subscription, plan, Project, Subcontractor, or reminder state. This prevents
+background jobs from bypassing the same access boundary enforced by web routes.

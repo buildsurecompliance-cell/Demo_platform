@@ -1,0 +1,130 @@
+{
+  "company": "Precision Fire Protection Dallas Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1730-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:56.061209+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "f4290608e50329cd89efe29c6f062acd88ddae58cc693f649f781cb2c3267efe"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Precision Fire Protection Dallas Demo LLC",
+        "tax_id_last4": "1730"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:56.061216+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "0fd54a9969dd574691315143e58d65cbd264a221814340d0adaf714594dd2239"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:56.061221+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "297e22afc05eb9c0d2507fbc0851c4bea9e3d1f7afeb74b4c794f260dce52f37"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:56.061225+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "79ec7d544752dcfdaebb05c517b85678197be6385d1c28cb8a91eec1bf7b316e"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:56.061229+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "b480e2268e93dcc9def48e23ec4aff0ec38610c8bbb2e0e729a32c2c3037f6cd"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1730"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:56.061233+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "38d40f526a5ccf27004c5c2d094a0ed82c071dd5eeda3eb55ca31127a3632a32"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Precision Fire Protection Dallas Demo LLC",
+        "trade": "Fire Protection"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:56.061237+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "21d658ed11928241e7f48144dbb510b492eed6ae99e6073b07661246adc49155"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Precision Fire Protection Dallas Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:56.061242+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "6eac0c0a83daa386fef1bde0bac1039a721cf2c689ec56f5b1b331189e54cb4f"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Fire Protection"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:56.061246+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "50c7ab461d8f8913b13eaa35d188e2e9ab90dda6cc663848ab3d8b52cc71801e"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:56.061250+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "6b7273b2b355cb132656c617a53f6cd68b628114443a910892c8420befe623e3"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:56.061193+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

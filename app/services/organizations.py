@@ -22,6 +22,11 @@ from app.models import (
     Subcontractor,
     User,
 )
+from app.services.subscription_service import (
+    PROVIDER_INTERNAL,
+    STATUS_ACTIVE,
+    get_or_create_subscription,
+)
 
 
 MANAGE_MEMBER_ROLES = (
@@ -62,6 +67,12 @@ def create_default_organization_for_user(user, role=ROLE_OWNER):
     db.session.flush()
 
     user.last_active_organization_id = organization.id
+
+    get_or_create_subscription(
+        organization,
+        status=STATUS_ACTIVE,
+        provider=PROVIDER_INTERNAL,
+    )
 
     return organization
 

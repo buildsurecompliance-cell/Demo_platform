@@ -1,0 +1,130 @@
+{
+  "company": "Volt Electrical Houston Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-4978-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:53.321542+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "8cc3396ee28e89e1c286bf7ba369121464e343b7deb6d427e4669e42d7c2d4a5"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical Houston Demo LLC",
+        "tax_id_last4": "4978"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:53.321549+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "9c8e5d45df3641256a46919f98c17c0c5456d32a4276cc8f223491d064f551cf"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:53.321553+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "4a954f864de6448998f993e0092c6d341b1cded1421d216eb5ed6bc74f5c8f71"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:53.321557+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "49872d06fabcb2b6791168d44e5456875f284a185dd9e86476ca3bb1296dc363"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:53.321561+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "0d182f2b4c5adfdd3a5dd710f24dd79f848b29d32412bd799e7d4d8f02c4a9bc"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-4978"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:53.321566+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "b3b0d0756231af59894d3e88c6f1613481a982cfb578b5a389e2a018b437e0e8"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical Houston Demo LLC",
+        "trade": "Electrical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:53.321570+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "a7c78a4276f54694ac44677fe082486d0395a531b4bd758debb465e6802bb35b"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical Houston Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:53.321575+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "5fef66acda0039d2ba551a64d4a1ecf0746b294dc7bbc2b3eb6c3db42b3ab2b8"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Electrical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:53.321579+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "40161b4cb36dc49b51d7f1526db713ee9d5325c97bcc7ed2aaacaaba85f69dd9"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:53.321583+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "feb76ed72f6361367417d565544e93cdd78bfd3b6ed1ee590d0827004dc18897"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:53.321528+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

@@ -1,0 +1,130 @@
+{
+  "company": "Apex Concrete San Antonio Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1857-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:47.804696+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "c301b42fd3e2279c9989218d8b424e99a50b4d6956b695fc814600185a2b06b1"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete San Antonio Demo LLC",
+        "tax_id_last4": "1857"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:47.804704+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "ed4c385b515f56720e3d38e7131944d94c06bbb5c3bca453d7c8392c3321955e"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:47.804710+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "a06eead350d509431fd384ca494c204654b4b606b95f0c9290e6c24ebd938d0c"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:47.804715+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "d309d3ffed251b38ec481e1615c00992a07337e5f7eee96091ed0b40665531b3"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:47.804719+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "c3cc2c129b4dededb8d077a3bc06da40f1e9cb1dd52c563a2ae28ee21f89c4d1"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1857"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:47.804724+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "a049a03d62c9e31bd72dba296f100eefecd741abd37650dd0fd95efd8baca8d0"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete San Antonio Demo LLC",
+        "trade": "Concrete"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:47.804728+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "ac4dfa06e65b11a80a26e7d3f74c44a895dca719106ba56b43f52b8f94b637eb"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete San Antonio Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:47.804732+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "2b69fe28ad8baffda808493b8353e202c80f258fb4ec192ff3a08853e3b17e92"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Concrete"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:47.804736+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "5b3e54cf0e8a52ff1a91494b9856086c477ba13f03e59b5b25bc4ab93d4bb971"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:47.804740+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "da298e43fd662887551dfd5f2829e1cc4ca1a20c56cf89e0c6f933e645d02fa0"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:47.804678+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

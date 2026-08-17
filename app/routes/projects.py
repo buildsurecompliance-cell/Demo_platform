@@ -23,6 +23,7 @@ from flask_login import (
 
 from sqlalchemy.orm import joinedload
 
+from app.decorators import subscription_required
 from app.extensions import db
 
 from app.models import (
@@ -497,6 +498,7 @@ def _render_edit_project(
 
 @projects_bp.route("/add_project", methods=["GET", "POST"])
 @login_required
+@subscription_required
 def add_project():
 
     organization = get_current_organization()
@@ -692,6 +694,7 @@ def add_project():
 
 @projects_bp.route("/edit_project/<int:project_id>", methods=["GET", "POST"])
 @login_required
+@subscription_required
 def edit_project(project_id):
 
     project = Project.query.filter_by(
@@ -878,6 +881,7 @@ def edit_project(project_id):
 
 @projects_bp.route("/project/<int:project_id>")
 @login_required
+@subscription_required
 def view_project(project_id):
 
     project = (
@@ -939,6 +943,7 @@ def view_project(project_id):
 
 @projects_bp.route("/delete_project/<int:id>", methods=["POST"])
 @login_required
+@subscription_required
 def delete_project(id):
 
     project = Project.query.filter_by(
@@ -979,6 +984,7 @@ def delete_project(id):
 
 @projects_bp.route("/project/<int:project_id>/upload", methods=["POST"])
 @login_required
+@subscription_required
 def upload_project_document(project_id):
 
     project = Project.query.filter_by(

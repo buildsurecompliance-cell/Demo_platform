@@ -31,7 +31,8 @@ class User(UserMixin, db.Model):
         nullable=False
     )
 
-    # SaaS Subscription
+    # Legacy compatibility only. Organization Subscription controls billing
+    # and operational access; this field should not authorize product use.
     paid = db.Column(
         db.Boolean,
         default=False

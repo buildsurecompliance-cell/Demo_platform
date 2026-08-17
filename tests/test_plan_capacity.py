@@ -25,17 +25,33 @@ from app.models import (
 from app.services.organizations import create_default_organization_for_user
 from app.services.plan_capacity import (
     ENTERPRISE,
+    INVALID_RESOURCE,
+    LIMITED_RESOURCES,
+    PLAN_ENTERPRISE,
+    PLAN_PROFESSIONAL,
+    PLAN_STARTER,
     PROFESSIONAL,
+    RESOURCE_PROJECT,
+    RESOURCE_SUBCONTRACTOR,
     STARTER,
+    CapacityResult,
     PLAN_DEFINITIONS,
     PlanCapacityError,
     can_create_project,
     can_create_subcontractor,
+    check_capacity,
+    ensure_project_capacity,
+    ensure_subcontractor_capacity,
+    get_capacity,
+    get_plan_definition,
+    get_plan_limit,
     get_organization_plan,
     get_organization_usage,
+    require_capacity,
     require_project_capacity,
     require_subcontractor_capacity,
     set_organization_plan,
+    validate_resource,
     validate_plan_key,
 )
 
@@ -142,6 +158,9 @@ class PlanCapacityTest(unittest.TestCase):
             set(PLAN_DEFINITIONS.keys()),
             {STARTER, PROFESSIONAL, ENTERPRISE},
         )
+        self.assertEqual(PLAN_STARTER, STARTER)
+        self.assertEqual(PLAN_PROFESSIONAL, PROFESSIONAL)
+        self.assertEqual(PLAN_ENTERPRISE, ENTERPRISE)
 
         starter = PLAN_DEFINITIONS[STARTER]
         professional = PLAN_DEFINITIONS[PROFESSIONAL]
@@ -149,20 +168,70 @@ class PlanCapacityTest(unittest.TestCase):
 
         self.assertEqual(starter.max_projects, 10)
         self.assertEqual(starter.max_subcontractors, 25)
-        self.assertTrue(starter.unlimited_users)
         self.assertEqual(professional.max_projects, 50)
         self.assertEqual(professional.max_subcontractors, 300)
         self.assertIsNone(enterprise.max_projects)
         self.assertIsNone(enterprise.max_subcontractors)
-        self.assertTrue(enterprise.unlimited_users)
         self.assertFalse(hasattr(starter, "price"))
         self.assertFalse(hasattr(professional, "price"))
         self.assertFalse(hasattr(enterprise, "price"))
+        self.assertFalse(hasattr(starter, "features"))
+        self.assertFalse(hasattr(professional, "features"))
+        self.assertFalse(hasattr(enterprise, "features"))
+        self.assertFalse(hasattr(starter, "max_users"))
+        self.assertFalse(hasattr(professional, "max_users"))
+        self.assertFalse(hasattr(enterprise, "max_users"))
+        self.assertFalse(hasattr(starter, "unlimited_users"))
 
         with self.assertRaises(Exception):
             starter.max_projects = 99
         with self.assertRaises(TypeError):
             PLAN_DEFINITIONS["TEAM"] = starter
+
+    def test_only_projects_and_subcontractors_are_limited_resources(self):
+        self.assertEqual(
+            LIMITED_RESOURCES,
+            (
+                RESOURCE_PROJECT,
+                RESOURCE_SUBCONTRACTOR,
+            ),
+        )
+        self.assertEqual(validate_resource(" PROJECT "), RESOURCE_PROJECT)
+        self.assertEqual(
+            validate_resource("Subcontractor"),
+            RESOURCE_SUBCONTRACTOR,
+        )
+        for resource in (
+            "user",
+            "document",
+            "storage",
+            "ai",
+            "report",
+            "email",
+            "feature",
+        ):
+            with self.subTest(resource=resource):
+                with self.assertRaises(ValueError):
+                    validate_resource(resource)
+
+    def test_get_plan_definition_and_limits_use_central_registry(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+
+            self.assertIs(
+                get_plan_definition("starter"),
+                PLAN_DEFINITIONS[STARTER],
+            )
+            self.assertEqual(
+                get_plan_limit(organization, RESOURCE_PROJECT),
+                10,
+            )
+            self.assertEqual(
+                get_plan_limit(organization, RESOURCE_SUBCONTRACTOR),
+                25,
+            )
+            with self.assertRaises(ValueError):
+                get_plan_limit(organization, "user")
 
     def test_invalid_plan_key_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -205,16 +274,31 @@ class PlanCapacityTest(unittest.TestCase):
             organization = db.session.get(Organization, self.organization_id)
             self.create_projects(organization.id, 9)
             self.assertTrue(can_create_project(organization).allowed)
+            self.assertTrue(
+                check_capacity(
+                    organization,
+                    RESOURCE_PROJECT,
+                ).allowed
+            )
 
             self.create_projects(organization.id, 1)
             check = can_create_project(organization)
 
+            self.assertIsInstance(check, CapacityResult)
             self.assertFalse(check.allowed)
             self.assertEqual(check.current, 10)
             self.assertEqual(check.limit, 10)
             self.assertEqual(check.reason_code, "PROJECT_LIMIT_REACHED")
-            with self.assertRaises(PlanCapacityError):
+            with self.assertRaises(PlanCapacityError) as captured:
                 require_project_capacity(organization)
+            self.assertEqual(captured.exception.resource, RESOURCE_PROJECT)
+            self.assertEqual(captured.exception.current, 10)
+            self.assertEqual(captured.exception.limit, 10)
+            self.assertEqual(captured.exception.plan_key, STARTER)
+            self.assertEqual(
+                captured.exception.reason_code,
+                "PROJECT_LIMIT_REACHED",
+            )
 
     def test_starter_allows_twenty_five_subcontractors_and_blocks_next(self):
         with self.app.app_context():
@@ -230,7 +314,10 @@ class PlanCapacityTest(unittest.TestCase):
             self.assertEqual(check.limit, 25)
             self.assertEqual(check.reason_code, "SUBCONTRACTOR_LIMIT_REACHED")
             with self.assertRaises(PlanCapacityError):
-                require_subcontractor_capacity(organization)
+                require_capacity(
+                    organization,
+                    RESOURCE_SUBCONTRACTOR,
+                )
 
     def test_professional_limits_are_used(self):
         with self.app.app_context():
@@ -306,6 +393,53 @@ class PlanCapacityTest(unittest.TestCase):
 
             usage = get_organization_usage(organization)
             self.assertEqual(usage.subcontractor_count, 1)
+            self.assertFalse(hasattr(usage, "user_count"))
+            self.assertFalse(hasattr(usage, "document_count"))
+            self.assertFalse(hasattr(usage, "ai_usage"))
+
+    def test_compatibility_capacity_wrappers_still_work(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+
+            self.assertEqual(
+                get_capacity(
+                    organization,
+                    RESOURCE_PROJECT,
+                ),
+                can_create_project(organization),
+            )
+            self.assertEqual(
+                ensure_project_capacity(organization),
+                require_project_capacity(organization),
+            )
+            self.assertEqual(
+                ensure_subcontractor_capacity(organization),
+                require_subcontractor_capacity(organization),
+            )
+
+    def test_user_memberships_do_not_affect_capacity_limits(self):
+        with self.app.app_context():
+            organization = db.session.get(Organization, self.organization_id)
+            for index in range(35):
+                user = User(email=f"extra-{index}@example.com", paid=False)
+                user.set_password("password123")
+                db.session.add(user)
+                db.session.flush()
+                db.session.add(
+                    OrganizationMembership(
+                        organization_id=organization.id,
+                        user_id=user.id,
+                        role="MEMBER",
+                    )
+                )
+            db.session.commit()
+
+            usage = get_organization_usage(organization)
+
+            self.assertEqual(usage.project_count, 0)
+            self.assertEqual(usage.subcontractor_count, 0)
+            self.assertTrue(can_create_project(organization).allowed)
+            self.assertTrue(can_create_subcontractor(organization).allowed)
 
     def test_same_organization_members_share_usage(self):
         with self.app.app_context():
@@ -366,7 +500,7 @@ class PlanCapacityTest(unittest.TestCase):
         self.assertIn("Risk & Mobilization Dashboard", body)
         self.assertNotIn("You need to subscribe", body)
 
-    def test_unpaid_user_without_membership_still_uses_legacy_subscribe_gate(self):
+    def test_user_without_membership_is_sent_to_organization_recovery(self):
         with self.app.app_context():
             user = User(email="unpaid-alone@example.com", paid=False)
             user.set_password("password123")
@@ -380,7 +514,7 @@ class PlanCapacityTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            "You need to subscribe before accessing the platform.",
+            "Organization access required",
             response.get_data(as_text=True),
         )
 
@@ -448,7 +582,14 @@ class PlanCapacityTest(unittest.TestCase):
             db.session.add(user)
             db.session.commit()
 
-        self.login(email="no-org@example.com", password="password123")
+        login_response = self.login(
+            email="no-org@example.com",
+            password="password123",
+        )
+        self.assertIn(
+            "Organization access required",
+            login_response.get_data(as_text=True),
+        )
         token = self.csrf_token("/login")
 
         response = self.client.post(
@@ -461,6 +602,11 @@ class PlanCapacityTest(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+        with self.app.app_context():
+            self.assertIsNone(
+                Project.query.filter_by(name="No Org Project").first()
+            )
 
     def test_add_sub_blocks_before_insert_upload_and_analysis(self):
         self.login()
@@ -586,7 +732,7 @@ class PlanCapacityTest(unittest.TestCase):
                     body,
                 )
 
-        self.assertEqual(body.count("All core compliance features"), 3)
+        self.assertEqual(body.count("All BuildSure tools"), 3)
         self.assertEqual(body.count("Unlimited team members"), 3)
         self.assertIn("Current Plan", body)
         self.assertNotIn("$", body)

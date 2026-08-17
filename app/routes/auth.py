@@ -29,6 +29,7 @@ from app.security import (
     safe_redirect_target,
 )
 from app.services.organizations import (
+    can_manage_members,
     create_default_organization_for_user,
     get_current_membership,
     get_current_organization,
@@ -40,9 +41,17 @@ from app.services.organizations import (
 from app.services.plan_capacity import (
     get_organization_plan,
     get_organization_usage,
-    get_plan_selection_options,
     set_organization_plan,
     validate_plan_key,
+)
+from app.services.plan_catalog import (
+    format_plan_price,
+    get_plan_catalog,
+)
+from app.services.subscription_service import get_access_decision
+from app.services.stripe_service import (
+    is_stripe_checkout_configured,
+    is_stripe_portal_configured,
 )
 
 auth_bp = Blueprint(
@@ -80,12 +89,18 @@ def subscribe():
         organization = get_current_organization()
 
         if not organization:
-            abort(403)
+            return redirect(
+                url_for("auth.organization_required")
+            )
 
         membership = get_current_membership()
         can_change_plan = bool(
             membership
             and membership.role == ROLE_OWNER
+        )
+        can_manage_billing = can_manage_members(
+            current_user,
+            organization,
         )
         production_mode = current_app.config.get("ENV") == "production"
 
@@ -173,11 +188,20 @@ def subscribe():
         return render_template(
             "subscribe.html",
             organization=organization,
-            plans=get_plan_selection_options(organization),
+            plans=get_plan_catalog(),
             capacity_usage=get_organization_usage(organization),
             current_plan=get_organization_plan(organization),
+            format_plan_price=format_plan_price,
+            subscription_access=get_access_decision(organization),
             can_change_plan=can_change_plan,
+            can_manage_billing=can_manage_billing,
             production_mode=production_mode,
+            stripe_checkout_configured=is_stripe_checkout_configured(),
+            stripe_portal_configured=is_stripe_portal_configured(),
+            has_stripe_customer=bool(
+                organization.subscription
+                and organization.subscription.billing_customer_id
+            ),
             email_prefill="",
         )
 
@@ -346,7 +370,7 @@ def register():
 
             new_user = User(
                 email=email,
-                paid=not bool(invitation),
+                paid=False,
             )
 
             new_user.set_password(password)
@@ -458,21 +482,25 @@ def login():
             password
         ):
 
-            if not user.paid and not get_user_memberships(user):
-
-                flash(
-                    "You need to subscribe before accessing the platform.",
-                    "warning"
-                )
-
-                return redirect(
-                    url_for("auth.subscribe")
-                )
-
             login_user(
                 user,
                 remember=False
             )
+
+            if not get_user_memberships(user):
+                session.pop("organization_id", None)
+                if user.last_active_organization_id:
+                    user.last_active_organization_id = None
+                    db.session.commit()
+
+                flash(
+                    "You do not belong to an Organization yet. Use an invitation link or contact your Organization owner.",
+                    "warning"
+                )
+
+                return redirect(
+                    url_for("auth.organization_required")
+                )
 
             resolve_active_organization(user)
             db.session.commit()
@@ -498,6 +526,19 @@ def login():
 
     return render_template(
         "login.html"
+    )
+
+
+@auth_bp.route("/organization-required")
+@login_required
+def organization_required():
+    if get_user_memberships(current_user):
+        return redirect(
+            url_for("dashboard.dashboard")
+        )
+
+    return render_template(
+        "organization_required.html"
     )
 
 

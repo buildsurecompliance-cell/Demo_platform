@@ -53,19 +53,66 @@
             Choose the capacity plan for {{ organization.name }}.
         </p>
         <p class="text-muted">
-            Plan selection is a development/pilot configuration. Automated billing is not active yet.
+            Checkout starts through Stripe. BuildSure updates access after billing confirmation.
         </p>
     </div>
 
-    {% if not can_change_plan %}
+    {% if not stripe_checkout_configured and not can_change_plan %}
     <div class="alert alert-warning">
         Only the Organization Owner can select the plan. You can still review the available plans.
     </div>
+    {% elif stripe_checkout_configured and not can_manage_billing %}
+    <div class="alert alert-warning">
+        Only Organization Owners and Admins can manage billing. You can still review the available plans.
+    </div>
     {% endif %}
 
-    {% if production_mode %}
+    {% if not stripe_checkout_configured %}
     <div class="alert alert-info">
-        Online plan changes are not available yet. Contact BuildSure to change plans.
+        Online checkout is not configured for this environment. Contact BuildSure to change plans.
+    </div>
+    {% endif %}
+
+    {% if subscription_access %}
+    <div class="muted-panel p-4 mb-5">
+        <h2 class="h5 fw-bold">Subscription Status</h2>
+        <p class="mb-1">
+            Status: {{ subscription_access.status|replace('_', ' ')|title }}
+        </p>
+        {% if subscription_access.trial_end %}
+        <p class="mb-1">
+            Trial ends: {{ subscription_access.trial_end.strftime('%Y-%m-%d') }}
+        </p>
+        {% endif %}
+        {% if subscription_access.current_period_end %}
+        <p class="mb-1">
+            Current period ends: {{ subscription_access.current_period_end.strftime('%Y-%m-%d') }}
+        </p>
+        {% endif %}
+        {% if subscription_access.cancellation_scheduled %}
+        <p class="mb-0">
+            Cancellation scheduled{% if subscription_access.cancel_at %}: {{ subscription_access.cancel_at.strftime('%Y-%m-%d') }}{% endif %}.
+        </p>
+        {% endif %}
+        {% if stripe_portal_configured and has_stripe_customer and can_manage_billing %}
+        <div class="d-flex gap-2 flex-wrap mt-3">
+        <a class="btn btn-outline-light" href="{{ url_for('billing.status') }}">
+            Billing Status
+        </a>
+        <form method="POST" action="{{ url_for('billing.create_portal') }}">
+            {{ csrf_input() }}
+            <button class="btn btn-outline-light" type="submit">
+                Open Billing Portal
+            </button>
+        </form>
+        </div>
+        {% elif can_manage_billing %}
+        <div class="mt-3">
+            <a class="btn btn-outline-light" href="{{ url_for('billing.status') }}">
+                Billing Status
+            </a>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -76,10 +123,12 @@
                 <div class="card-body d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <h2 class="h4 fw-bold mb-0">{{ plan.display_name }}</h2>
-                        {% if plan.is_current %}
+                        {% if plan.plan_key == current_plan.key %}
                         <span class="badge bg-success">Current Plan</span>
                         {% endif %}
                     </div>
+                    <p class="text-muted">{{ plan.description }}</p>
+                    <p class="h5 fw-bold">{{ format_plan_price(plan.plan_key) }}</p>
 
                     <ul class="list-group list-group-flush mb-4">
                         <li class="list-group-item">
@@ -100,30 +149,33 @@
                             Unlimited team members
                         </li>
                         <li class="list-group-item">
-                            All core compliance features
+                            All BuildSure tools
                         </li>
                     </ul>
 
                     <div class="mt-auto">
-                        {% if plan.is_current %}
+                        {% if plan.plan_key == current_plan.key %}
                         <button class="btn btn-outline-success w-100" type="button" disabled>
                             Current Plan
                         </button>
-                        {% elif production_mode %}
+                        {% elif not plan.self_service %}
                         <button class="btn btn-outline-light w-100" type="button" disabled>
-                            Contact BuildSure
+                            {{ plan.call_to_action }}
                         </button>
-                        {% elif can_change_plan %}
-                        <form method="POST" action="{{ url_for('auth.subscribe') }}">
+                        {% elif stripe_checkout_configured and can_manage_billing %}
+                        <form method="POST" action="{{ url_for('billing.create_checkout', plan_key=plan.plan_key) }}">
                             {{ csrf_input() }}
-                            <input type="hidden" name="plan_key" value="{{ plan.plan_key }}">
                             <button class="btn cta-btn w-100" type="submit">
-                                Select {{ plan.display_name }}
+                                {{ plan.call_to_action }}
                             </button>
                         </form>
+                        {% elif stripe_checkout_configured %}
+                        <button class="btn btn-outline-light w-100" type="button" disabled>
+                            Owner or Admin Only
+                        </button>
                         {% else %}
                         <button class="btn btn-outline-light w-100" type="button" disabled>
-                            Owner Only
+                            Checkout Unavailable
                         </button>
                         {% endif %}
                     </div>

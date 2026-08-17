@@ -1,0 +1,130 @@
+{
+  "company": "Volt Electrical LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-4978-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:44.258077+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "e3293cdc428fb3ed184101c0a6062c19ac540ab87c360ae97b6f216ac9d83a22"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical LLC",
+        "tax_id_last4": "4978"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:44.258084+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "d686f3b3e8444d290104863ae1bc2304da0312347db440bde0f912529e8258a5"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:44.258088+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "06d5de86f6386507751146106f74ea8c6ec5a2a114574fe419a62d7e04c5c281"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.258093+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "d20932919216db592eb903e3e9cfbadfbd69dc2c663be532efcd3fd794c608e7"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:44.258097+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "73146a8cbc2b358aa14b2bdfa75ba8e439b0b33f82161761f82474cb5bf30f3f"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-4978"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:44.258101+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "d3d556695eb29bb6119a02ae6c88db4676464a11d634b38676c21832c0afd038"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical LLC",
+        "trade": "Electrical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:44.258105+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "48ad0bcc5c78172815198e99078228fee6d956b56ad824236c8680c6e28a5a3f"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:44.258109+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "5667b608a5be10d3fcf1b11549ba65d7867bb7fd226fae57f4a91cc458469bfd"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Electrical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:44.258113+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "ec4268ad331a7bcf1eb221c9359ca67c05dbd574c6dd93a4b84cbca870f0b848"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:44.258117+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "bd8a38ac45a47e4191aac97db838f44935d1cfd9398108497a846e2fb786c581"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:44.258062+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

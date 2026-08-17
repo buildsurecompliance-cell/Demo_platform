@@ -18,5 +18,8 @@ uploads/*
 .coverage
 htmlcov/
 
+stripe-cli/
+.stripe/
+
 venv/
 .venv/

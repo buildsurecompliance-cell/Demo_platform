@@ -143,9 +143,78 @@ Plan keys are:
 
 `User.paid` is legacy compatibility state from the earlier simulated
 subscription flow. It must not define capacity, grant an individual user extra
-quota, or override the Organization's `plan_key`. It may remain as a temporary
-gate for users without any Organization membership, but it must not block an
-invited Organization member from accessing that Organization.
+quota, override the Organization's `plan_key`, or authorize product access.
+Login, operational access, plan capacity, and subscription access must not use
+`User.paid` as a decision input. The column remains only for compatibility with
+older local data until a future cleanup migration removes it.
+
+Subscription state belongs to the Organization, not to individual users. The
+`Subscription` model records whether the Organization has operational access,
+including active, trialing, past due, paused, unpaid, canceled, and inactive
+states. Subscription status must not change `Organization.plan_key`, delete
+customer data, or create per-user billing rules.
+
+The commercial boundary is intentionally split:
+
+- Subscription determines whether the Organization may use BuildSure.
+- `Organization.plan_key` determines the effective capacity plan.
+- `plan_capacity.py` determines only whether the Organization may create more
+  Projects or Subcontractors.
+
+Every plan continues to include all BuildSure tools and unlimited team members.
+Future Stripe integration must update Subscription state through the
+subscription service and translate external price IDs into `Organization.plan_key`
+through an explicit mapping layer.
+
+Commercial plan display and future billing lookup keys live in
+`plan_catalog.py`, separate from `plan_capacity.py`. The catalog may describe
+plan names, display copy, capacity limits, self-service availability, and
+internal billing lookup keys. It must not contain real Stripe price IDs,
+customer IDs, subscription IDs, payment links, or checkout behavior. Provider
+configuration belongs in environment variables and provider-specific services.
+
+Billing lookup keys are stable internal identifiers, not provider secrets. A
+future Stripe webhook or checkout flow must translate provider values through a
+strict exact mapping. It must never infer a plan from partial strings,
+descriptions, prices, or customer-controlled input.
+
+Future provider events are tracked through `BillingEvent` for idempotency. The
+event record stores provider, external event ID, event type, status, optional
+Organization/Subscription links, timestamps, and safe errors. It must not store
+raw webhook payloads, secrets, card data, or tokens.
+
+Stripe integration is isolated behind service modules. Routes and templates must
+not call the Stripe SDK directly. Checkout may create or reuse a Stripe customer
+for an Organization, but it must not activate access or change plans until a
+validated webhook is processed. Webhooks must map Stripe price IDs through exact
+configured values before updating `Organization.plan_key`.
+
+Stripe Test Mode validation is an operational deployment step, not a product
+scope expansion. It must prove checkout, signed webhooks, reconciliation,
+Customer Portal, retry, ordering, and tenant isolation without introducing
+per-user billing, seats, feature gating, real payment data, or Live Mode
+resources.
+
+Operational web access follows this responsibility order:
+
+1. Authenticate the user.
+2. Resolve and authorize the active Organization through membership.
+3. Verify operational access through the Subscription service.
+4. Apply role permissions for sensitive Organization actions.
+5. Apply Project or Subcontractor capacity only when creating those resources.
+
+Public authentication, recovery, health, pricing, subscription, billing, and
+invitation-acceptance routes must remain reachable when operational access is
+blocked so customers can recover, manage billing, or get support. Operational
+routes such as dashboard, Projects, Subcontractors, private Documents, document
+analysis, compliance views, and reminders must use the centralized
+subscription gate.
+
+Operational jobs follow the same boundary. Automatic reminders and future
+background work must skip Organizations without operational subscription
+access. Jobs must not use `User.paid`, must not silently reactivate access, and
+must not mutate plans or subscription state while skipping blocked
+Organizations.
 
 ### OrganizationMembership
 
@@ -363,15 +432,16 @@ under simultaneous requests. A future billing sprint should add database-level
 or transactional quota protection before treating plan limits as strictly
 enforced under high concurrency.
 
-Plan changes are not public in V1. Stripe or an internal admin workflow may
-change `Organization.plan_key` in a future sprint through the central plan
-capacity service. No prices are stored in code.
+Plan changes are not public in production V1. Stripe or an internal admin
+workflow may change `Organization.plan_key` in a future sprint through the
+central plan capacity service. No real prices or provider IDs are stored in
+code.
 
-Plan Selection UI V1 exposes the central plan registry on the `/subscribe`
-page as a Plans screen for authenticated users. The page is only a
-development/testing pilot configuration tool. It does not define prices, does
-not integrate Stripe, does not simulate payment success, and does not change
-`User.paid`.
+Plan Selection UI V1 exposes the central plan catalog on the `/subscribe` page
+as a Plans screen for authenticated users. The page is only a
+development/testing pilot configuration tool. It does not define real prices,
+does not integrate Stripe, does not simulate payment success, and does not
+change `User.paid`.
 
 Only an Organization OWNER may change `Organization.plan_key`, and direct
 changes are blocked in production until reviewed billing infrastructure exists.

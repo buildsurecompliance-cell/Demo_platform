@@ -15,6 +15,7 @@ from flask_login import (
 
 from app.extensions import db
 
+from app.decorators import subscription_required
 from app.models import (
     Subcontractor,
 )
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
     methods=["POST"]
 )
 @login_required
+@subscription_required
 def send_reminder(sub_id):
 
     sub = Subcontractor.query.filter_by(

@@ -1,0 +1,64 @@
+{
+  "company": {
+    "address": {
+      "city": "Dallas",
+      "state": "TX",
+      "street": "1840 Founders Yard",
+      "zip_code": "75201"
+    },
+    "city": "Dallas",
+    "dba_name": "Elite Mechanical",
+    "ein": "12-3451986",
+    "email": "compliance@elite_mechanical-demo.com",
+    "employee_count": 86,
+    "emr": 0.82,
+    "generated_at": "2026-07-18T01:04:44.259246+00:00",
+    "legal_name": "Elite Mechanical LLC",
+    "license_expiration": "2027-12-31",
+    "license_number": "TX-CONC-1986",
+    "naics_code": "238110",
+    "phone": "(214) 555-0187",
+    "primary_contact": {
+      "email": "michael.carter@apexconcrete-demo.com",
+      "name": "Michael Carter",
+      "phone": "(214) 555-0187",
+      "title": "President"
+    },
+    "safety_contact": {
+      "email": "safety@apexconcrete-demo.com",
+      "name": "Dana Ruiz",
+      "phone": "(214) 555-0194",
+      "title": "Safety Director"
+    },
+    "state": "TX",
+    "trade": "Mechanical",
+    "website": "https://apexconcrete-demo.com",
+    "years_in_business": 18,
+    "zip_code": "75201"
+  },
+  "fictitious": true,
+  "scenario": {
+    "expected_status": "BLOCKED",
+    "key": "blocked",
+    "label": "BLOCKED",
+    "missing_secondary_document": false,
+    "notes": [
+      "COI expired and coverage is below project requirement."
+    ],
+    "policy": {
+      "additional_insured": false,
+      "auto_liability": 1000000,
+      "carrier_name": "Lone Star Mutual Demo Insurance",
+      "effective_date": "2025-05-23",
+      "expiration_date": "2026-07-12",
+      "general_liability_aggregate": 2000000,
+      "general_liability_each_occurrence": 1000000,
+      "policy_number": "GL-1986-2026",
+      "producer_name": "Bluebonnet Risk Advisors Demo Agency",
+      "umbrella_each_occurrence": 0,
+      "waiver_of_subrogation": false,
+      "workers_compensation": "Statutory"
+    },
+    "required_coverage": 2000000
+  }
+}

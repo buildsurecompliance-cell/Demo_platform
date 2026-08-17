@@ -1,0 +1,130 @@
+{
+  "company": "Apex Concrete Fort Worth Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1857-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:50.287635+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "b901e2992454dcbb88fa667c4183b362f9420498370465ce1f36324491a94f4b"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Fort Worth Demo LLC",
+        "tax_id_last4": "1857"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:50.287641+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "69381bdc0dfb25b99f6957bc7bb331508b3d65bf4d2473849da4ef66063da67e"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:50.287645+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "43f8232ce7738a822b4b2cee2e3432c91d61693d90cbf2bff066e25842b14c3a"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:50.287649+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "0d59231dc395eab5285820a939269316d1b200d3cc744ffe0f6ee4fde1f98966"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:50.287653+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "25b8fdf6fa7408c350efe1b5c82f70f553a23feddc47230299a69379df17ff48"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1857"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:50.287657+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "0ac826913b91a4841c44423436d487f6635ed23d5a632e86588351711ec788b3"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Fort Worth Demo LLC",
+        "trade": "Concrete"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:50.287661+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "3a71b5067207e4635b5773e721fefc09e845d6d753eff2872fde3a86bb6c9154"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete Fort Worth Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:50.287665+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "751a71812b5ee9357e74131904d4899a8ca66afde5b936573eee77c1899b108e"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Concrete"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:50.287670+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "95069a0eb8c152f8eb50f5e95b6fc4c4ea66b8a94ca88c7a521078ae161a8094"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:50.287674+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "abaa12e4681e8cad7cd6e1f3d5f61995b2d0ab41e1c0ad41bd1f3a256e76e39d"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:50.287619+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

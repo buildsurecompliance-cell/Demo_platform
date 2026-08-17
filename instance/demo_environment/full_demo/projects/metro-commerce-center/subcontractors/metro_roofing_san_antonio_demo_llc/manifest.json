@@ -1,0 +1,130 @@
+{
+  "company": "Metro Roofing San Antonio Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": false,
+        "expiration_date": "07/12/2026",
+        "general_liability_limit": 1000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9525-2026",
+        "waiver_of_subrogation": false
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:49.380895+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "b45426c4a4249cafaebb4963e77677e50a3be59e3d7ae6f39160e4795796ba5b"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing San Antonio Demo LLC",
+        "tax_id_last4": "9525"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:49.380902+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "0e471a6c89fcb605abefe7b9ab51ebb1704f26f2e0810a6450d05eea7e497364"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:49.380906+00:00",
+      "page_count": 17,
+      "scenario": "blocked",
+      "sha256": "527aa2fdc8fccddfdc309e729ba0cc98cb25c34d0333d5ce839c64fb76ad7b1b"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:49.380912+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "c62b953519425f30a8771c1bf0dcfeca5d487f288dc823d2601ee2a0651450ce"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:49.380916+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "a413d8baae325a1efb9c938c439e52fa3ab98f5382ce7efbc67da795b23dcbc8"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9525"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:49.380920+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "cff6fc14d20ea43f2b27e420005d63181fe7a6b0c56ee8698c685b3e300489fb"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing San Antonio Demo LLC",
+        "trade": "Roofing"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:49.380925+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "f3443928b465c6879fc90c041eb545f91072f4a760c9c5b09e1b304fd6abbf2a"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Metro Roofing San Antonio Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:49.380929+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "8e4b4ba8f77b41a4fac8b1d5bbfd4cad0ccd9e0015742c89c86d1e8675aed174"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Roofing"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:49.380933+00:00",
+      "page_count": 1,
+      "scenario": "blocked",
+      "sha256": "9cd6d1c3f73143db2f88da925ff169601e28c467b8b6f27723f50f48ad61182d"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:49.380937+00:00",
+      "page_count": 4,
+      "scenario": "blocked",
+      "sha256": "0f9f839decd3c06dd39b73e0b95c8c305d57a55a4a9eecc89e7870102445bc27"
+    }
+  ],
+  "expected_status": "BLOCKED",
+  "generated_at": "2026-07-18T01:04:49.380880+00:00",
+  "preset": "apex-concrete",
+  "scenario": "blocked"
+}

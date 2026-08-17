@@ -1,0 +1,130 @@
+{
+  "company": "Volt Electrical San Antonio Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-4978-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:48.313434+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "92d0f2621c7f0ac506db2415875bb7ab24f7a458bcdac9e938016d4af9e47966"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical San Antonio Demo LLC",
+        "tax_id_last4": "4978"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:48.313440+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "0be9cba779d61a7554b9c7ea07321e6809afee8fc9e492a1a9d0a4140aac3ce1"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:48.313445+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "d76e34f614581855b2d01dd9948a5fd328cc59e7763fe3777e98b9445029d2f6"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:48.313449+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "8d0da8a28509f46519fb08d67507f13d69b13426b1fa2714c3693817ee532978"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:48.313454+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "da1c5df74dfdfc0291925f41c2b9be234fb27d2ec23350e7ad5f9b58eb2f96f1"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-4978"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:48.313458+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "3ec047dbdefe3cc6098a820e0f361d9f0dee405bb72f2a454424a1e8ae329b4f"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical San Antonio Demo LLC",
+        "trade": "Electrical"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:48.313462+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "562a2c2b49d22675ef3e0daf5bbb9e9a2d9471bea108dc3146933981931a13f3"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Volt Electrical San Antonio Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:48.313465+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "040b57b65b1d35f82805df5fe2500c59c63ea666576e6835cef2483baf6c5341"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Electrical"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:48.313469+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "cac1558f1d0a4d2845e55a715c4253f461db5c5b6743e1d5cb1e3acad3b6f47d"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:48.313473+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "ad35444e07451b01a081c323f89a8c0781cb378bb7a5702687f38de845968a76"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:48.313420+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

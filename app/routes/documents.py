@@ -15,6 +15,7 @@ from flask_login import (
 
 from app.extensions import db
 
+from app.decorators import subscription_required
 from app.models import (
     Document,
     Project,
@@ -103,6 +104,7 @@ def user_can_access_document(doc):
 
 @documents_bp.route("/document/<int:doc_id>")
 @login_required
+@subscription_required
 def view_document(doc_id):
     doc = db.session.get(
         Document,
@@ -166,6 +168,7 @@ def view_document(doc_id):
     methods=["POST"]
 )
 @login_required
+@subscription_required
 def delete_document(doc_id):
 
     doc = db.session.get(
@@ -249,6 +252,7 @@ def delete_document(doc_id):
 
 @documents_bp.route("/download_document/<int:doc_id>")
 @login_required
+@subscription_required
 def download_document(doc_id):
 
     doc = Document.query.get_or_404(

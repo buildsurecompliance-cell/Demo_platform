@@ -1,5 +1,6 @@
 from .ai import ai_bp
 from .auth import auth_bp
+from .billing import billing_bp
 from .dashboard import dashboard_bp
 from .documents import documents_bp
 from .health import health_bp
@@ -11,6 +12,7 @@ from .team import team_bp
 __all__ = [
     "ai_bp",
     "auth_bp",
+    "billing_bp",
     "dashboard_bp",
     "documents_bp",
     "health_bp",

@@ -1,0 +1,130 @@
+{
+  "company": "Apex Concrete LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-1857-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T00:41:30.032164+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "1655082cb2f95c7d0722ae6f1032cae26028e5ca26c7396dc396e84c27f48a18"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete LLC",
+        "tax_id_last4": "1857"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T00:41:30.032172+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "3f9123abd8453f7412be2fc237305f258512b4a33b33a80f4b632f745becad20"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T00:41:30.032178+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "20dcd37a6d74694a9ea115b83dd093a9ae5dd808f54e4f1ac1ec085809ee0e56"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T00:41:30.032182+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "1d59903a9739d489a59c025e702b0decc4f00c839e46c90b29a97cc42134d670"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T00:41:30.032186+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "fe9eeab7c711e2e66a46aed0c3d63397797ba50b6d8cbe89577feb265df78be2"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-1857"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T00:41:30.032190+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "75e098bdb250ca3ad44f42226d8418abe201a1ef7bd59aba79e3c3176e8b6529"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete LLC",
+        "trade": "Concrete"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T00:41:30.032193+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "2d8db71f1f3b59cb644fcbaaae3d212ecc416c5f2960155c98b4f72fb26e1c8f"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Apex Concrete LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T00:41:30.032197+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "240008ca1d88111d92fccb9409214be0ac19a7646be128bfde3471e1abf9aeb1"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Concrete"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T00:41:30.032200+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "a82cf7282fb2635b6a2ac0b7b707a84076ba8ebc12218257be10ff2dbcb7f5d0"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T00:41:30.032203+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "8250e4dd35aa7e2ccb9314077d449ee3eafdeb03f687a0d73e27ad47d21c3215"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T00:41:30.032146+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}

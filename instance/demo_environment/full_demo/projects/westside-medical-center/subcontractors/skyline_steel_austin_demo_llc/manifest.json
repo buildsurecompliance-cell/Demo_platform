@@ -1,0 +1,130 @@
+{
+  "company": "Skyline Steel Austin Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "08/01/2026",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-5551-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:57.497481+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "563155a9dc0d906aaeafe7f109d508382d567564546c234725c0bb5d01d7c912"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel Austin Demo LLC",
+        "tax_id_last4": "5551"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:57.497487+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "d66c39febcbd1c44ede7aa69dbfc9fe2564145146070a30d0845856417538a5d"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:57.497491+00:00",
+      "page_count": 17,
+      "scenario": "pending",
+      "sha256": "68b8e4a3c285abdd87ec3f677c5803afd2978770d7d3b53d641552572fb7c4a9"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:57.497495+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "4c8612cd5df9da9a3ff90446f927c23a37552fc31f2806ab22cc545d7d1fba0f"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:57.497499+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "bdabdda14b0236338573da2665ffe8ccbaba60811c51706a3e9f38713cc50176"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-5551"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:57.497503+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "8a6e06666e2e39fd32f50ea31077820ec9c11e2d794d541b24940ad94e8f4c6a"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel Austin Demo LLC",
+        "trade": "Structural Steel"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:57.497507+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "661254663e70f67a093cbc1f62bf495857331eea4754ed6a9273b96e1e111a77"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Skyline Steel Austin Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:57.497511+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "682f7678aded19f93e38a0cf081a1512cb7be95ac4182daa4d80f16fc5f454e9"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Structural Steel"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:57.497514+00:00",
+      "page_count": 1,
+      "scenario": "pending",
+      "sha256": "e375015fbe718bd40fea419b4cf35d172f0642064b60ac1fcaf39b484a6dacb7"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:57.497518+00:00",
+      "page_count": 4,
+      "scenario": "pending",
+      "sha256": "49b9c98e6e6ee4312fd8ddc9d2cb15c7749b010430a4036212c852c7d470047d"
+    }
+  ],
+  "expected_status": "PENDING",
+  "generated_at": "2026-07-18T01:04:57.497466+00:00",
+  "preset": "apex-concrete",
+  "scenario": "pending"
+}

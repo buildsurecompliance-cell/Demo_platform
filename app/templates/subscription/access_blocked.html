@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card bg-dark text-light border-secondary">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <h1 class="h3 fw-bold mb-2">Subscription access required</h1>
+                            <p class="text-muted mb-0">{{ message }}</p>
+                        </div>
+                        <span class="badge bg-warning text-dark">
+                            {{ decision.status|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+
+                    <hr class="border-secondary">
+
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Organization</dt>
+                        <dd class="col-sm-8">
+                            {{ organization.name if organization else "Not available" }}
+                        </dd>
+
+                        <dt class="col-sm-4">Current plan</dt>
+                        <dd class="col-sm-8">
+                            {{ current_plan.name if current_plan else "Not available" }}
+                        </dd>
+
+                        {% if decision.trial_end %}
+                        <dt class="col-sm-4">Trial ends</dt>
+                        <dd class="col-sm-8">{{ decision.trial_end.strftime('%Y-%m-%d') }}</dd>
+                        {% endif %}
+
+                        {% if decision.current_period_end %}
+                        <dt class="col-sm-4">Current period ends</dt>
+                        <dd class="col-sm-8">{{ decision.current_period_end.strftime('%Y-%m-%d') }}</dd>
+                        {% endif %}
+
+                        {% if decision.grace_period_end %}
+                        <dt class="col-sm-4">Grace period ends</dt>
+                        <dd class="col-sm-8">{{ decision.grace_period_end.strftime('%Y-%m-%d') }}</dd>
+                        {% endif %}
+
+                        {% if decision.cancellation_scheduled %}
+                        <dt class="col-sm-4">Cancellation</dt>
+                        <dd class="col-sm-8">
+                            Scheduled{% if decision.cancel_at %}: {{ decision.cancel_at.strftime('%Y-%m-%d') }}{% endif %}.
+                        </dd>
+                        {% endif %}
+                    </dl>
+
+                    {% if can_manage_billing %}
+                    <p class="text-muted">
+                        Review the available plans or contact BuildSure to restore access.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-success" href="{{ url_for('auth.subscribe') }}">
+                            View plans
+                        </a>
+                        <button class="btn btn-outline-light" type="button" onclick="window.history.back()">
+                            Back
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">
+                        Contact your Organization owner or administrator to restore access.
+                    </p>
+                    <button class="btn btn-outline-light" type="button" onclick="window.history.back()">
+                        Back
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

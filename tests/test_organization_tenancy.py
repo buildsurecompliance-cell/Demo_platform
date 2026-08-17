@@ -27,6 +27,10 @@ from app.services.organizations import (
     get_current_organization,
     hash_invitation_token,
 )
+from app.services.subscription_service import (
+    STATUS_ACTIVE,
+    get_or_create_subscription,
+)
 
 
 class OrganizationTenancyTest(unittest.TestCase):
@@ -342,6 +346,10 @@ class OrganizationTenancyTest(unittest.TestCase):
             )
             db.session.add(second_org)
             db.session.flush()
+            get_or_create_subscription(
+                second_org,
+                status=STATUS_ACTIVE,
+            )
             db.session.add(
                 OrganizationMembership(
                     organization_id=second_org.id,
@@ -379,6 +387,10 @@ class OrganizationTenancyTest(unittest.TestCase):
             invited_org = Organization(name="Invited Organization")
             db.session.add(invited_org)
             db.session.flush()
+            get_or_create_subscription(
+                invited_org,
+                status=STATUS_ACTIVE,
+            )
             db.session.add(
                 OrganizationMembership(
                     organization_id=invited_org.id,

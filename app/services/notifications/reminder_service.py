@@ -10,6 +10,7 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 
 from app.models import Subcontractor
+from app.services.subscription_service import has_operational_access
 
 from app.services.notifications.email_service import (
     send_email_reminder,
@@ -41,7 +42,8 @@ def check_and_send_auto_reminders_for_all_users():
     subs = (
         Subcontractor.query
         .options(
-            joinedload(Subcontractor.owner)
+            joinedload(Subcontractor.owner),
+            joinedload(Subcontractor.organization),
         )
         .filter(
             Subcontractor.coi_expiration.isnot(None)
@@ -55,6 +57,12 @@ def check_and_send_auto_reminders_for_all_users():
     reminders_sent = 0
 
     for sub in subs:
+        if not has_operational_access(sub.organization):
+            logger.info(
+                "Skipping automatic reminder for organization_id=%s due to billing access",
+                sub.organization_id,
+            )
+            continue
 
         expiration = sub.coi_expiration
 

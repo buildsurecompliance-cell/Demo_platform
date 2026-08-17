@@ -1,0 +1,130 @@
+{
+  "company": "Diamond Flooring San Antonio Demo LLC",
+  "documents": [
+    {
+      "document_type": "COI",
+      "expected_extracted_fields": {
+        "additional_insured": true,
+        "expiration_date": "03/01/2027",
+        "general_liability_limit": 2000000,
+        "insurance_carrier": "Lone Star Mutual Demo Insurance",
+        "policy_number": "GL-9516-2026",
+        "waiver_of_subrogation": true
+      },
+      "filename": "Certificate_of_Insurance.pdf",
+      "generated_at": "2026-07-18T01:04:49.657714+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "c912aa8f1683b9037fa7f22d381d175dbbae1bc612d79aa0845d02b7601ef4a0"
+    },
+    {
+      "document_type": "W9",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring San Antonio Demo LLC",
+        "tax_id_last4": "9516"
+      },
+      "filename": "W9_Demo.pdf",
+      "generated_at": "2026-07-18T01:04:49.657720+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "fe60bc3d42fdc47d7472d2a28be423734b8a5d3188647f89e740bd9bbfc8e63a"
+    },
+    {
+      "document_type": "Safety Manual",
+      "expected_extracted_fields": {
+        "minimum_pages": 12,
+        "sections": 17
+      },
+      "filename": "Safety_Manual.pdf",
+      "generated_at": "2026-07-18T01:04:49.657724+00:00",
+      "page_count": 17,
+      "scenario": "ready",
+      "sha256": "d6c803e776ec66965c69c38ee7e44e6d46a6fd8f542a961be7dedd1b6ddf14cf"
+    },
+    {
+      "document_type": "EMR Letter",
+      "expected_extracted_fields": {
+        "emr": 0.82
+      },
+      "filename": "EMR_Verification_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:49.657729+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "b60ca7a15191f929e2343812bb90e811339466ce5befc114e254e398df32f95a"
+    },
+    {
+      "document_type": "OSHA Letter",
+      "expected_extracted_fields": {
+        "safety_contact": "Dana Ruiz"
+      },
+      "filename": "OSHA_Compliance_Letter.pdf",
+      "generated_at": "2026-07-18T01:04:49.657732+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "3979b20d90d61f7453162ceb8c325d2c306d6a63473a82db694c98275f2d6b1a"
+    },
+    {
+      "document_type": "Contractor License",
+      "expected_extracted_fields": {
+        "expiration_date": "12/31/2027",
+        "license_number": "TX-CONC-9516"
+      },
+      "filename": "Contractor_License.pdf",
+      "generated_at": "2026-07-18T01:04:49.657736+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "db5ef3e99082150b603e6053de355e7ae37a866d373142ac4471a6d3068161a5"
+    },
+    {
+      "document_type": "Vendor Form",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring San Antonio Demo LLC",
+        "trade": "Flooring"
+      },
+      "filename": "Vendor_Information_Form.pdf",
+      "generated_at": "2026-07-18T01:04:49.657740+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "edc933ce55cd2275352f9635583fd9fb83b87afb70dd3bd8e86fe068ce01e6da"
+    },
+    {
+      "document_type": "Company Profile",
+      "expected_extracted_fields": {
+        "legal_name": "Diamond Flooring San Antonio Demo LLC"
+      },
+      "filename": "Company_Profile.pdf",
+      "generated_at": "2026-07-18T01:04:49.657744+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "c4e2b7f301f2d697a917a9a40b5cdf9723548942d7d0af2d0b8a34deaf1bfad8"
+    },
+    {
+      "document_type": "Scope",
+      "expected_extracted_fields": {
+        "project": "Summit Distribution Center",
+        "trade": "Flooring"
+      },
+      "filename": "Scope_of_Work.pdf",
+      "generated_at": "2026-07-18T01:04:49.657748+00:00",
+      "page_count": 1,
+      "scenario": "ready",
+      "sha256": "a1bba26fa3cdef5508e1bc2a521938817272e351e72f1c34b3e1cf03320df1e0"
+    },
+    {
+      "document_type": "Subcontract Agreement",
+      "expected_extracted_fields": {
+        "contract_amount": 2450000,
+        "project": "Summit Distribution Center"
+      },
+      "filename": "Subcontract_Agreement.pdf",
+      "generated_at": "2026-07-18T01:04:49.657752+00:00",
+      "page_count": 4,
+      "scenario": "ready",
+      "sha256": "6e6b7231a7c2feeae61f6415346000987eb200516848541bbc1612e71a7e3a05"
+    }
+  ],
+  "expected_status": "READY",
+  "generated_at": "2026-07-18T01:04:49.657699+00:00",
+  "preset": "apex-concrete",
+  "scenario": "ready"
+}
