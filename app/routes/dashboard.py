@@ -22,11 +22,15 @@ from app.services.organizations import (
     scoped_project_query,
     scoped_subcontractor_query,
 )
+from app.services.compliance_evidence_service import (
+    collect_coi_evidence,
+)
 from app.services.readiness_service import (
     BLOCKED,
     READY,
     calculate_readiness,
 )
+from app.services.documents.types import SUBCONTRACTOR_DOCUMENT_TYPE
 
 dashboard_bp = Blueprint(
     "dashboard",
@@ -69,27 +73,18 @@ def _coverage_label(value):
 
 
 def _subcontractor_coverage_label(sub):
-    coverage_values = []
+    validated_evidence = [
+        item
+        for item in collect_coi_evidence(sub)
+        if item.validated
+    ]
 
-    for document in sub.documents:
-        extracted = document.ai_extracted_data or {}
-        coverage = (
-            extracted.get("general_liability_limit")
-            or extracted.get("coverage")
-        )
-
-        if not coverage:
-            continue
-
-        try:
-            coverage_values.append(int(float(coverage)))
-        except (TypeError, ValueError):
-            continue
-
-    if not coverage_values:
+    if not validated_evidence:
         return "Not available"
 
-    return _coverage_label(max(coverage_values))
+    return _coverage_label(
+        validated_evidence[0].value.get("coverage")
+    )
 
 
 def _readiness_label(status):
@@ -215,16 +210,30 @@ def _subcontractor_row(sub):
 
 
 def _sub_status_label(sub):
+    if _has_processing_coi_document(sub):
+        return "CHECKING"
+
     if not sub.coi_expiration:
         return "MISSING"
 
     if sub.computed_status == "expired":
         return "EXPIRED"
 
-    if sub.computed_status == "at_risk":
-        return "AT RISK"
+    return "VALID"
 
-    return "COMPLIANT"
+
+def _has_processing_coi_document(sub):
+    for document in sub.documents:
+        if document.document_type != SUBCONTRACTOR_DOCUMENT_TYPE:
+            continue
+
+        if document.ai_status not in {
+            "analyzed",
+            "failed",
+        }:
+            return True
+
+    return False
 
 
 def _readiness_attention_items(projects):
@@ -353,7 +362,7 @@ def dashboard():
 
             for sub in subs
 
-            if sub.computed_status == status_filter
+            if _sub_status_label(sub).lower().replace(" ", "_") == status_filter
 
         ]
 
@@ -475,9 +484,7 @@ def dashboard():
         else:
             blocked_projects += 1
 
-    # =========================
-    # TEMPLATE
-    # =========================
+    needs_attention = _readiness_attention_items(projects)
 
     return render_template(
         "dashboard.html",
@@ -498,5 +505,6 @@ def dashboard():
         pending_projects=pending_projects,
         blocked_projects=blocked_projects,
         unassigned_projects=unassigned_projects,
-        needs_attention=_readiness_attention_items(projects),
+        needs_attention=needs_attention,
+        needs_attention_count=len(needs_attention),
     )

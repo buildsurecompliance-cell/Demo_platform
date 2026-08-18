@@ -24,23 +24,23 @@
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ ready_projects }}</span>
-<span class="ux-metric-label">Ready</span>
+<span class="ux-metric-label">Ready Projects</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ checking_projects }}</span>
-<span class="ux-metric-label">Checking</span>
+<span class="ux-metric-label">Checking Projects</span>
 </div>
 <div class="ux-metric">
-<span class="ux-metric-value">{{ pending_projects }}</span>
-<span class="ux-metric-label">Needs Attention</span>
+<span class="ux-metric-value">{{ needs_attention_count }}</span>
+<span class="ux-metric-label">Needs Attention Items</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ blocked_projects }}</span>
-<span class="ux-metric-label">Blocked</span>
+<span class="ux-metric-label">Blocked Projects</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ unassigned_projects }}</span>
-<span class="ux-metric-label">No Subcontractors</span>
+<span class="ux-metric-label">No Subcontractors Projects</span>
 </div>
 </div>
 </section>
@@ -153,8 +153,8 @@
 <select class="form-select" name="status" aria-label="Subcontractor status">
 <option value="">All Status</option>
 <option value="missing" {% if request.args.get('status') == 'missing' %}selected{% endif %}>Missing</option>
-<option value="compliant" {% if request.args.get('status') == 'compliant' %}selected{% endif %}>Compliant</option>
-<option value="at_risk" {% if request.args.get('status') == 'at_risk' %}selected{% endif %}>At Risk</option>
+<option value="valid" {% if request.args.get('status') == 'valid' %}selected{% endif %}>Valid</option>
+<option value="checking" {% if request.args.get('status') == 'checking' %}selected{% endif %}>Checking</option>
 <option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>Expired</option>
 </select>
 <button type="submit" class="ux-btn ux-btn-primary">Filter</button>
@@ -196,10 +196,6 @@ Not available
 <div class="ux-actions">
 <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=row.subcontractor.id) }}" class="ux-btn ux-btn-primary" aria-label="View documents for {{ row.company }}">View Documents</a>
 <a href="{{ url_for('subcontractors.edit_sub', id=row.subcontractor.id) }}" class="ux-btn ux-btn-secondary" aria-label="Edit {{ row.company }}">Edit</a>
-<form method="POST" action="{{ url_for('notifications.send_reminder', sub_id=row.subcontractor.id) }}">
-{{ csrf_input() }}
-<button type="submit" class="ux-btn ux-btn-warning">Reminder</button>
-</form>
 <form method="POST" action="{{ url_for('subcontractors.delete_sub', id=row.subcontractor.id) }}" onsubmit="return confirm('Delete this subcontractor?');">
 {{ csrf_input() }}
 <button type="submit" class="ux-btn ux-btn-danger">Delete</button>

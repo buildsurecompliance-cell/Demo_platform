@@ -152,10 +152,11 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Compliance Dashboard", body)
         self.assertIn("Active Projects", body)
-        self.assertIn("Ready", body)
-        self.assertIn("Checking", body)
+        self.assertIn("Ready Projects", body)
+        self.assertIn("Checking Projects", body)
         self.assertIn("Needs Attention", body)
-        self.assertIn("Blocked", body)
+        self.assertIn("Needs Attention Items", body)
+        self.assertIn("Blocked Projects", body)
         self.assertNotIn("Plan Capacity", body)
         self.assertNotIn("Document Intelligence Summary", body)
         self.assertNotIn("Portfolio Value", body)
@@ -167,6 +168,96 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("+ Add Subcontractor", body)
         self.assertNotIn(">Add Sub</a>", body)
         self.assertNotIn(">+ Project</a>", body)
+
+    def test_dashboard_project_counts_and_attention_items_are_separate(self):
+        self.create_project_subcontractor()
+
+        with self.app.app_context():
+            blocked_project = Project(
+                name="Blocked Project",
+                required_coverage=2_000_000,
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            blocked_sub = Subcontractor(
+                name="Blocked Sub",
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add_all([blocked_project, blocked_sub])
+            db.session.flush()
+            db.session.add(
+                ProjectSubcontractor(
+                    project_id=blocked_project.id,
+                    subcontractor_id=blocked_sub.id,
+                )
+            )
+            db.session.commit()
+
+        self.login()
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn(
+            '<span class="ux-metric-value">2</span>\n'
+            '<span class="ux-metric-label">Active Projects</span>',
+            body,
+        )
+        self.assertIn(
+            '<span class="ux-metric-value">1</span>\n'
+            '<span class="ux-metric-label">Ready Projects</span>',
+            body,
+        )
+        self.assertIn(
+            '<span class="ux-metric-value">1</span>\n'
+            '<span class="ux-metric-label">Blocked Projects</span>',
+            body,
+        )
+        self.assertIn(
+            '<span class="ux-metric-value">1</span>\n'
+            '<span class="ux-metric-label">Needs Attention Items</span>',
+            body,
+        )
+        self.assertIn("Blocked Sub", body)
+        self.assertIn("Blocked Project", body)
+
+    def test_needs_attention_count_uses_same_source_as_table(self):
+        with self.app.app_context():
+            project = Project(
+                name="Two Exceptions Project",
+                required_coverage=2_000_000,
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add(project)
+            db.session.flush()
+
+            for name in ("Missing COI One", "Missing COI Two"):
+                sub = Subcontractor(
+                    name=name,
+                    user_id=self.user_id,
+                    organization_id=self.organization_id,
+                )
+                db.session.add(sub)
+                db.session.flush()
+                db.session.add(
+                    ProjectSubcontractor(
+                        project_id=project.id,
+                        subcontractor_id=sub.id,
+                    )
+                )
+
+            db.session.commit()
+
+        self.login()
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn(
+            '<span class="ux-metric-value">2</span>\n'
+            '<span class="ux-metric-label">Needs Attention Items</span>',
+            body,
+        )
+        self.assertIn("Missing COI One", body)
+        self.assertIn("Missing COI Two", body)
 
     def test_processing_document_is_checking_not_needs_attention(self):
         with self.app.app_context():
@@ -203,6 +294,73 @@ class CoreUXPolishTest(unittest.TestCase):
 
         self.assertIn("CHECKING", body)
         self.assertNotIn("Checking Sub</td>\n<td>Checking Project</td>", body)
+
+    def test_global_subcontractor_status_is_documental_not_readiness(self):
+        with self.app.app_context():
+            sub = Subcontractor(
+                name="Global Valid Sub",
+                coi_expiration=date.today() + timedelta(days=60),
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add(sub)
+            db.session.commit()
+
+        self.login()
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn("Global Valid Sub", body)
+        self.assertIn("VALID", body)
+        self.assertNotIn("COMPLIANT", body)
+        self.assertNotIn("READY", body)
+        self.assertNotIn("BLOCKED", body)
+
+    def test_global_subcontractor_coverage_requires_valid_evidence(self):
+        with self.app.app_context():
+            sub = Subcontractor(
+                name="Legacy Coverage Sub",
+                coi_expiration=date.today() + timedelta(days=60),
+                user_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+            doc = Document(
+                filename="subcontractors/1/coi.pdf",
+                original_name="coi.pdf",
+                document_type="COI",
+                sub_id=None,
+                uploaded_by=self.user_id,
+                ai_status="analyzed",
+                ai_confidence=0.95,
+                ai_extracted_data={
+                    "expiration_date": "2029-01-01",
+                    "coverage_limit": 5_000_000,
+                    "general_liability": {
+                        "each_occurrence": 5_000_000,
+                    },
+                    "confidence": 0.95,
+                },
+            )
+            db.session.add(sub)
+            db.session.flush()
+            doc.sub_id = sub.id
+            db.session.add(doc)
+            db.session.commit()
+
+        self.login()
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn("Legacy Coverage Sub", body)
+        self.assertIn("Not available", body)
+        self.assertNotIn("$5M", body)
+
+    def test_global_manual_reminder_action_is_not_shown(self):
+        self.create_project_subcontractor()
+        self.login()
+
+        body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertNotIn(">Reminder<", body)
+        self.assertNotIn("/send_reminder", body)
 
     def test_project_view_shows_final_status_and_contract_extraction(self):
         project_id, _ = self.create_project_subcontractor()
