@@ -8,6 +8,14 @@ from .organization_membership import (
     OrganizationMembership,
 )
 from .organization_invitation import OrganizationInvitation
+from .document_request import (
+    DOCUMENT_REQUEST_CANCELLED,
+    DOCUMENT_REQUEST_COMPLETED,
+    DOCUMENT_REQUEST_EXPIRED,
+    DOCUMENT_REQUEST_PENDING,
+    DOCUMENT_REQUEST_STATUSES,
+    DocumentRequest,
+)
 from .billing_event import (
     EVENT_FAILED,
     EVENT_IGNORED,
@@ -28,6 +36,12 @@ __all__ = [
     "Organization",
     "OrganizationMembership",
     "OrganizationInvitation",
+    "DocumentRequest",
+    "DOCUMENT_REQUEST_PENDING",
+    "DOCUMENT_REQUEST_COMPLETED",
+    "DOCUMENT_REQUEST_EXPIRED",
+    "DOCUMENT_REQUEST_CANCELLED",
+    "DOCUMENT_REQUEST_STATUSES",
     "BillingEvent",
     "EVENT_RECEIVED",
     "EVENT_PROCESSING",

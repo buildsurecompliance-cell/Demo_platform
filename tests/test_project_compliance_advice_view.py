@@ -169,6 +169,7 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
                 "primary_reason",
                 "recommended_action",
                 "action_priority",
+                "document_request",
             },
         )
         self.assertTrue(row["advice_available"])

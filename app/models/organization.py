@@ -83,5 +83,11 @@ class Organization(db.Model):
         lazy=True,
     )
 
+    document_requests = db.relationship(
+        "DocumentRequest",
+        back_populates="organization",
+        lazy=True,
+    )
+
     def __repr__(self):
         return f"<Organization {self.id} {self.name}>"

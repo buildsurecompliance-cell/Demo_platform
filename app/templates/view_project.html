@@ -180,6 +180,29 @@ Priority: {{ row.action_priority }}
 </span>
 </div>
 
+{% if row.status != "READY" %}
+<div class="ux-soft mt-3">
+{% if row.document_request %}
+<strong>COI request</strong>
+<p class="mb-2">
+{{ row.document_request.status }}
+{% if row.document_request.last_sent_at %}
+- sent {{ row.document_request.last_sent_at|format_local_time }}
+{% endif %}
+{% if row.document_request.completed_at %}
+- completed {{ row.document_request.completed_at|format_local_time }}
+{% endif %}
+</p>
+{% endif %}
+<form method="POST" action="{{ url_for('document_requests.request_coi', project_id=project.id, subcontractor_id=ps.subcontractor.id) }}">
+{{ csrf_input() }}
+<button type="submit" class="ux-btn ux-btn-warning">
+{% if row.document_request and row.document_request.status == "PENDING" %}Resend{% else %}Request COI{% endif %}
+</button>
+</form>
+</div>
+{% endif %}
+
 {% if advice.actions %}
 <details class="mt-3">
 <summary>More actions</summary>

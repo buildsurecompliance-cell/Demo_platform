@@ -98,6 +98,14 @@ class Config:
     DEBUG = _bool_env("DEBUG", False)
     TESTING = False
     PORT = _int_env("PORT", 8000)
+    APPLICATION_BASE_URL = os.getenv(
+        "APPLICATION_BASE_URL",
+        os.getenv("APP_BASE_URL", "http://localhost:8000"),
+    )
+    DOCUMENT_REQUEST_EXPIRATION_DAYS = _int_env(
+        "DOCUMENT_REQUEST_EXPIRATION_DAYS",
+        7,
+    )
 
     SECRET_KEY = _secret_key(required=False)
 
@@ -177,6 +185,10 @@ class Config:
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "5 per minute")
     REGISTER_RATE_LIMIT = os.getenv("REGISTER_RATE_LIMIT", "3 per minute")
+    DOCUMENT_REQUEST_UPLOAD_RATE_LIMIT = os.getenv(
+        "DOCUMENT_REQUEST_UPLOAD_RATE_LIMIT",
+        "10 per hour",
+    )
 
     SUBSCRIPTION_GRACE_PERIOD_DAYS = _int_env(
         "SUBSCRIPTION_GRACE_PERIOD_DAYS",

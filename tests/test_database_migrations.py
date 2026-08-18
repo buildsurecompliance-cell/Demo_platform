@@ -23,6 +23,7 @@ from app.extensions import db
 from app.models import (
     BillingEvent,
     Document,
+    DocumentRequest,
     Organization,
     OrganizationInvitation,
     OrganizationMembership,
@@ -39,6 +40,7 @@ EXPECTED_TABLES = {
     "alembic_version",
     "billing_event",
     "document",
+    "document_request",
     "organization",
     "organization_invitation",
     "organization_membership",
@@ -52,6 +54,7 @@ EXPECTED_TABLES = {
 MODEL_TABLES = {
     "billing_event",
     "document",
+    "document_request",
     "organization",
     "organization_invitation",
     "organization_membership",
@@ -392,7 +395,7 @@ class DatabaseMigrationTest(unittest.TestCase):
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertIn("Status: HEALTHY", result.output)
             self.assertIn("Missing tables: none", result.output)
-            self.assertIn("Migration head: d4e5f6a7b8c9", result.output)
+            self.assertIn("Migration head: e5f6a7b8c9d0", result.output)
 
     def test_db_health_cli_reports_unhealthy_unmigrated_schema(self):
         with self.temporary_unmigrated_app() as app:

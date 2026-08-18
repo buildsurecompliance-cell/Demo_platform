@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload COI - BuildSure</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:24px;}
+.shell{max-width:560px;margin:40px auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:28px;}
+h1{margin:0 0 8px;font-size:1.5rem;}
+p{line-height:1.5;color:#475569;}
+.field{margin:22px 0;}
+label{display:block;font-weight:700;margin-bottom:8px;}
+input{width:100%;}
+button{background:#2563eb;color:#fff;border:0;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer;}
+.help{font-size:.9rem;color:#64748b;}
+.flash{border-radius:6px;padding:10px 12px;margin-bottom:12px;background:#fee2e2;color:#991b1b;}
+</style>
+</head>
+<body>
+<main class="shell">
+<h1>BuildSure</h1>
+<p><strong>{{ document_request.subcontractor.name }}</strong></p>
+<p>
+{{ document_request.project.name }} requires an updated Certificate of Insurance.
+</p>
+
+{% for category, message in get_flashed_messages(with_categories=True) %}
+<div class="flash">{{ message }}</div>
+{% endfor %}
+
+<form method="POST" enctype="multipart/form-data">
+{{ csrf_input() }}
+<div class="field">
+<label for="file">Upload COI</label>
+<input id="file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+<p class="help">PDF, JPG, or PNG. Maximum 10 MB.</p>
+</div>
+<button type="submit">Upload COI</button>
+</form>
+</main>
+</body>
+</html>

@@ -28,6 +28,7 @@ from app.extensions import db
 
 from app.models import (
     Document,
+    DocumentRequest,
     Project,
     ProjectSubcontractor,
     Subcontractor,
@@ -46,6 +47,7 @@ from app.services.document_analysis_service import (
 
 from app.services.documents.types import (
     PROJECT_DOCUMENT_TYPES,
+    SUBCONTRACTOR_DOCUMENT_TYPE,
     normalize_project_document_type,
     supports_automatic_analysis,
 )
@@ -305,6 +307,7 @@ def _project_subcontractor_view_model(project_subcontractor):
         )
 
     primary_action = advice.actions[0] if advice.actions else None
+    latest_request = _latest_document_request(project_subcontractor)
 
     return {
         "project_subcontractor": project_subcontractor,
@@ -336,6 +339,7 @@ def _project_subcontractor_view_model(project_subcontractor):
             if primary_action
             else "LOW"
         ),
+        "document_request": latest_request,
     }
 
 
@@ -344,6 +348,19 @@ def _fallback_compliance_advice(project_subcontractor):
         status=project_subcontractor.readiness_status,
         summary="Compliance advice unavailable.",
         actions=(),
+    )
+
+
+def _latest_document_request(project_subcontractor):
+    return (
+        DocumentRequest.query
+        .filter_by(
+            project_id=project_subcontractor.project_id,
+            subcontractor_id=project_subcontractor.subcontractor_id,
+            document_type=SUBCONTRACTOR_DOCUMENT_TYPE,
+        )
+        .order_by(DocumentRequest.created_at.desc())
+        .first()
     )
 
 
