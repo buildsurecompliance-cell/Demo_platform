@@ -376,12 +376,8 @@ class CoreUXPolishTest(unittest.TestCase):
             "Document analysis results do not replace final mobilization readiness.",
             body,
         )
-        self.assertIn("Current GL", body)
-        self.assertIn("$5M", body)
-        self.assertIn("Required GL", body)
-        self.assertIn("$2M", body)
-        self.assertIn("Coverage Gap", body)
-        self.assertIn("No gap", body)
+        self.assertIn("COI Expiration", body)
+        self.assertNotIn("Coverage Gap", body)
         self.assertIn("Contract Extraction", body)
         self.assertIn("Preserved", body)
         self.assertIn("Applied", body)

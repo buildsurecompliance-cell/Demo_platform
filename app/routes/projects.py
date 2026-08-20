@@ -27,6 +27,8 @@ from app.decorators import subscription_required
 from app.extensions import db
 
 from app.models import (
+    DOCUMENT_REQUEST_COMPLETED,
+    DOCUMENT_REQUEST_PENDING,
     Document,
     DocumentRequest,
     Project,
@@ -132,13 +134,10 @@ def _coverage_label(value):
         return "No minimum"
 
     amount = int(value)
-    presets = {
-        1_000_000: "$1M",
-        2_000_000: "$2M",
-        5_000_000: "$5M",
-    }
+    if amount % 1_000_000 == 0:
+        return f"${amount // 1_000_000}M"
 
-    return presets.get(amount, _money_full(amount))
+    return _money_full(amount)
 
 
 def _mobilization_label(status):
@@ -308,6 +307,17 @@ def _project_subcontractor_view_model(project_subcontractor):
 
     primary_action = advice.actions[0] if advice.actions else None
     latest_request = _latest_document_request(project_subcontractor)
+    display_reason = _display_reason(
+        advice.summary,
+        current_coverage,
+        required_coverage,
+        coverage_gap,
+    )
+    display_action = _display_action(
+        primary_action.description if primary_action else None,
+        required_coverage,
+        coverage_gap,
+    )
 
     return {
         "project_subcontractor": project_subcontractor,
@@ -328,18 +338,27 @@ def _project_subcontractor_view_model(project_subcontractor):
             if project_subcontractor.subcontractor.coi_expiration
             else "Not available"
         ),
-        "primary_reason": advice.summary,
-        "recommended_action": (
-            primary_action.description
-            if primary_action
-            else "No action required."
-        ),
+        "primary_reason": display_reason,
+        "recommended_action": display_action,
         "action_priority": (
             primary_action.priority
             if primary_action
             else "LOW"
         ),
         "document_request": latest_request,
+        "document_request_status": _document_request_status_label(
+            latest_request
+        ),
+        "document_request_cta": _document_request_cta_label(
+            latest_request,
+            advice.status,
+        ),
+        "show_operational_action": bool(display_action),
+        "show_more_actions": not _has_coverage_gap(
+            current_coverage,
+            required_coverage,
+            coverage_gap,
+        ),
     }
 
 
@@ -361,6 +380,83 @@ def _latest_document_request(project_subcontractor):
         )
         .order_by(DocumentRequest.created_at.desc())
         .first()
+    )
+
+
+def _display_reason(summary, current_coverage, required_coverage, coverage_gap):
+    if _has_coverage_gap(current_coverage, required_coverage, coverage_gap):
+        return "GL coverage is below requirement."
+
+    return summary
+
+
+def _display_action(action_description, required_coverage, coverage_gap):
+    if coverage_gap and required_coverage:
+        return (
+            "A corrected COI with at least "
+            f"{_coverage_label(required_coverage)} GL coverage is required."
+        )
+
+    return action_description
+
+
+def _document_request_cta_label(document_request, status):
+    if status == "READY":
+        return None
+
+    if (
+        document_request
+        and document_request.status == DOCUMENT_REQUEST_PENDING
+    ):
+        return "Resend"
+
+    if (
+        document_request
+        and document_request.status == DOCUMENT_REQUEST_COMPLETED
+    ):
+        return "Request Corrected COI"
+
+    return "Request COI"
+
+
+def _document_request_status_label(document_request):
+    if not document_request:
+        return None
+
+    if document_request.status == DOCUMENT_REQUEST_PENDING:
+        if document_request.last_sent_at:
+            return (
+                "COI request sent "
+                f"{_short_date_label(document_request.last_sent_at)}"
+            )
+
+        return "COI request pending"
+
+    if document_request.status == DOCUMENT_REQUEST_COMPLETED:
+        if document_request.completed_at:
+            return (
+                "COI received "
+                f"{_short_date_label(document_request.completed_at)}"
+            )
+
+        return "COI received"
+
+    return None
+
+
+def _short_date_label(value):
+    if not value:
+        return ""
+
+    return value.strftime("%b %d").replace(" 0", " ")
+
+
+def _has_coverage_gap(current_coverage, required_coverage, coverage_gap):
+    return (
+        current_coverage is not None
+        and required_coverage
+        and coverage_gap
+        and coverage_gap > 0
     )
 
 

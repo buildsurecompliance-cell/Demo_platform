@@ -18,6 +18,7 @@ from app.models import (
     Subcontractor,
 )
 from app.services.documents.types import SUBCONTRACTOR_DOCUMENT_TYPE
+from app.services.compliance_evidence_service import collect_coi_evidence
 from app.services.notifications.email_service import send_email_reminder
 
 
@@ -135,14 +136,30 @@ def complete_document_request(request, document):
 
 def send_document_request_email(request, token):
     upload_url = document_request_url(token)
-    subject = f"COI requested for {request.project.name}"
-    message = (
-        f"{request.organization.name} needs an updated Certificate of "
-        f"Insurance for {request.project.name}.\n\n"
-        "Upload your COI using the secure link below.\n\n"
-        f"{upload_url}\n\n"
-        "No account is required."
-    )
+    correction_context = _coverage_correction_context(request)
+
+    if correction_context:
+        subject = f"Corrected COI requested for {request.project.name}"
+        message = (
+            f"{request.organization.name} needs a corrected Certificate of "
+            f"Insurance for {request.project.name}.\n\n"
+            "The submitted COI shows:\n"
+            f"General Liability: {_money_label(correction_context['current'])}\n\n"
+            "Project requirement:\n"
+            f"General Liability: {_money_label(correction_context['required'])}\n\n"
+            "Please upload a corrected COI using the secure link below.\n\n"
+            f"{upload_url}\n\n"
+            "No account is required."
+        )
+    else:
+        subject = f"COI requested for {request.project.name}"
+        message = (
+            f"{request.organization.name} needs an updated Certificate of "
+            f"Insurance for {request.project.name}.\n\n"
+            "Upload your COI using the secure link below.\n\n"
+            f"{upload_url}\n\n"
+            "No account is required."
+        )
 
     try:
         return send_email_reminder(
@@ -157,6 +174,51 @@ def send_document_request_email(request, token):
             error.__class__.__name__,
         )
         return False
+
+
+def _coverage_correction_context(request):
+    required_coverage = getattr(
+        request.project,
+        "required_coverage",
+        None,
+    )
+
+    if not required_coverage:
+        return None
+
+    validated_evidence = [
+        evidence
+        for evidence in collect_coi_evidence(request.subcontractor)
+        if evidence.validated
+    ]
+
+    if not validated_evidence:
+        return None
+
+    current_coverage = validated_evidence[0].value.get("coverage")
+
+    try:
+        current = int(float(current_coverage))
+        required = int(float(required_coverage))
+    except (TypeError, ValueError):
+        return None
+
+    if current >= required:
+        return None
+
+    return {
+        "current": current,
+        "required": required,
+    }
+
+
+def _money_label(value):
+    amount = int(value or 0)
+
+    if amount >= 1_000_000 and amount % 1_000_000 == 0:
+        return f"${amount // 1_000_000}M"
+
+    return f"${amount:,.0f}"
 
 
 def document_request_url(token):

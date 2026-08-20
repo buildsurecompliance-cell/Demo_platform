@@ -175,6 +175,52 @@ class DocumentRequestTest(unittest.TestCase):
         self.assertIsNotNone(request.last_sent_at)
         send_email.assert_called_once()
 
+    def test_corrected_coi_request_email_includes_coverage_context(self):
+        self.project.required_coverage = 5_000_000
+        document = Document(
+            filename="subcontractors/1/coi.pdf",
+            original_name="coi.pdf",
+            document_type="COI",
+            sub_id=self.subcontractor_id,
+            uploaded_by=self.owner_id,
+            ai_status="analyzed",
+            ai_confidence=0.95,
+            ai_extracted_data={
+                "expiration_date": "2027-05-01",
+                "coverage_limit": 2_000_000,
+                "general_liability": {
+                    "each_occurrence": 2_000_000,
+                    "expiration_date": "2027-05-01",
+                },
+                "confidence": 0.95,
+            },
+            ai_compliance_result={
+                "is_coi": True,
+                "validator": {"valid": True, "errors": []},
+                "confidence": 0.95,
+            },
+        )
+        db.session.add(document)
+        db.session.commit()
+
+        with patch(
+            "app.services.document_requests.send_email_reminder",
+            return_value=True,
+        ) as send_email:
+            delivery = create_or_resend_coi_request(
+                organization=self.organization,
+                project=self.project,
+                subcontractor=self.subcontractor,
+                created_by_user_id=self.owner_id,
+            )
+
+        self.assertTrue(delivery.sent)
+        _, subject, message = send_email.call_args.args
+        self.assertEqual(subject, "Corrected COI requested for Request Project")
+        self.assertIn("corrected Certificate of Insurance", message)
+        self.assertIn("General Liability: $2M", message)
+        self.assertIn("General Liability: $5M", message)
+
     def test_request_requires_same_organization_and_link(self):
         self.login_owner()
         csrf_token = self.csrf_token(f"/project/{self.project_id}")
@@ -533,7 +579,7 @@ class DocumentRequestTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Resend", response.data)
-        self.assertIn(b"PENDING", response.data)
+        self.assertIn(b"COI request sent", response.data)
         self.assertNotIn(delivery.token.encode(), response.data)
 
 

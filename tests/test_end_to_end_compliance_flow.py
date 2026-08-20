@@ -179,7 +179,8 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(status, body)
-        self.assertIn(summary, body)
+        if summary:
+            self.assertIn(summary, body)
         return body
 
     def test_blocked_missing_coi_flows_to_project_view(self):
@@ -356,8 +357,9 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
         body = self.assert_view_status(
             project_id,
             "READY",
-            "Ready for mobilization.",
+            None,
         )
+        self.assertNotIn("Ready for mobilization.", body)
         self.assertNotIn("<ul class=\"mb-0\">", body)
 
     def test_malformed_ai_data_stays_pending_and_view_renders(self):
