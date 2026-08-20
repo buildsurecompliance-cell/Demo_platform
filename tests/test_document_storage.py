@@ -10,6 +10,7 @@ from unittest.mock import ANY, Mock, patch
 from werkzeug.datastructures import FileStorage
 
 from app import create_app
+from app.config import TestingConfig
 from app.extensions import db
 from app.models import Document
 from app.services.documents.storage import (
@@ -52,12 +53,13 @@ class DocumentStorageTest(unittest.TestCase):
 
     def setUp(self):
         self.uploads = tempfile.TemporaryDirectory()
-        self.app = create_app()
-        self.app.config.update(
-            TESTING=True,
-            UPLOAD_FOLDER=self.uploads.name,
-            STORAGE_BACKEND="local",
-        )
+        upload_folder = self.uploads.name
+
+        class LocalStorageTestingConfig(TestingConfig):
+            UPLOAD_FOLDER = upload_folder
+            STORAGE_BACKEND = "local"
+
+        self.app = create_app(LocalStorageTestingConfig)
 
         self.ctx = self.app.app_context()
         self.ctx.push()

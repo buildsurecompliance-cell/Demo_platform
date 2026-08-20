@@ -1,6 +1,7 @@
 import os
 
 from datetime import timedelta
+from urllib.parse import unquote
 
 from dotenv import load_dotenv
 
@@ -63,6 +64,60 @@ def _database_url(default_sqlite=True):
         )
 
     return None
+
+
+def _sqlite_uri_path(database_uri):
+    if not database_uri or database_uri == "sqlite:///:memory:":
+        return None
+
+    if not database_uri.startswith("sqlite:///"):
+        return None
+
+    path = unquote(database_uri[len("sqlite:///"):])
+
+    if path.startswith("/") and len(path) > 3 and path[2] == ":":
+        path = path[1:]
+
+    return os.path.abspath(os.path.normpath(path))
+
+
+def development_database_path():
+    return os.path.abspath(
+        os.path.normpath(
+            os.path.join(
+                BASE_DIR,
+                "instance",
+                "database.db",
+            )
+        )
+    )
+
+
+def is_development_database_uri(database_uri):
+    sqlite_path = _sqlite_uri_path(database_uri)
+
+    return bool(
+        sqlite_path
+        and os.path.normcase(sqlite_path)
+        == os.path.normcase(development_database_path())
+    )
+
+
+def assert_safe_test_database_uri(database_uri):
+    if is_development_database_uri(database_uri):
+        raise RuntimeError(
+            "Refusing to run destructive test database operation "
+            "against development database."
+        )
+
+
+def _testing_database_url():
+    database_uri = os.getenv(
+        "TEST_DATABASE_URL",
+        "sqlite:///:memory:",
+    )
+    assert_safe_test_database_uri(database_uri)
+    return database_uri
 
 
 def _secret_key(required=False):
@@ -260,10 +315,7 @@ class TestingConfig(Config):
     TESTING = True
     DEBUG = False
     SECRET_KEY = os.getenv("SECRET_KEY", "test-secret")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "TEST_DATABASE_URL",
-        "sqlite:///:memory:",
-    )
+    SQLALCHEMY_DATABASE_URI = _testing_database_url()
 
 
 def get_config():

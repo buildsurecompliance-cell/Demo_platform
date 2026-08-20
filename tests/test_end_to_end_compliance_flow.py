@@ -12,6 +12,7 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
 from app import create_app
+from app.config import TestingConfig
 from app.extensions import db
 from app.models import Document, Project, ProjectSubcontractor, Subcontractor, User
 from app.services.organizations import create_default_organization_for_user
@@ -25,7 +26,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
 
     def setUp(self):
         self.uploads = tempfile.TemporaryDirectory()
-        self.app = create_app()
+        self.app = create_app(TestingConfig)
         self.app.config.update(
             TESTING=True,
             WTF_CSRF_ENABLED=False,

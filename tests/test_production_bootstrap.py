@@ -10,7 +10,10 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
 from app import create_app
-from app.config import TestingConfig
+from app.config import (
+    TestingConfig,
+    development_database_path,
+)
 from app.extensions import db
 
 
@@ -164,6 +167,38 @@ class ProductionBootstrapTest(unittest.TestCase):
         self.assertTrue(config.TESTING)
         self.assertFalse(config.DEBUG)
         self.assertEqual(config.SQLALCHEMY_DATABASE_URI, "sqlite:///:memory:")
+
+    def test_testing_config_rejects_development_database_url(self):
+        development_uri = "sqlite:///" + development_database_path()
+
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "testing",
+                "TEST_DATABASE_URL": development_uri,
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Refusing to run destructive test database operation",
+            ):
+                importlib.reload(config_module)
+
+    def test_create_app_rejects_testing_app_pointing_to_development_database(self):
+        class UnsafeTestingConfig(TestingConfig):
+            TESTING = True
+            SQLALCHEMY_DATABASE_URI = (
+                "sqlite:///" + development_database_path()
+            )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Refusing to run destructive test database operation",
+        ):
+            create_app(UnsafeTestingConfig)
 
     def test_boolean_environment_values_are_parsed_explicitly(self):
         with patch.dict(

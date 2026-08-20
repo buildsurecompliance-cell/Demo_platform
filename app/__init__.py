@@ -4,7 +4,10 @@ import logging
 from flask import Flask
 from flask_login import current_user
 
-from app.config import get_config
+from app.config import (
+    assert_safe_test_database_uri,
+    get_config,
+)
 
 from app.extensions import (
     csrf,
@@ -39,6 +42,11 @@ def create_app(config_object=None):
         config_object
         or get_config()
     )
+
+    if app.config.get("TESTING"):
+        assert_safe_test_database_uri(
+            app.config.get("SQLALCHEMY_DATABASE_URI")
+        )
 
     logging.basicConfig(
         level=logging.INFO,
