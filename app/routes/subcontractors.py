@@ -361,6 +361,20 @@ def _form_timezone():
     return timezone_name
 
 
+def _default_subcontractor_timezone():
+    timezone_name = (
+        getattr(current_user, "timezone", None)
+        or "US/Eastern"
+    ).strip()
+
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return "US/Eastern"
+
+    return timezone_name
+
+
 def _render_add_sub(
     organization,
     projects,
@@ -450,36 +464,11 @@ def add_sub():
 
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").lower().strip()
-        phone = request.form.get("phone")
         role = request.form.get("role")
         project_ids = _selected_owned_project_ids()
 
         if not name:
             flash("Subcontractor name is required.", "danger")
-            return _render_add_sub(
-                organization,
-                projects,
-                request.form,
-                project_ids,
-            )
-
-        coi_raw = request.form.get("coi_expiration")
-
-        try:
-            coi_expiration = _parse_optional_date(coi_raw)
-        except ValueError:
-            flash("Invalid date format.", "danger")
-            return _render_add_sub(
-                organization,
-                projects,
-                request.form,
-                project_ids,
-            )
-
-        try:
-            timezone_name = _form_timezone()
-        except ValueError:
-            flash("Invalid timezone.", "danger")
             return _render_add_sub(
                 organization,
                 projects,
@@ -496,10 +485,10 @@ def add_sub():
         new_sub = Subcontractor(
             name=name,
             email=email,
-            phone=phone,
+            phone=None,
             role=role,
-            timezone=timezone_name,
-            coi_expiration=coi_expiration,
+            timezone=_default_subcontractor_timezone(),
+            coi_expiration=None,
             user_id=current_user.id,
             organization_id=organization.id,
         )

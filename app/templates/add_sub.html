@@ -10,11 +10,6 @@
     <div class="form-header">
         <div>
             <h1>Add Subcontractor</h1>
-            {% if capacity_usage %}
-            <p class="text-muted mb-0">
-                {{ capacity_usage.subcontractor_count }} subcontractors currently in this Organization.
-            </p>
-            {% endif %}
         </div>
         <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-outline-secondary">
             Back
@@ -45,7 +40,9 @@
                     id="email"
                     name="email"
                     class="form-control"
-                    value="{{ sub_email }}">
+                    value="{{ sub_email }}"
+                    aria-describedby="sub-email-help">
+                <div id="sub-email-help" class="field-help">Email is used for COI requests.</div>
             </div>
 
             <div class="form-field">
@@ -84,7 +81,7 @@
         </section>
 
         <section class="form-card">
-            <h4>Certificate of Insurance</h4>
+            <h4>COI (optional)</h4>
 
             <div class="form-field">
                 <label for="documents">Upload COI</label>
@@ -96,7 +93,7 @@
                     aria-describedby="documentsHelp"
                     multiple>
                 <div class="field-help" id="documentsHelp">
-                    BuildSure analyzes uploaded COIs automatically and uses validated evidence for readiness.
+                    Upload a COI now, or request one later from the project. BuildSure analyzes supported COIs automatically.
                 </div>
             </div>
         </section>

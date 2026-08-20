@@ -684,7 +684,7 @@ class ProjectContractAutoFillTest(unittest.TestCase):
             self.assertEqual(project.required_coverage, 2000000)
             self.assertEqual(document.ai_status, "analyzed")
 
-    def test_add_project_contract_auto_analysis_preserves_manual_fields(self):
+    def test_add_project_contract_auto_analysis_preserves_visible_manual_fields(self):
         self.login()
 
         with patch(
@@ -718,16 +718,15 @@ class ProjectContractAutoFillTest(unittest.TestCase):
             project = Project.query.filter_by(name="Manual Project").one()
             document = Document.query.filter_by(project_id=project.id).one()
 
-            self.assertEqual(project.contract_value, 100)
-            self.assertEqual(project.start_date.isoformat(), "2026-01-01")
+            self.assertEqual(project.contract_value, 4850000)
+            self.assertEqual(project.start_date.isoformat(), "2026-08-01")
             self.assertEqual(project.end_date.isoformat(), "2026-12-31")
             self.assertEqual(project.required_coverage, 1000000)
-            self.assertEqual(
-                document.ai_compliance_result["project_auto_fill"]["fields"][
-                    "contract_value"
-                ]["status"],
-                "preserved",
-            )
+            fields = document.ai_compliance_result["project_auto_fill"]["fields"]
+            self.assertEqual(fields["contract_value"]["status"], "applied")
+            self.assertEqual(fields["start_date"]["status"], "applied")
+            self.assertEqual(fields["end_date"]["status"], "preserved")
+            self.assertEqual(fields["required_coverage"]["status"], "preserved")
 
     def test_add_project_scope_and_owner_requirements_do_not_auto_analyze(self):
         self.login()

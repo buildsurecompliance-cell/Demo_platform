@@ -143,6 +143,117 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         self.assertIn("$2M", body)
         self.assertIn("$5M", body)
         self.assertIn("Custom amount", body)
+        self.assertIn('id="required-coverage-custom-group"', body)
+        self.assertNotIn("Contract Value", body)
+        self.assertNotIn("Start Date", body)
+        self.assertNotIn("projects currently in this Organization", body)
+
+    def test_add_project_does_not_require_contract_value_or_start_date(self):
+        self.login()
+        token = self.csrf_token("/add_project")
+
+        response = self.client.post(
+            "/add_project",
+            data={
+                "csrf_token": token,
+                "name": "Minimal Project",
+                "required_coverage_choice": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            project = Project.query.filter_by(name="Minimal Project").one()
+            self.assertEqual(project.contract_value, 0)
+            self.assertIsNone(project.start_date)
+            self.assertIsNone(project.end_date)
+
+    def test_add_project_ignores_removed_contract_value_and_start_date_fields(self):
+        self.login()
+        token = self.csrf_token("/add_project")
+
+        response = self.client.post(
+            "/add_project",
+            data={
+                "csrf_token": token,
+                "name": "Manipulated Minimal Project",
+                "contract_value": "999999",
+                "start_date": "2026-01-01",
+                "required_coverage_choice": "1000000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            project = Project.query.filter_by(
+                name="Manipulated Minimal Project"
+            ).one()
+            self.assertEqual(project.contract_value, 0)
+            self.assertIsNone(project.start_date)
+            self.assertEqual(project.required_coverage, 1000000)
+
+    def test_add_project_still_requires_project_name(self):
+        self.login()
+        token = self.csrf_token("/add_project")
+
+        response = self.client.post(
+            "/add_project",
+            data={
+                "csrf_token": token,
+                "name": "",
+                "required_coverage_choice": "",
+            },
+        )
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Project name is required.", body)
+
+    def test_add_project_end_date_is_optional_and_can_be_saved(self):
+        self.login()
+        token = self.csrf_token("/add_project")
+
+        response = self.client.post(
+            "/add_project",
+            data={
+                "csrf_token": token,
+                "name": "End Date Project",
+                "end_date": "2027-06-30",
+                "required_coverage_choice": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            project = Project.query.filter_by(name="End Date Project").one()
+            self.assertEqual(project.end_date.isoformat(), "2027-06-30")
+
+    def test_add_project_without_subcontractors_is_allowed(self):
+        self.login()
+        token = self.csrf_token("/add_project")
+
+        response = self.client.post(
+            "/add_project",
+            data={
+                "csrf_token": token,
+                "name": "Empty Project",
+                "required_coverage_choice": "2000000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            project = Project.query.filter_by(name="Empty Project").one()
+            self.assertEqual(
+                ProjectSubcontractor.query.filter_by(
+                    project_id=project.id
+                ).count(),
+                0,
+            )
 
     def test_add_project_persists_required_coverage_and_owned_links_only(self):
         self.login()
@@ -354,7 +465,6 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
                 "csrf_token": token,
                 "name": "No COI Sub",
                 "email": "nocoi@example.com",
-                "timezone": "America/New_York",
             },
         )
 
@@ -365,15 +475,19 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
                 name="No COI Sub"
             ).one()
             self.assertIsNone(subcontractor.coi_expiration)
-            self.assertEqual(subcontractor.timezone, "America/New_York")
+            self.assertEqual(subcontractor.timezone, "US/Eastern")
 
         response = self.client.get("/add_sub")
-        self.assertIn(
-            "BuildSure analyzes uploaded COIs automatically",
-            response.get_data(as_text=True),
-        )
+        body = response.get_data(as_text=True)
+        self.assertIn("Email is used for COI requests.", body)
+        self.assertIn("COI (optional)", body)
+        self.assertIn("BuildSure analyzes supported COIs automatically", body)
+        self.assertNotIn("Phone", body)
+        self.assertNotIn("Timezone", body)
+        self.assertNotIn("COI Expiration", body)
+        self.assertNotIn("subcontractors currently in this Organization", body)
 
-    def test_add_sub_rejects_invalid_coi_date_before_insert(self):
+    def test_add_sub_ignores_removed_coi_date_phone_and_timezone_fields(self):
         self.login()
         token = self.csrf_token("/add_sub")
 
@@ -381,32 +495,11 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             "/add_sub",
             data={
                 "csrf_token": token,
-                "name": "Bad Date Sub",
-                "email": "bad-date@example.com",
+                "name": "Manipulated Sub",
+                "email": "manipulated@example.com",
+                "phone": "555-1111",
                 "coi_expiration": "07/15/2026",
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Invalid date format.", response.get_data(as_text=True))
-
-        with self.app.app_context():
-            self.assertIsNone(
-                Subcontractor.query.filter_by(name="Bad Date Sub").first()
-            )
-
-    def test_add_sub_accepts_valid_coi_date_and_rejects_invalid_timezone(self):
-        self.login()
-        token = self.csrf_token("/add_sub")
-
-        response = self.client.post(
-            "/add_sub",
-            data={
-                "csrf_token": token,
-                "name": "Dated Sub",
-                "email": "dated@example.com",
-                "coi_expiration": "2026-12-31",
-                "timezone": "America/Chicago",
+                "timezone": "Not/AZone",
             },
         )
 
@@ -414,29 +507,36 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
 
         with self.app.app_context():
             subcontractor = Subcontractor.query.filter_by(
-                name="Dated Sub"
+                name="Manipulated Sub"
             ).one()
-            self.assertEqual(subcontractor.coi_expiration.isoformat(), "2026-12-31")
-            self.assertEqual(subcontractor.timezone, "America/Chicago")
+            self.assertIsNone(subcontractor.phone)
+            self.assertIsNone(subcontractor.coi_expiration)
+            self.assertEqual(subcontractor.timezone, "US/Eastern")
 
+    def test_add_sub_does_not_require_phone_timezone_or_manual_coi_expiration(self):
+        self.login()
         token = self.csrf_token("/add_sub")
+
         response = self.client.post(
             "/add_sub",
             data={
                 "csrf_token": token,
-                "name": "Bad Timezone",
-                "email": "bad-timezone@example.com",
-                "timezone": "Not/AZone",
+                "name": "Minimal Sub",
+                "email": "",
+                "role": "Concrete",
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Invalid timezone.", response.get_data(as_text=True))
+        self.assertEqual(response.status_code, 302)
 
         with self.app.app_context():
-            self.assertIsNone(
-                Subcontractor.query.filter_by(name="Bad Timezone").first()
-            )
+            subcontractor = Subcontractor.query.filter_by(
+                name="Minimal Sub"
+            ).one()
+            self.assertEqual(subcontractor.email, "")
+            self.assertEqual(subcontractor.role, "Concrete")
+            self.assertIsNone(subcontractor.phone)
+            self.assertIsNone(subcontractor.coi_expiration)
 
     def test_edit_sub_preserves_and_clears_optional_coi_date(self):
         self.login()
@@ -559,7 +659,7 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         project_body = project_response.get_data(as_text=True)
         self.assertIn("Project Information", project_body)
         self.assertIn("Insurance Requirements", project_body)
-        self.assertIn("Initial Documents", project_body)
+        self.assertIn("Project Requirements (optional)", project_body)
         self.assertIn("Assigned Subcontractors", project_body)
         self.assertIn("aria-describedby", project_body)
         self.assertNotIn("calculate_readiness", project_body)
@@ -567,8 +667,8 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         sub_response = self.client.get("/add_sub")
         sub_body = sub_response.get_data(as_text=True)
         self.assertIn("Company Information", sub_body)
-        self.assertIn("Certificate of Insurance", sub_body)
-        self.assertIn("BuildSure analyzes uploaded COIs automatically", sub_body)
+        self.assertIn("COI (optional)", sub_body)
+        self.assertIn("BuildSure analyzes supported COIs automatically", sub_body)
         self.assertNotIn("Insurance Information", sub_body)
         self.assertNotIn("Settings", sub_body)
         self.assertIn("aria-describedby", sub_body)

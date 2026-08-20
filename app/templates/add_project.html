@@ -2,8 +2,6 @@
 {% block content %}
 
 {% set project_name = form_data.get('name', '') if form_data else '' %}
-{% set contract_value = form_data.get('contract_value', '') if form_data else '' %}
-{% set start_date = form_data.get('start_date', '') if form_data else '' %}
 {% set end_date = form_data.get('end_date', '') if form_data else '' %}
 {% set selected_doc_type = form_data.get('doc_type', project_document_types[0]) if form_data else project_document_types[0] %}
 
@@ -12,11 +10,6 @@
     <div class="form-header">
         <div>
             <h1>Add Project</h1>
-            {% if capacity_usage %}
-            <p class="text-muted mb-0">
-                {{ capacity_usage.project_count }} projects currently in this Organization.
-            </p>
-            {% endif %}
         </div>
         <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-outline-secondary">
             Back
@@ -43,44 +36,14 @@
             </div>
 
             <div class="form-field">
-                <label for="contract_value">Contract Value</label>
-                <div class="input-prefix">
-                    <span>$</span>
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        id="contract_value"
-                        name="contract_value"
-                        class="form-control"
-                        value="{{ contract_value }}"
-                        aria-describedby="contract-value-help">
-                </div>
-                <div id="contract-value-help" class="field-help">Optional. Used for project context, not readiness decisions.</div>
-            </div>
-
-            <div class="form-grid">
-                <div class="form-field">
-                    <label for="start_date">Start Date</label>
-                    <input
-                        type="date"
-                        id="start_date"
-                        name="start_date"
-                        class="form-control"
-                        value="{{ start_date }}">
-                    <div class="field-help">Optional mobilization reference date.</div>
-                </div>
-
-                <div class="form-field">
-                    <label for="end_date">End Date</label>
-                    <input
-                        type="date"
-                        id="end_date"
-                        name="end_date"
-                        class="form-control"
-                        value="{{ end_date }}">
-                    <div class="field-help">Optional contract completion reference date.</div>
-                </div>
+                <label for="end_date">Project End Date</label>
+                <input
+                    type="date"
+                    id="end_date"
+                    name="end_date"
+                    class="form-control"
+                    value="{{ end_date }}">
+                <div class="field-help">Optional. Helps give compliance timing more context.</div>
             </div>
         </section>
 
@@ -105,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="form-field">
+            <div class="form-field" id="required-coverage-custom-group">
                 <label for="required_coverage_custom">Custom Amount</label>
                 <div class="input-prefix">
                     <span>$</span>
@@ -124,11 +87,14 @@
         </section>
 
         <section class="form-card">
-            <h4>Initial Documents</h4>
+            <h4>Project Requirements (optional)</h4>
+            <p class="field-help">
+                Upload a Contract, Scope, or Owner Requirements document. BuildSure analyzes Contracts automatically.
+            </p>
 
             <div class="form-grid">
                 <div class="form-field">
-                    <label for="doc_type">Project Document Type</label>
+                    <label for="doc_type">Requirement Type</label>
                     <select id="doc_type" name="doc_type" class="form-select">
                         {% for document_type in project_document_types %}
                         <option value="{{ document_type }}" {% if selected_doc_type == document_type %}selected{% endif %}>
@@ -146,7 +112,7 @@
                         name="documents"
                         class="form-control"
                         multiple>
-                    <div class="field-help">Optional. You can upload Contract, Scope, or Owner Requirements now.</div>
+                    <div class="field-help">Optional. Scope and Owner Requirements are stored for project context.</div>
                 </div>
             </div>
         </section>
@@ -188,5 +154,28 @@
     </form>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const choice = document.getElementById("required_coverage_choice");
+    const customGroup = document.getElementById("required-coverage-custom-group");
+    const customInput = document.getElementById("required_coverage_custom");
+
+    function syncCustomCoverage() {
+        const showCustom = choice && choice.value === "custom";
+        if (customGroup) {
+            customGroup.hidden = !showCustom;
+        }
+        if (customInput && !showCustom) {
+            customInput.value = "";
+        }
+    }
+
+    if (choice) {
+        choice.addEventListener("change", syncCustomCoverage);
+        syncCustomCoverage();
+    }
+});
+</script>
 
 {% endblock %}

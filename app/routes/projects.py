@@ -619,24 +619,11 @@ def add_project():
     if request.method == "POST":
 
         name = request.form.get("name", "").strip()
-        value_raw = request.form.get("contract_value")
-        start_raw = request.form.get("start_date")
         end_raw = request.form.get("end_date")
         selected_sub_ids = _selected_owned_subcontractor_ids()
 
         if not name:
             flash("Project name is required.", "danger")
-            return _render_add_project(
-                organization,
-                subs,
-                request.form,
-                selected_sub_ids,
-            )
-
-        try:
-            contract_value = float(value_raw) if value_raw else 0
-        except ValueError:
-            flash("Invalid contract value.", "danger")
             return _render_add_project(
                 organization,
                 subs,
@@ -655,19 +642,6 @@ def add_project():
                 selected_sub_ids,
             )
 
-        start_date = None
-        if start_raw:
-            try:
-                start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
-            except ValueError:
-                flash("Invalid start date.", "danger")
-                return _render_add_project(
-                    organization,
-                    subs,
-                    request.form,
-                    selected_sub_ids,
-                )
-
         end_date = None
         if end_raw:
             try:
@@ -681,15 +655,6 @@ def add_project():
                     selected_sub_ids,
                 )
 
-        if start_date and end_date and end_date < start_date:
-            flash("End date cannot be before start date.", "danger")
-            return _render_add_project(
-                organization,
-                subs,
-                request.form,
-                selected_sub_ids,
-            )
-
         try:
             require_project_capacity(organization)
         except PlanCapacityError as error:
@@ -698,10 +663,10 @@ def add_project():
 
         project = Project(
             name=name,
-            contract_value=contract_value,
+            contract_value=0,
             user_id=current_user.id,
             organization_id=organization.id,
-            start_date=start_date,
+            start_date=None,
             end_date=end_date,
             required_coverage=required_coverage,
         )
