@@ -436,6 +436,229 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             project = db.session.get(Project, project_id)
             self.assertEqual(project.required_coverage, 3000000)
 
+    def test_edit_project_shows_only_final_editable_fields(self):
+        with self.app.app_context():
+            project = Project(
+                name="Focused Edit",
+                contract_value=7500000,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                start_date=date(2026, 1, 1),
+                end_date=date(2027, 1, 1),
+                required_coverage=5000000,
+            )
+            db.session.add(project)
+            db.session.flush()
+            document = Document(
+                filename="projects/focused/contract.pdf",
+                original_name="contract.pdf",
+                document_type="Contract",
+                version=1,
+                project_id=project.id,
+                uploaded_by=self.owner_id,
+            )
+            db.session.add(document)
+            db.session.commit()
+            project_id = project.id
+
+        self.login()
+        response = self.client.get(f"/edit_project/{project_id}")
+        body = response.get_data(as_text=True)
+
+        self.assertIn("Project Name", body)
+        self.assertIn("Project End Date", body)
+        self.assertIn("Minimum General Liability Coverage", body)
+        self.assertIn("Assigned Subcontractors", body)
+        self.assertIn("Select the subcontractors working on this project.", body)
+        self.assertIn("Project Requirements", body)
+        self.assertIn("1 document on file", body)
+        self.assertIn("Contract", body)
+        self.assertIn("View Documents", body)
+        self.assertIn('id="required-coverage-custom-row" hidden', body)
+
+        self.assertNotIn("Contract Value", body)
+        self.assertNotIn("Start Date", body)
+        self.assertNotIn("Contract Status", body)
+        self.assertNotIn("Days Remaining", body)
+        self.assertNotIn("Initial Documents", body)
+        self.assertNotIn("Project Document Type", body)
+        self.assertNotIn("Upload Project Document", body)
+        self.assertNotIn("AI confidence", body)
+
+    def test_edit_project_shows_custom_amount_only_for_custom_coverage(self):
+        with self.app.app_context():
+            preset_project = Project(
+                name="Preset GL",
+                contract_value=0,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                required_coverage=5000000,
+            )
+            custom_project = Project(
+                name="Custom GL",
+                contract_value=0,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                required_coverage=3000000,
+            )
+            db.session.add_all([preset_project, custom_project])
+            db.session.commit()
+            preset_project_id = preset_project.id
+            custom_project_id = custom_project.id
+
+        self.login()
+
+        preset_response = self.client.get(f"/edit_project/{preset_project_id}")
+        preset_body = preset_response.get_data(as_text=True)
+        self.assertIn('id="required-coverage-custom-row" hidden', preset_body)
+
+        custom_response = self.client.get(f"/edit_project/{custom_project_id}")
+        custom_body = custom_response.get_data(as_text=True)
+        self.assertIn('id="required-coverage-custom-row"', custom_body)
+        self.assertNotIn('id="required-coverage-custom-row" hidden', custom_body)
+        self.assertIn('value="3000000"', custom_body)
+
+    def test_edit_project_ignores_removed_fields_from_manipulated_post(self):
+        original_start = date(2026, 1, 15)
+        original_contract_value = 4250000
+        with self.app.app_context():
+            project = Project(
+                name="Hardened Edit",
+                contract_value=original_contract_value,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                start_date=original_start,
+                end_date=date(2026, 12, 31),
+                required_coverage=1000000,
+            )
+            db.session.add(project)
+            db.session.commit()
+            project_id = project.id
+
+        self.login()
+        token = self.csrf_token(f"/edit_project/{project_id}")
+        response = self.client.post(
+            f"/edit_project/{project_id}",
+            data={
+                "csrf_token": token,
+                "name": "Hardened Edit Updated",
+                "contract_value": "not-a-number",
+                "start_date": "not-a-date",
+                "end_date": "2027-02-01",
+                "required_coverage_choice": "2000000",
+                "required_coverage_custom": "5000000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            project = db.session.get(Project, project_id)
+            self.assertEqual(project.name, "Hardened Edit Updated")
+            self.assertEqual(project.contract_value, original_contract_value)
+            self.assertEqual(project.start_date, original_start)
+            self.assertEqual(project.end_date, date(2027, 2, 1))
+            self.assertEqual(project.required_coverage, 2000000)
+
+    def test_edit_project_rejects_invalid_end_date_and_custom_coverage(self):
+        with self.app.app_context():
+            project = Project(
+                name="Reject Invalid",
+                contract_value=0,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                required_coverage=1000000,
+            )
+            db.session.add(project)
+            db.session.commit()
+            project_id = project.id
+
+        self.login()
+
+        token = self.csrf_token(f"/edit_project/{project_id}")
+        invalid_end_response = self.client.post(
+            f"/edit_project/{project_id}",
+            data={
+                "csrf_token": token,
+                "name": "Reject Invalid",
+                "end_date": "not-a-date",
+                "required_coverage_choice": "1000000",
+            },
+        )
+        self.assertEqual(invalid_end_response.status_code, 200)
+        self.assertIn("Invalid date format.", invalid_end_response.get_data(as_text=True))
+
+        token = self.csrf_token(f"/edit_project/{project_id}")
+        invalid_custom_response = self.client.post(
+            f"/edit_project/{project_id}",
+            data={
+                "csrf_token": token,
+                "name": "Reject Invalid",
+                "required_coverage_choice": "custom",
+                "required_coverage_custom": "-1",
+            },
+        )
+        self.assertEqual(invalid_custom_response.status_code, 200)
+        self.assertIn(
+            "Invalid minimum coverage amount.",
+            invalid_custom_response.get_data(as_text=True),
+        )
+
+    def test_edit_project_updates_assigned_subcontractors_with_org_isolation(self):
+        with self.app.app_context():
+            project = Project(
+                name="Assignments",
+                contract_value=0,
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+                required_coverage=None,
+            )
+            db.session.add(project)
+            db.session.commit()
+            project_id = project.id
+
+        self.login()
+        token = self.csrf_token(f"/edit_project/{project_id}")
+        response = self.client.post(
+            f"/edit_project/{project_id}",
+            data={
+                "csrf_token": token,
+                "name": "Assignments",
+                "required_coverage_choice": "",
+                "subcontractors": [
+                    str(self.subcontractor_id),
+                    str(self.other_subcontractor_id),
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            links = ProjectSubcontractor.query.filter_by(
+                project_id=project_id
+            ).all()
+            self.assertEqual(len(links), 1)
+            self.assertEqual(links[0].subcontractor_id, self.subcontractor_id)
+
+        token = self.csrf_token(f"/edit_project/{project_id}")
+        response = self.client.post(
+            f"/edit_project/{project_id}",
+            data={
+                "csrf_token": token,
+                "name": "Assignments",
+                "required_coverage_choice": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            links = ProjectSubcontractor.query.filter_by(
+                project_id=project_id
+            ).all()
+            self.assertEqual(links, [])
+
     def test_other_organization_project_cannot_be_edited(self):
         with self.app.app_context():
             other_project = Project(

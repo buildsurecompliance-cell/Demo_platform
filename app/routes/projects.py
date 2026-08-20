@@ -589,11 +589,21 @@ def _render_edit_project(
             for link in project.subs
         }
 
+    project_documents = (
+        Document.query
+        .filter_by(project_id=project.id)
+        .order_by(Document.document_type.asc(), Document.version.desc())
+        .all()
+    )
+    project_document_types_on_file = []
+    for document in project_documents:
+        if document.document_type not in project_document_types_on_file:
+            project_document_types_on_file.append(document.document_type)
+
     return render_template(
         "edit_project.html",
         project=project,
         subs=subs,
-        project_document_types=PROJECT_DOCUMENT_TYPES,
         coverage_options=PROJECT_REQUIRED_COVERAGE_OPTIONS,
         coverage_form=_coverage_form_values(
             getattr(project, "required_coverage", None),
@@ -601,6 +611,8 @@ def _render_edit_project(
         ),
         form_data=form_data,
         selected_subcontractor_ids=selected_subcontractor_ids,
+        project_document_count=len(project_documents),
+        project_document_types_on_file=project_document_types_on_file,
     )
 
 
@@ -792,19 +804,6 @@ def edit_project(project_id):
                 selected_sub_ids,
             )
 
-        value_raw = request.form.get("contract_value")
-
-        try:
-            contract_value = float(value_raw) if value_raw else 0
-        except ValueError:
-            flash("Invalid contract value.", "danger")
-            return _render_edit_project(
-                project,
-                subs,
-                request.form,
-                selected_sub_ids,
-            )
-
         try:
             required_coverage = _parse_required_coverage(request.form)
         except ValueError:
@@ -816,16 +815,9 @@ def edit_project(project_id):
                 selected_sub_ids,
             )
 
-        start_raw = request.form.get("start_date")
         end_raw = request.form.get("end_date")
 
         try:
-            start_date = (
-                datetime.strptime(start_raw, "%Y-%m-%d").date()
-                if start_raw
-                else None
-            )
-
             end_date = (
                 datetime.strptime(end_raw, "%Y-%m-%d").date()
                 if end_raw
@@ -841,7 +833,7 @@ def edit_project(project_id):
                 selected_sub_ids,
             )
 
-        if start_date and end_date and end_date < start_date:
+        if project.start_date and end_date and end_date < project.start_date:
             flash("End date cannot be before start date.", "danger")
             return _render_edit_project(
                 project,
@@ -850,10 +842,8 @@ def edit_project(project_id):
                 selected_sub_ids,
             )
 
-        project.start_date = start_date
         project.end_date = end_date
         project.name = name
-        project.contract_value = contract_value
         project.required_coverage = required_coverage
 
         current_links = ProjectSubcontractor.query.filter_by(
@@ -877,58 +867,10 @@ def edit_project(project_id):
                 )
                 db.session.add(new_link)
 
-        saved_storage_keys = []
-        uploaded_contract_documents = []
-        file = request.files.get("file")
-
-        if file and file.filename != "":
-
-            if allowed_file(file.filename):
-
-                original_name = file.filename
-
-                storage_key = save_document_file(
-                    file,
-                    original_name,
-                    project_id=project.id,
-                )
-                saved_storage_keys.append(storage_key)
-
-                doc_type = normalize_project_document_type(
-                    request.form.get("doc_type")
-                )
-
-                last_doc = (
-                    Document.query
-                    .filter_by(
-                        project_id=project.id,
-                        document_type=doc_type,
-                    )
-                    .order_by(Document.version.desc())
-                    .first()
-                )
-
-                version = last_doc.version + 1 if last_doc else 1
-
-                new_doc = Document(
-                    filename=storage_key,
-                    original_name=original_name,
-                    document_type=doc_type,
-                    version=version,
-                    project_id=project.id,
-                    uploaded_by=current_user.id,
-                )
-
-                db.session.add(new_doc)
-
-                if supports_automatic_analysis(doc_type):
-                    uploaded_contract_documents.append(new_doc)
-
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            _cleanup_saved_documents(saved_storage_keys)
             logger.exception(
                 "Project update failed for project_id=%s",
                 project.id,
@@ -943,24 +885,7 @@ def edit_project(project_id):
                 )
             )
 
-        uploaded_contract_document_ids = [
-            doc.id
-            for doc in uploaded_contract_documents
-        ]
-
-        if uploaded_contract_document_ids:
-            if _analyze_created_contract_documents(
-                uploaded_contract_document_ids
-            ):
-                flash("Project updated and contract analyzed successfully.", "success")
-            else:
-                flash(
-                    "Project updated, but automatic contract analysis could not be completed. "
-                    "You can retry from the project page.",
-                    "warning",
-                )
-        else:
-            flash("Project updated successfully!", "success")
+        flash("Project updated successfully!", "success")
 
         return redirect(
             url_for(

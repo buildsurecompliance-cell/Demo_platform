@@ -2,16 +2,15 @@
 {% block content %}
 
 {% set project_name = form_data.get('name', project.name) if form_data else project.name %}
-{% set contract_value = form_data.get('contract_value', project.contract_value) if form_data else project.contract_value %}
-{% set start_value = form_data.get('start_date', '') if form_data else (project.start_date.strftime('%Y-%m-%d') if project.start_date else '') %}
 {% set end_value = form_data.get('end_date', '') if form_data else (project.end_date.strftime('%Y-%m-%d') if project.end_date else '') %}
+{% set custom_visible = coverage_form.choice == 'custom' %}
 
 <div class="form-shell">
 
     <div class="form-header">
         <div>
             <h1>Edit Project</h1>
-            <p class="text-muted mb-0">Update project details, requirements, documents, and assignments.</p>
+            <p class="text-muted mb-0">Update project requirements and assignments.</p>
         </div>
         <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
             Back
@@ -38,55 +37,15 @@
             </div>
 
             <div class="form-field">
-                <label for="contract_value">Contract Value</label>
-                <div class="input-prefix">
-                    <span>$</span>
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        id="contract_value"
-                        name="contract_value"
-                        class="form-control"
-                        value="{{ contract_value }}"
-                        aria-describedby="contract-value-help">
-                </div>
-                <div id="contract-value-help" class="field-help">Optional. Used for project context, not readiness decisions.</div>
+                <label for="end_date">Project End Date</label>
+                <input
+                    type="date"
+                    id="end_date"
+                    name="end_date"
+                    class="form-control"
+                    value="{{ end_value }}">
+                <div class="field-help">Optional contract completion reference date.</div>
             </div>
-
-            <div class="form-grid">
-                <div class="form-field">
-                    <label for="start_date">Start Date</label>
-                    <input
-                        type="date"
-                        id="start_date"
-                        name="start_date"
-                        class="form-control"
-                        value="{{ start_value }}">
-                    <div class="field-help">Optional mobilization reference date.</div>
-                </div>
-
-                <div class="form-field">
-                    <label for="end_date">End Date</label>
-                    <input
-                        type="date"
-                        id="end_date"
-                        name="end_date"
-                        class="form-control"
-                        value="{{ end_value }}">
-                    <div class="field-help">Optional contract completion reference date.</div>
-                </div>
-            </div>
-
-            {% if project.end_date %}
-            <div class="alert alert-info mb-0">
-                Contract Status:
-                <strong>{{ project.contract_status }}</strong>
-                <br>
-                Days Remaining:
-                <strong>{{ project.days_remaining }}</strong>
-            </div>
-            {% endif %}
         </section>
 
         <section class="form-card">
@@ -110,7 +69,7 @@
                 </div>
             </div>
 
-            <div class="form-field">
+            <div class="form-field" id="required-coverage-custom-row" {% if not custom_visible %}hidden{% endif %}>
                 <label for="required_coverage_custom">Custom Amount</label>
                 <div class="input-prefix">
                     <span>$</span>
@@ -131,7 +90,7 @@
         <section class="form-card">
             <h4>Assigned Subcontractors</h4>
             <p class="field-help">
-                Optional. Select subcontractors that should be checked against this project's requirements.
+                Select the subcontractors working on this project.
             </p>
 
             {% if subs %}
@@ -154,52 +113,56 @@
             {% endif %}
         </section>
 
+        <section class="form-card">
+            <h4>Project Requirements</h4>
+            <p class="field-help mb-2">
+                {{ project_document_count }} document{% if project_document_count != 1 %}s{% endif %} on file.
+            </p>
+            {% if project_document_types_on_file %}
+            <div class="field-help mb-3">
+                {{ project_document_types_on_file|join(", ") }}
+            </div>
+            {% endif %}
+            <a
+                href="{{ url_for('projects.view_project', project_id=project.id, _anchor='project-documents') }}"
+                class="btn btn-outline-secondary">
+                View Documents
+            </a>
+        </section>
+
         <div class="form-actions mb-4">
             <button type="submit" class="btn btn-success">
                 Save Changes
             </button>
+            <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
         </div>
     </form>
 
-    <form
-        action="{{ url_for('projects.upload_project_document', project_id=project.id) }}"
-        method="POST"
-        enctype="multipart/form-data">
-        {{ csrf_input() }}
-
-        <section class="form-card">
-            <h4>Initial Documents</h4>
-
-            <div class="form-grid">
-                <div class="form-field">
-                    <label for="doc_type">Project Document Type</label>
-                    <select id="doc_type" name="doc_type" class="form-select" required>
-                        {% for document_type in project_document_types %}
-                        <option value="{{ document_type }}">
-                            {{ document_type }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="file">Upload Project Document</label>
-                    <input
-                        type="file"
-                        id="file"
-                        name="file"
-                        class="form-control"
-                        required>
-                    <div class="field-help">Optional separate upload for Contract, Scope, or Owner Requirements.</div>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary">
-                Upload Document
-            </button>
-        </section>
-    </form>
-
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const choice = document.getElementById("required_coverage_choice");
+    const customRow = document.getElementById("required-coverage-custom-row");
+    const customInput = document.getElementById("required_coverage_custom");
+
+    if (!choice || !customRow || !customInput) {
+        return;
+    }
+
+    const syncCustomAmount = () => {
+        const isCustom = choice.value === "custom";
+        customRow.hidden = !isCustom;
+        if (!isCustom) {
+            customInput.value = "";
+        }
+    };
+
+    choice.addEventListener("change", syncCustomAmount);
+    syncCustomAmount();
+});
+</script>
 
 {% endblock %}
