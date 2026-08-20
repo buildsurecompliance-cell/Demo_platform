@@ -19,7 +19,7 @@ from flask_login import (
 )
 
 from werkzeug.utils import secure_filename
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.decorators import subscription_required
 from app.extensions import db
@@ -83,6 +83,29 @@ def _money_label(value):
         return f"${amount / 1_000_000:.0f}M"
 
     return f"${amount:,.0f}"
+
+
+def _subcontractor_list_row(sub):
+    summary = get_subcontractor_coi_summary(sub)
+
+    return {
+        "subcontractor": sub,
+        "company": sub.name,
+        "trade": sub.role or "Not specified",
+        "expiration": (
+            summary.expiration.strftime("%m/%d/%Y")
+            if summary.expiration
+            else "Not available"
+        ),
+        "coverage": (
+            _money_label(summary.coverage)
+            if summary.has_coverage
+            else "Not available"
+        ),
+        "status": summary.status,
+        "project_count": len(sub.projects),
+        "document_count": len(sub.documents),
+    }
 
 
 def _coverage_gap_label(current_coverage, required_coverage):
@@ -415,6 +438,61 @@ def _render_edit_sub(
         selected_projects=selected_projects,
         form_data=form_data,
         coi_summary=get_subcontractor_coi_summary(sub),
+    )
+
+
+@subcontractors_bp.route("/subcontractors")
+@login_required
+@subscription_required
+def list_subcontractors():
+    search = request.args.get(
+        "search",
+        "",
+    ).strip()
+    status_filter = request.args.get(
+        "status",
+        "",
+    ).strip().upper()
+
+    query = scoped_subcontractor_query().options(
+        selectinload(Subcontractor.documents),
+        selectinload(Subcontractor.projects),
+    )
+
+    if search:
+        query = query.filter(
+            Subcontractor.name.ilike(f"%{search}%")
+        )
+
+    subs = query.order_by(
+        Subcontractor.name.asc()
+    ).all()
+
+    rows = [
+        _subcontractor_list_row(sub)
+        for sub in subs
+    ]
+
+    valid_statuses = {
+        "VALID",
+        "EXPIRED",
+        "MISSING",
+        "CHECKING",
+    }
+    if status_filter in valid_statuses:
+        rows = [
+            row
+            for row in rows
+            if row["status"] == status_filter
+        ]
+    else:
+        status_filter = ""
+
+    return render_template(
+        "subcontractors_list.html",
+        sub_rows=rows,
+        search=search,
+        status_filter=status_filter,
     )
 
 

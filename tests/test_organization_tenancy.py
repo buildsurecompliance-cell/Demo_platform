@@ -161,8 +161,7 @@ class OrganizationTenancyTest(unittest.TestCase):
         response = self.client.get("/dashboard")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Shared Project", response.data)
-        self.assertIn(b"Shared Sub", response.data)
+        self.assertIn(b"1 active project", response.data)
 
     def test_different_organizations_are_isolated(self):
         with self.app.app_context():
@@ -300,7 +299,7 @@ class OrganizationTenancyTest(unittest.TestCase):
         response = self.client.get("/dashboard")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Organization Metric Project", response.data)
+        self.assertIn(b"1 active project", response.data)
 
     def test_session_organization_id_must_belong_to_current_user(self):
         self.login(self.owner_id)

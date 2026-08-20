@@ -6,8 +6,10 @@
 <div class="ux-page-header">
 <div>
 <h1>Compliance Dashboard</h1>
-<span class="ux-sr-only">Risk & Mobilization Dashboard</span>
-<p class="ux-help mb-0">Operational view of project readiness and document compliance.</p>
+<p class="ux-help mb-0">{{ active_projects }} active project{% if active_projects != 1 %}s{% endif %}</p>
+{% if unassigned_projects %}
+<p class="ux-help mb-0">{{ unassigned_projects }} project{% if unassigned_projects != 1 %}s have{% else %} has{% endif %} no subcontractors assigned.</p>
+{% endif %}
 </div>
 </div>
 
@@ -15,16 +17,12 @@
 <h2 id="operational-metrics" class="ux-sr-only">Operational Metrics</h2>
 <div class="ux-grid">
 <div class="ux-metric">
-<span class="ux-metric-value">{{ active_projects }}</span>
-<span class="ux-metric-label">Active Projects</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ subs|length }}</span>
-<span class="ux-metric-label">Total Subcontractors</span>
-</div>
-<div class="ux-metric">
 <span class="ux-metric-value">{{ ready_projects }}</span>
 <span class="ux-metric-label">Ready Projects</span>
+</div>
+<div class="ux-metric">
+<span class="ux-metric-value">{{ blocked_projects }}</span>
+<span class="ux-metric-label">Blocked Projects</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ checking_projects }}</span>
@@ -32,15 +30,7 @@
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ needs_attention_count }}</span>
-<span class="ux-metric-label">Needs Attention Items</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ blocked_projects }}</span>
-<span class="ux-metric-label">Blocked Projects</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ unassigned_projects }}</span>
-<span class="ux-metric-label">No Subcontractors Projects</span>
+<span class="ux-metric-label">Needs Attention</span>
 </div>
 </div>
 </section>
@@ -49,166 +39,48 @@
 <div class="ux-card-header">
 <div>
 <h2 id="needs-attention">Needs Attention</h2>
-<p class="ux-help mb-0">Subcontractors that cannot work today or need compliance follow-up.</p>
+<p class="ux-help mb-0">Items where a GC action is available.</p>
 </div>
 </div>
 
+{% if needs_attention %}
 <div class="ux-table-wrap">
 <table class="ux-table">
-<caption class="ux-sr-only">Subcontractors needing compliance attention</caption>
+<caption class="ux-sr-only">Compliance items needing action</caption>
 <thead>
 <tr>
 <th scope="col">Company</th>
 <th scope="col">Project</th>
-<th scope="col">Status</th>
 <th scope="col">Issue</th>
+<th scope="col">Action</th>
 </tr>
 </thead>
 <tbody>
-{% if needs_attention %}
 {% for item in needs_attention %}
 <tr>
 <td>{{ item.subcontractor.name }}</td>
 <td>{{ item.project.name }}</td>
+<td>{{ item.issue }}</td>
 <td>
-<span class="ux-status ux-status-{% if item.status == 'BLOCKED' %}danger{% else %}warning{% endif %}">{{ item.status }}</span>
-</td>
-<td>{{ item.reason }}</td>
-</tr>
-{% endfor %}
-{% else %}
-<tr><td colspan="4"><div class="ux-empty">No items need attention.</div></td></tr>
-{% endif %}
-</tbody>
-</table>
-</div>
-</section>
-
-<section class="ux-card" id="projects" aria-labelledby="projects-heading">
-<div class="ux-card-header">
-<h2 id="projects-heading">Projects</h2>
-<a href="{{ url_for('projects.add_project') }}" class="ux-btn ux-btn-primary">+ New Project</a>
-</div>
-
-<form method="GET" class="form-actions mb-3">
-<input type="text" class="form-control" name="project_search" placeholder="Search project..." value="{{ request.args.get('project_search','') }}" aria-label="Search projects">
-<select class="form-select" name="contract_status" aria-label="Contract status">
-<option value="">All Contract Status</option>
-<option value="active" {% if request.args.get('contract_status') == 'active' %}selected{% endif %}>Active</option>
-<option value="expiring" {% if request.args.get('contract_status') == 'expiring' %}selected{% endif %}>Expiring Soon</option>
-<option value="expired" {% if request.args.get('contract_status') == 'expired' %}selected{% endif %}>Expired</option>
-</select>
-<button type="submit" class="ux-btn ux-btn-primary">Filter</button>
-<a href="{{ url_for('dashboard.dashboard') }}" class="ux-btn ux-btn-secondary">Reset</a>
-</form>
-
-<div class="ux-table-wrap">
-<table class="ux-table">
-<caption class="ux-sr-only">Projects readiness list</caption>
-<thead>
-<tr>
-<th scope="col">Project</th>
-<th scope="col">Required GL</th>
-<th scope="col">Schedule / Days Left</th>
-<th scope="col">Subcontractors</th>
-<th scope="col">Readiness</th>
-<th scope="col">Actions</th>
-</tr>
-</thead>
-<tbody>
-{% for row in project_rows %}
-<tr>
-<td>{{ row.name }}</td>
-<td>{{ row.required_coverage }}</td>
-<td>{{ row.schedule }}</td>
-<td>{{ row.subcontractor_count }}</td>
-<td><span class="ux-status ux-status-{{ row.readiness|lower|replace(' ', '-') }}">{{ row.readiness }}</span></td>
-<td>
-<div class="ux-actions">
-<a href="{{ url_for('projects.view_project', project_id=row.project.id) }}" class="ux-btn ux-btn-primary" aria-label="View {{ row.name }}">View</a>
-<a href="{{ url_for('projects.edit_project', project_id=row.project.id) }}" class="ux-btn ux-btn-secondary" aria-label="Edit {{ row.name }}">Edit</a>
-<form action="{{ url_for('projects.delete_project', id=row.project.id) }}" method="POST" onsubmit="return confirm('Delete this project?');">
+{% if item.action.kind == "post" %}
+<form method="POST" action="{{ url_for(item.action.endpoint, **item.action.params) }}">
 {{ csrf_input() }}
-<button class="ux-btn ux-btn-danger" type="submit">Delete</button>
+<button type="submit" class="ux-btn ux-btn-primary">{{ item.action.label }}</button>
 </form>
-</div>
-</td>
-</tr>
 {% else %}
-<tr><td colspan="6"><div class="ux-empty">No projects yet.</div></td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</section>
-
-<section class="ux-card" id="subcontractors" aria-labelledby="subcontractors-heading">
-<div class="ux-card-header">
-<h2 id="subcontractors-heading">Subcontractors</h2>
-<a href="{{ url_for('subcontractors.add_sub') }}" class="ux-btn ux-btn-primary">+ Add Subcontractor</a>
-</div>
-
-<form method="GET" class="form-actions mb-3">
-<input type="text" class="form-control" name="search" placeholder="Search by company" value="{{ request.args.get('search','') }}" aria-label="Search subcontractors">
-<select class="form-select" name="status" aria-label="Subcontractor status">
-<option value="">All Status</option>
-<option value="missing" {% if request.args.get('status') == 'missing' %}selected{% endif %}>Missing</option>
-<option value="valid" {% if request.args.get('status') == 'valid' %}selected{% endif %}>Valid</option>
-<option value="checking" {% if request.args.get('status') == 'checking' %}selected{% endif %}>Checking</option>
-<option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>Expired</option>
-</select>
-<button type="submit" class="ux-btn ux-btn-primary">Filter</button>
-<a href="{{ url_for('dashboard.dashboard') }}" class="ux-btn ux-btn-secondary">Reset</a>
-</form>
-
-<div class="ux-table-wrap">
-<table class="ux-table">
-<caption class="ux-sr-only">Subcontractors compliance list</caption>
-<thead>
-<tr>
-<th scope="col">Company</th>
-<th scope="col">Trade</th>
-<th scope="col">COI Expiration</th>
-<th scope="col">Coverage</th>
-<th scope="col">Status</th>
-<th scope="col">Projects</th>
-<th scope="col">Documents</th>
-<th scope="col">Actions</th>
-</tr>
-</thead>
-<tbody>
-{% for row in sub_rows %}
-<tr>
-<td>{{ row.company }}</td>
-<td>{{ row.trade }}</td>
-<td>{{ row.expiration }}</td>
-<td>{{ row.coverage }}</td>
-<td><span class="ux-status ux-status-{{ row.status|lower|replace(' ', '-') }}">{{ row.status }}</span></td>
-<td>{{ row.project_count }}</td>
-<td>
-{% if row.document_count %}
-<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=row.subcontractor.id) }}">{{ row.document_count }} file(s)</a>
-{% else %}
-Not available
+<a href="{{ url_for(item.action.endpoint, **item.action.params) }}" class="ux-btn ux-btn-secondary">
+{{ item.action.label }}
+</a>
 {% endif %}
 </td>
-<td>
-<div class="ux-actions">
-<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=row.subcontractor.id) }}" class="ux-btn ux-btn-primary" aria-label="View documents for {{ row.company }}">View Documents</a>
-<a href="{{ url_for('subcontractors.edit_sub', id=row.subcontractor.id) }}" class="ux-btn ux-btn-secondary" aria-label="Edit {{ row.company }}">Edit</a>
-<form method="POST" action="{{ url_for('subcontractors.delete_sub', id=row.subcontractor.id) }}" onsubmit="return confirm('Delete this subcontractor?');">
-{{ csrf_input() }}
-<button type="submit" class="ux-btn ux-btn-danger">Delete</button>
-</form>
-</div>
-</td>
 </tr>
-{% else %}
-<tr><td colspan="8"><div class="ux-empty">No subcontractors yet.</div></td></tr>
 {% endfor %}
 </tbody>
 </table>
 </div>
+{% else %}
+<div class="ux-empty">No compliance issues need your attention.</div>
+{% endif %}
 </section>
 
 </div>

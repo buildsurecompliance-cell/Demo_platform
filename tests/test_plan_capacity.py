@@ -497,7 +497,7 @@ class PlanCapacityTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
-        self.assertIn("Risk & Mobilization Dashboard", body)
+        self.assertIn("Compliance Dashboard", body)
         self.assertNotIn("You need to subscribe", body)
 
     def test_user_without_membership_is_sent_to_organization_recovery(self):

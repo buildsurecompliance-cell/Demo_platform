@@ -21,7 +21,7 @@ from flask_login import (
     login_required,
 )
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.decorators import subscription_required
 from app.extensions import db
@@ -70,6 +70,9 @@ from app.services.plan_capacity import (
     PlanCapacityError,
     get_organization_usage,
     require_project_capacity,
+)
+from app.services.dashboard.project_readiness import (
+    dashboard_readiness_for_project,
 )
 
 
@@ -138,6 +141,27 @@ def _coverage_label(value):
         return f"${amount // 1_000_000}M"
 
     return _money_full(amount)
+
+
+def _project_list_schedule_label(project):
+    if project.days_remaining is None:
+        return "Not scheduled"
+
+    if project.days_remaining == 0:
+        return "Expired"
+
+    return f"{project.days_remaining} days left"
+
+
+def _project_list_row(project):
+    return {
+        "project": project,
+        "name": project.name,
+        "required_coverage": _coverage_label(project.required_coverage),
+        "schedule": _project_list_schedule_label(project),
+        "subcontractor_count": len(project.subs),
+        "readiness": dashboard_readiness_for_project(project),
+    }
 
 
 def _mobilization_label(status):
@@ -613,6 +637,39 @@ def _render_edit_project(
         selected_subcontractor_ids=selected_subcontractor_ids,
         project_document_count=len(project_documents),
         project_document_types_on_file=project_document_types_on_file,
+    )
+
+
+@projects_bp.route("/projects")
+@login_required
+@subscription_required
+def list_projects():
+    search = request.args.get(
+        "search",
+        "",
+    ).strip()
+
+    query = scoped_project_query().options(
+        selectinload(Project.subs)
+        .selectinload(ProjectSubcontractor.subcontractor),
+    )
+
+    if search:
+        query = query.filter(
+            Project.name.ilike(f"%{search}%")
+        )
+
+    projects = query.order_by(
+        Project.id.desc()
+    ).all()
+
+    return render_template(
+        "projects_list.html",
+        project_rows=[
+            _project_list_row(project)
+            for project in projects
+        ],
+        search=search,
     )
 
 

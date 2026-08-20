@@ -64,7 +64,7 @@ class AuthPaidLegacyTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            "Risk & Mobilization Dashboard",
+            "Compliance Dashboard",
             response.get_data(as_text=True),
         )
 

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="ux-page">
+
+<div class="ux-page-header">
+<div>
+<h1>Subcontractors</h1>
+<p class="ux-help mb-0">Manage subcontractor COI documents and assignments.</p>
+</div>
+<a href="{{ url_for('subcontractors.add_sub') }}" class="ux-btn ux-btn-primary">+ Add Subcontractor</a>
+</div>
+
+<section class="ux-card" aria-labelledby="subcontractors-list">
+<div class="ux-card-header">
+<h2 id="subcontractors-list">Subcontractor List</h2>
+</div>
+
+<form method="GET" class="form-actions mb-3">
+<input type="text" class="form-control" name="search" placeholder="Search by company" value="{{ search }}" aria-label="Search subcontractors">
+<select class="form-select" name="status" aria-label="Subcontractor document status">
+<option value="">All Status</option>
+<option value="VALID" {% if status_filter == "VALID" %}selected{% endif %}>Valid</option>
+<option value="EXPIRED" {% if status_filter == "EXPIRED" %}selected{% endif %}>Expired</option>
+<option value="MISSING" {% if status_filter == "MISSING" %}selected{% endif %}>Missing</option>
+<option value="CHECKING" {% if status_filter == "CHECKING" %}selected{% endif %}>Checking</option>
+</select>
+<button type="submit" class="ux-btn ux-btn-primary">Filter</button>
+{% if search or status_filter %}
+<a href="{{ url_for('subcontractors.list_subcontractors') }}" class="ux-btn ux-btn-secondary">Reset</a>
+{% endif %}
+</form>
+
+<div class="ux-table-wrap">
+<table class="ux-table">
+<caption class="ux-sr-only">Subcontractors document list</caption>
+<thead>
+<tr>
+<th scope="col">Company</th>
+<th scope="col">Trade</th>
+<th scope="col">COI Expiration</th>
+<th scope="col">Coverage</th>
+<th scope="col">Status</th>
+<th scope="col">Projects</th>
+<th scope="col">Documents</th>
+<th scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
+{% for row in sub_rows %}
+<tr>
+<td>{{ row.company }}</td>
+<td>{{ row.trade }}</td>
+<td>{{ row.expiration }}</td>
+<td>{{ row.coverage }}</td>
+<td><span class="ux-status ux-status-{{ row.status|lower|replace(' ', '-') }}">{{ row.status }}</span></td>
+<td>{{ row.project_count }}</td>
+<td>
+{% if row.document_count %}
+<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=row.subcontractor.id) }}">{{ row.document_count }} file(s)</a>
+{% else %}
+Not available
+{% endif %}
+</td>
+<td>
+<div class="ux-actions">
+<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=row.subcontractor.id) }}" class="ux-btn ux-btn-primary" aria-label="View documents for {{ row.company }}">View Documents</a>
+<a href="{{ url_for('subcontractors.edit_sub', id=row.subcontractor.id) }}" class="ux-btn ux-btn-secondary" aria-label="Edit {{ row.company }}">Edit</a>
+<form method="POST" action="{{ url_for('subcontractors.delete_sub', id=row.subcontractor.id) }}" onsubmit="return confirm('Delete this subcontractor?');">
+{{ csrf_input() }}
+<button type="submit" class="ux-btn ux-btn-danger">Delete</button>
+</form>
+</div>
+</td>
+</tr>
+{% else %}
+<tr><td colspan="8"><div class="ux-empty">No subcontractors yet.</div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+
+{% endblock %}

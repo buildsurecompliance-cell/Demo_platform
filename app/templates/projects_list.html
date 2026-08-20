@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="ux-page">
+
+<div class="ux-page-header">
+<div>
+<h1>Projects</h1>
+<p class="ux-help mb-0">Manage project readiness and requirements.</p>
+</div>
+<a href="{{ url_for('projects.add_project') }}" class="ux-btn ux-btn-primary">+ New Project</a>
+</div>
+
+<section class="ux-card" aria-labelledby="projects-list">
+<div class="ux-card-header">
+<h2 id="projects-list">Project List</h2>
+</div>
+
+<form method="GET" class="form-actions mb-3">
+<input type="text" class="form-control" name="search" placeholder="Search project..." value="{{ search }}" aria-label="Search project">
+<button type="submit" class="ux-btn ux-btn-primary">Search</button>
+{% if search %}
+<a href="{{ url_for('projects.list_projects') }}" class="ux-btn ux-btn-secondary">Reset</a>
+{% endif %}
+</form>
+
+<div class="ux-table-wrap">
+<table class="ux-table">
+<caption class="ux-sr-only">Projects readiness list</caption>
+<thead>
+<tr>
+<th scope="col">Project</th>
+<th scope="col">Required GL</th>
+<th scope="col">Schedule / Days Left</th>
+<th scope="col">Subcontractors</th>
+<th scope="col">Readiness</th>
+<th scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
+{% for row in project_rows %}
+<tr>
+<td>{{ row.name }}</td>
+<td>{{ row.required_coverage }}</td>
+<td>{{ row.schedule }}</td>
+<td>{{ row.subcontractor_count }}</td>
+<td><span class="ux-status ux-status-{{ row.readiness|lower|replace(' ', '-') }}">{{ row.readiness }}</span></td>
+<td>
+<div class="ux-actions">
+<a href="{{ url_for('projects.view_project', project_id=row.project.id) }}" class="ux-btn ux-btn-primary" aria-label="View {{ row.name }}">View</a>
+<a href="{{ url_for('projects.edit_project', project_id=row.project.id) }}" class="ux-btn ux-btn-secondary" aria-label="Edit {{ row.name }}">Edit</a>
+<form action="{{ url_for('projects.delete_project', id=row.project.id) }}" method="POST" onsubmit="return confirm('Delete this project?');">
+{{ csrf_input() }}
+<button class="ux-btn ux-btn-danger" type="submit">Delete</button>
+</form>
+</div>
+</td>
+</tr>
+{% else %}
+<tr><td colspan="6"><div class="ux-empty">No projects yet.</div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+
+{% endblock %}

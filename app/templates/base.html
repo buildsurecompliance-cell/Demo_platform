@@ -668,12 +668,12 @@ display:block;
    class="{% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
 Dashboard
 </a>
-<a href="{{ url_for('dashboard.dashboard') }}#projects"
-   class="{% if request.endpoint in ['projects.view_project', 'projects.edit_project', 'projects.add_project'] %}active{% endif %}">
+<a href="{{ url_for('projects.list_projects') }}"
+   class="{% if request.endpoint in ['projects.list_projects', 'projects.view_project', 'projects.edit_project', 'projects.add_project'] %}active{% endif %}">
 Projects
 </a>
-<a href="{{ url_for('dashboard.dashboard') }}#subcontractors"
-   class="{% if request.endpoint in ['subcontractors.view_sub_documents', 'subcontractors.edit_sub', 'subcontractors.add_sub'] %}active{% endif %}">
+<a href="{{ url_for('subcontractors.list_subcontractors') }}"
+   class="{% if request.endpoint in ['subcontractors.list_subcontractors', 'subcontractors.view_sub_documents', 'subcontractors.edit_sub', 'subcontractors.add_sub'] %}active{% endif %}">
 Subcontractors
 </a>
 <a href="{{ url_for('team.team') }}"

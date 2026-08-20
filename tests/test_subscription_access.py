@@ -178,7 +178,7 @@ class SubscriptionAccessTest(unittest.TestCase):
         response = self.client.get("/dashboard")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Protected Project", response.get_data(as_text=True))
+        self.assertIn("1 active project", response.get_data(as_text=True))
 
     def test_blocked_subscription_renders_friendly_html(self):
         self.set_subscription_status(STATUS_INACTIVE)
