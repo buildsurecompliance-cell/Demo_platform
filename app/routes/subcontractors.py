@@ -48,6 +48,9 @@ from app.services.documents.storage import (
 from app.services.documents.types import (
     SUBCONTRACTOR_DOCUMENT_TYPE,
 )
+from app.services.subcontractors.coi_summary import (
+    get_subcontractor_coi_summary,
+)
 from app.services.organizations import (
     get_current_organization,
     project_scope_filter,
@@ -411,6 +414,7 @@ def _render_edit_sub(
         projects=projects,
         selected_projects=selected_projects,
         form_data=form_data,
+        coi_summary=get_subcontractor_coi_summary(sub),
     )
 
 
@@ -614,7 +618,6 @@ def edit_sub(id):
 
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").lower().strip()
-        phone = request.form.get("phone")
         role = request.form.get("role")
         project_ids = _selected_owned_project_ids()
 
@@ -627,36 +630,9 @@ def edit_sub(id):
                 project_ids,
             )
 
-        expiration_raw = request.form.get("coi_expiration")
-
-        try:
-            coi_expiration = _parse_optional_date(expiration_raw)
-        except ValueError:
-            flash("Invalid date format.", "danger")
-            return _render_edit_sub(
-                sub,
-                projects,
-                request.form,
-                project_ids,
-            )
-
-        try:
-            timezone_name = _form_timezone()
-        except ValueError:
-            flash("Invalid timezone.", "danger")
-            return _render_edit_sub(
-                sub,
-                projects,
-                request.form,
-                project_ids,
-            )
-
         sub.name = name
         sub.email = email
-        sub.phone = phone
         sub.role = role
-        sub.timezone = timezone_name
-        sub.coi_expiration = coi_expiration
 
         current_links = ProjectSubcontractor.query.filter_by(
             subcontractor_id=sub.id
@@ -681,79 +657,11 @@ def edit_sub(id):
             )
             db.session.add(link)
 
-        uploaded_docs = []
-        saved_storage_keys = []
-
-        files = request.files.getlist("documents")
-
-        for file in files:
-
-            if not file or file.filename == "":
-                continue
-
-            if not allowed_file(file.filename):
-                flash(f"Invalid file type: {file.filename}", "danger")
-                continue
-
-            try:
-                original_name = file.filename
-
-                doc_type = SUBCONTRACTOR_DOCUMENT_TYPE
-
-                existing_doc = (
-                    Document.query
-                    .filter_by(
-                        sub_id=sub.id,
-                        document_type=doc_type,
-                    )
-                    .order_by(Document.version.desc())
-                    .first()
-                )
-
-                new_version = (
-                    existing_doc.version + 1
-                    if existing_doc
-                    else 1
-                )
-
-                storage_key = save_document_file(
-                    file,
-                    original_name,
-                    sub_id=sub.id,
-                )
-                saved_storage_keys.append(storage_key)
-
-                new_doc = Document(
-                    filename=storage_key,
-                    original_name=original_name,
-                    document_type=doc_type,
-                    version=new_version,
-                    sub_id=sub.id,
-                    uploaded_by=current_user.id,
-                )
-
-                db.session.add(new_doc)
-                uploaded_docs.append(new_doc)
-
-            except Exception as e:
-                logger.exception(
-                    "Subcontractor document upload failed during edit_sub"
-                )
-                flash(f"Error uploading {file.filename}", "danger")
-
-        uploaded_doc_ids = []
-
         try:
-            db.session.flush()
-            uploaded_doc_ids = [
-                doc.id
-                for doc in uploaded_docs
-            ]
             db.session.commit()
 
         except Exception as e:
             db.session.rollback()
-            _cleanup_saved_documents(saved_storage_keys)
             logger.exception(
                 "Subcontractor update failed for subcontractor_id=%s",
                 sub.id,
@@ -761,17 +669,7 @@ def edit_sub(id):
             flash("Error updating subcontractor.", "danger")
             return redirect(url_for("dashboard.dashboard"))
 
-        if uploaded_doc_ids:
-            if _analyze_uploaded_documents(uploaded_doc_ids):
-                flash("Subcontractor updated successfully.", "success")
-            else:
-                flash(
-                    "Subcontractor updated, but automatic COI analysis could not be completed. "
-                    "You can retry from the documents page.",
-                    "warning",
-                )
-        else:
-            flash("Subcontractor updated successfully.", "success")
+        flash("Subcontractor updated successfully.", "success")
 
         return redirect(url_for("dashboard.dashboard"))
 

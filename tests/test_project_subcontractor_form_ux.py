@@ -538,7 +538,147 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
             self.assertIsNone(subcontractor.phone)
             self.assertIsNone(subcontractor.coi_expiration)
 
-    def test_edit_sub_preserves_and_clears_optional_coi_date(self):
+    def test_edit_sub_renders_simplified_company_projects_and_coi_summary(self):
+        self.login()
+
+        response = self.client.get(f"/edit_sub/{self.subcontractor_id}")
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Company Name", body)
+        self.assertIn("Email", body)
+        self.assertIn("Used for COI requests.", body)
+        self.assertIn("Trade", body)
+        self.assertIn("Projects", body)
+        self.assertIn("Current COI", body)
+        self.assertIn("View Documents", body)
+        self.assertNotIn('name="phone"', body)
+        self.assertNotIn('name="timezone"', body)
+        self.assertNotIn('name="coi_expiration"', body)
+        self.assertNotIn("How it works", body)
+        self.assertNotIn("Upload Documents", body)
+        self.assertNotIn("Document Type", body)
+        self.assertNotIn("Coverage is evaluated from validated COI evidence", body)
+        self.assertNotIn(">READY<", body)
+        self.assertNotIn(">BLOCKED<", body)
+
+    def test_edit_sub_valid_coi_summary_uses_validated_evidence_coverage(self):
+        with self.app.app_context():
+            self.add_valid_coi_document(2_000_000)
+            db.session.commit()
+
+        self.login()
+        response = self.client.get(f"/edit_sub/{self.subcontractor_id}")
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("VALID", body)
+        self.assertIn("Expires", body)
+        self.assertIn("GL Coverage: $2M", body)
+
+    def test_edit_sub_expired_missing_and_checking_coi_summary(self):
+        with self.app.app_context():
+            missing_sub = Subcontractor(
+                name="Missing Summary Sub",
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            expired_sub = Subcontractor(
+                name="Expired Summary Sub",
+                coi_expiration=date.today() - timedelta(days=1),
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            checking_sub = Subcontractor(
+                name="Checking Summary Sub",
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            db.session.add_all([missing_sub, expired_sub, checking_sub])
+            db.session.flush()
+            db.session.add(
+                Document(
+                    filename="checking.pdf",
+                    original_name="checking.pdf",
+                    document_type="COI",
+                    sub_id=checking_sub.id,
+                    uploaded_by=self.owner_id,
+                    ai_status="not_analyzed",
+                )
+            )
+            db.session.commit()
+            missing_id = missing_sub.id
+            expired_id = expired_sub.id
+            checking_id = checking_sub.id
+
+        self.login()
+        missing_body = self.client.get(
+            f"/edit_sub/{missing_id}"
+        ).get_data(as_text=True)
+        expired_body = self.client.get(
+            f"/edit_sub/{expired_id}"
+        ).get_data(as_text=True)
+        checking_body = self.client.get(
+            f"/edit_sub/{checking_id}"
+        ).get_data(as_text=True)
+
+        self.assertIn("No COI on file.", missing_body)
+        self.assertIn("EXPIRED", expired_body)
+        self.assertIn("Expired", expired_body)
+        self.assertIn("CHECKING", checking_body)
+        self.assertIn(
+            "BuildSure is processing the latest COI.",
+            checking_body,
+        )
+
+    def test_edit_sub_hides_unvalidated_coverage(self):
+        with self.app.app_context():
+            sub = db.session.get(Subcontractor, self.subcontractor_id)
+            document = Document(
+                filename="unvalidated.pdf",
+                original_name="unvalidated.pdf",
+                document_type="COI",
+                sub_id=self.subcontractor_id,
+                uploaded_by=self.owner_id,
+                ai_status="analyzed",
+                ai_confidence=0.2,
+                ai_extracted_data={
+                    "expiration_date": (
+                        date.today() + timedelta(days=60)
+                    ).isoformat(),
+                    "coverage_limit": 5_000_000,
+                    "confidence": 0.2,
+                },
+                ai_compliance_result={
+                    "status": "Ready",
+                    "issues": [],
+                    "warnings": [],
+                    "confidence": 0.2,
+                },
+            )
+            sub.documents.append(document)
+            db.session.commit()
+
+        self.login()
+        body = self.client.get(
+            f"/edit_sub/{self.subcontractor_id}"
+        ).get_data(as_text=True)
+
+        self.assertIn("VALID", body)
+        self.assertNotIn("GL Coverage", body)
+
+    def test_edit_sub_manipulated_post_preserves_hidden_fields(self):
+        with self.app.app_context():
+            subcontractor = db.session.get(
+                Subcontractor,
+                self.subcontractor_id,
+            )
+            subcontractor.phone = "555-0000"
+            subcontractor.timezone = "US/Central"
+            subcontractor.coi_expiration = date.today() + timedelta(days=60)
+            db.session.commit()
+            original_expiration = subcontractor.coi_expiration
+
         self.login()
         token = self.csrf_token(f"/edit_sub/{self.subcontractor_id}")
 
@@ -550,7 +690,7 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
                 "email": "owned@example.com",
                 "phone": "555-1111",
                 "role": "Concrete",
-                "timezone": "US/Central",
+                "timezone": "Not/AZone",
                 "coi_expiration": "",
             },
         )
@@ -562,8 +702,55 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
                 Subcontractor,
                 self.subcontractor_id,
             )
-            self.assertIsNone(subcontractor.coi_expiration)
+            self.assertEqual(subcontractor.phone, "555-0000")
             self.assertEqual(subcontractor.timezone, "US/Central")
+            self.assertEqual(subcontractor.coi_expiration, original_expiration)
+            self.assertEqual(subcontractor.name, "Owned Sub Updated")
+            self.assertEqual(subcontractor.role, "Concrete")
+
+    def test_edit_sub_project_assignments_keep_organization_isolation(self):
+        with self.app.app_context():
+            owned_project = Project(
+                name="Owned Assignment",
+                user_id=self.owner_id,
+                organization_id=self.organization_id,
+            )
+            other_project = Project(
+                name="Other Assignment",
+                user_id=self.other_id,
+                organization_id=self.other_organization_id,
+            )
+            db.session.add_all([owned_project, other_project])
+            db.session.commit()
+            owned_project_id = owned_project.id
+            other_project_id = other_project.id
+
+        self.login()
+        token = self.csrf_token(f"/edit_sub/{self.subcontractor_id}")
+
+        response = self.client.post(
+            f"/edit_sub/{self.subcontractor_id}",
+            data={
+                "csrf_token": token,
+                "name": "Owned Sub",
+                "email": "owned@example.com",
+                "role": "Concrete",
+                "projects": [
+                    str(owned_project_id),
+                    str(other_project_id),
+                    "not-an-id",
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            links = ProjectSubcontractor.query.filter_by(
+                subcontractor_id=self.subcontractor_id,
+            ).all()
+            self.assertEqual(len(links), 1)
+            self.assertEqual(links[0].project_id, owned_project_id)
 
     def test_project_required_coverage_drives_existing_readiness_rule(self):
         with self.app.app_context():

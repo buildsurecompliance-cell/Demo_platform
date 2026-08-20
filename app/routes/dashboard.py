@@ -22,15 +22,14 @@ from app.services.organizations import (
     scoped_project_query,
     scoped_subcontractor_query,
 )
-from app.services.compliance_evidence_service import (
-    collect_coi_evidence,
-)
 from app.services.readiness_service import (
     BLOCKED,
     READY,
     calculate_readiness,
 )
-from app.services.documents.types import SUBCONTRACTOR_DOCUMENT_TYPE
+from app.services.subcontractors.coi_summary import (
+    get_subcontractor_coi_summary,
+)
 
 dashboard_bp = Blueprint(
     "dashboard",
@@ -70,21 +69,6 @@ def _coverage_label(value):
     }
 
     return presets.get(amount, _money_full(amount))
-
-
-def _subcontractor_coverage_label(sub):
-    validated_evidence = [
-        item
-        for item in collect_coi_evidence(sub)
-        if item.validated
-    ]
-
-    if not validated_evidence:
-        return "Not available"
-
-    return _coverage_label(
-        validated_evidence[0].value.get("coverage")
-    )
 
 
 def _readiness_label(status):
@@ -190,50 +174,27 @@ def _schedule_label(project):
 
 
 def _subcontractor_row(sub):
-    status = _sub_status_label(sub)
+    summary = get_subcontractor_coi_summary(sub)
 
     return {
         "subcontractor": sub,
         "company": sub.name,
         "trade": sub.role or "Not specified",
         "expiration": (
-            sub.coi_expiration.strftime("%m/%d/%Y")
-            if sub.coi_expiration
+            summary.expiration.strftime("%m/%d/%Y")
+            if summary.expiration
             else "Not available"
         ),
-        "coverage": _subcontractor_coverage_label(sub),
-        "status": status,
+        "coverage": (
+            _coverage_label(summary.coverage)
+            if summary.has_coverage
+            else "Not available"
+        ),
+        "status": summary.status,
         "project_count": len(sub.projects),
         "document_count": len(sub.documents),
         "last_reminder": sub.last_reminder_sent,
     }
-
-
-def _sub_status_label(sub):
-    if _has_processing_coi_document(sub):
-        return "CHECKING"
-
-    if not sub.coi_expiration:
-        return "MISSING"
-
-    if sub.computed_status == "expired":
-        return "EXPIRED"
-
-    return "VALID"
-
-
-def _has_processing_coi_document(sub):
-    for document in sub.documents:
-        if document.document_type != SUBCONTRACTOR_DOCUMENT_TYPE:
-            continue
-
-        if document.ai_status not in {
-            "analyzed",
-            "failed",
-        }:
-            return True
-
-    return False
 
 
 def _readiness_attention_items(projects):
