@@ -1,116 +1,128 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% macro readiness_badge(status) -%}
-<span class="ux-status ux-status-{{ status|lower }}">{{ status }}</span>
+{% macro status_badge(status) -%}
+{% set normalized = status|lower|replace(' ', '-') %}
+<span class="ux-status ux-status-{{ normalized }}">{{ status }}</span>
 {%- endmacro %}
 
 <div class="ux-page">
 
-<div class="ux-page-header">
+<section class="ux-card" aria-labelledby="subcontractor-summary">
+<div class="ux-page-header mb-0">
 <div>
-<h1>{{ sub.name }} Documents</h1>
-<p class="ux-help mb-0">
-Contact:
-{{ sub.email or "No email" }}{% if sub.phone %} - {{ sub.phone }}{% else %} - No phone{% endif %}
-</p>
-<p class="ux-help mb-0">
-COI Expiration:
-{% if sub.coi_expiration %}
-{{ sub.coi_expiration.strftime("%m/%d/%Y") }}
+<h1 id="subcontractor-summary">{{ sub.name }}</h1>
+<p class="ux-help mb-0">{{ sub.role or "Trade not specified" }}</p>
+{% if sub.email %}
+<p class="ux-help mb-0">Email: {{ sub.email }}</p>
 {% else %}
-Not available
+<p class="ux-help mb-0">No email on file</p>
 {% endif %}
-</p>
+</div>
+<div>
+{{ status_badge(coi_summary.status) }}
+</div>
+</div>
+
+<div class="ux-soft mt-3">
+<strong>{{ coi_summary.detail }}</strong>
+{% if coi_summary.coverage %}
+<div class="ux-help">{{ coi_summary.coverage }}</div>
+{% endif %}
+</div>
+
+<div class="form-actions mt-3">
+<a href="{{ url_for('subcontractors.list_subcontractors') }}" class="ux-btn ux-btn-secondary">Back to Subcontractors</a>
+<a href="{{ url_for('subcontractors.edit_sub', id=sub.id) }}" class="ux-btn ux-btn-primary">Edit Subcontractor</a>
+</div>
+</section>
+
+<section class="ux-card" aria-labelledby="project-readiness">
+<div class="ux-card-header">
+<div>
+<h2 id="project-readiness">Project Readiness</h2>
+<p class="ux-help mb-0">Readiness is contextual to each project.</p>
+</div>
+</div>
+
+{% if project_readiness_rows %}
+<div class="ux-table-wrap">
+<table class="ux-table">
+<caption class="ux-sr-only">Project readiness for this subcontractor</caption>
+<thead>
+<tr>
+<th scope="col">Project</th>
+<th scope="col">Status</th>
+<th scope="col">Issue / State</th>
+<th scope="col">Action</th>
+</tr>
+</thead>
+<tbody>
+{% for row in project_readiness_rows %}
+<tr>
+<td>{{ row.project.name }}</td>
+<td>{{ status_badge(row.status) }}</td>
+<td>{{ row.issue }}</td>
+<td>
+<a href="{{ url_for('projects.view_project', project_id=row.project.id) }}" class="ux-btn ux-btn-secondary">View Project</a>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<div class="ux-empty">No projects linked.</div>
+{% endif %}
+</section>
+
+<section class="ux-card" aria-labelledby="documents-history">
+<div class="ux-card-header">
+<div>
+<h2 id="documents-history">Documents</h2>
+<p class="ux-help mb-0">Historical documents for this subcontractor.</p>
 </div>
 </div>
 
 {% if document_rows %}
-<div class="ux-grid-lg">
+<div class="ux-table-wrap">
+<table class="ux-table">
+<caption class="ux-sr-only">Subcontractor documents</caption>
+<thead>
+<tr>
+<th scope="col">File</th>
+<th scope="col">Version</th>
+<th scope="col">Uploaded</th>
+<th scope="col">Status</th>
+<th scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
 {% for row in document_rows %}
 {% set doc = row.document %}
-<article class="ux-card">
-<div class="ux-card-header">
-<div>
-<h2>{{ doc.original_name or doc.filename }}</h2>
-<p class="ux-help mb-0">{{ doc.document_type }} - v{{ doc.version }} - {{ doc.uploaded_at|format_local_time }}</p>
-</div>
-<span class="ux-status ux-status-{% if row.status == 'Analyzed' %}success{% elif row.status == 'Failed' %}danger{% else %}neutral{% endif %}">
-{{ row.status }}
-</span>
-</div>
-
-<div class="ux-grid-lg">
-<section class="ux-soft" aria-labelledby="intelligence-{{ doc.id }}">
-<h3 id="intelligence-{{ doc.id }}" class="h6">Document Intelligence</h3>
-<dl class="mb-0">
-<dt>Expiration</dt>
-<dd>{{ row.expiration }}</dd>
-<dt>General Liability</dt>
-<dd>{{ row.general_liability }}</dd>
-<dt>Each Occurrence</dt>
-<dd>{{ row.general_liability_each_occurrence }}</dd>
-<dt>General Aggregate</dt>
-<dd>{{ row.general_liability_general_aggregate }}</dd>
-<dt>Products-Comp/OP Agg</dt>
-<dd>{{ row.general_liability_products_completed_operations }}</dd>
-</dl>
-</section>
-
-<section class="ux-soft" aria-labelledby="decision-{{ doc.id }}">
-<h3 id="decision-{{ doc.id }}" class="h6">Compliance Decision</h3>
-{% if row.readiness_impacts %}
-{% for impact in row.readiness_impacts %}
-<div class="mb-2">
-<strong>{{ impact.project }}</strong>
-<div>{{ readiness_badge(impact.status) }}</div>
-<dl class="mb-1">
-<dt>Current Coverage</dt>
-<dd>{{ impact.current_coverage }}</dd>
-<dt>Required Coverage</dt>
-<dd>{{ impact.required_coverage }}</dd>
-<dt>Coverage Gap</dt>
-<dd>{{ impact.coverage_gap }}</dd>
-</dl>
-<p class="ux-help mb-0">{{ impact.reason }}</p>
-</div>
-{% endfor %}
-{% else %}
-<p class="ux-help mb-0">No project links yet.</p>
-{% endif %}
-</section>
-</div>
-
-{% if row.issues or row.warnings %}
-<div class="ux-soft mt-3">
-{% if row.issues %}
-<strong>Issues</strong>
-{% for issue in row.issues %}
-<div class="ux-help">{{ issue.get("message") }}</div>
-{% endfor %}
-{% endif %}
-{% if row.warnings %}
-<strong>Warnings</strong>
-{% for warning in row.warnings %}
-<div class="ux-help">{{ warning.get("message") }}</div>
-{% endfor %}
-{% endif %}
-</div>
-{% endif %}
-
-<div class="ux-actions mt-3">
+<tr>
+<td>{{ doc.original_name or doc.filename }}</td>
+<td>v{{ doc.version }}</td>
+<td>{{ doc.uploaded_at|format_local_time }}</td>
+<td>{{ status_badge(row.status) }}</td>
+<td>
+<div class="ux-actions">
 <a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" target="_blank" class="ux-btn ux-btn-primary">Open</a>
 <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document?');">
 {{ csrf_input() }}
 <button class="ux-btn ux-btn-danger" type="submit">Delete</button>
 </form>
 </div>
-</article>
+</td>
+</tr>
 {% endfor %}
+</tbody>
+</table>
 </div>
 {% else %}
-<div class="ux-empty">No documents uploaded for this subcontractor.</div>
+<div class="ux-empty">No documents uploaded.</div>
 {% endif %}
+</section>
 
 </div>
 

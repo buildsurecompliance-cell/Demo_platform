@@ -36,7 +36,6 @@ from app.services.document_analysis_service import (
 )
 from app.services.compliance_evidence_service import (
     collect_coi_evidence,
-    extract_coi_coverage,
 )
 from app.services.readiness_service import calculate_readiness
 
@@ -47,6 +46,10 @@ from app.services.documents.storage import (
 )
 from app.services.documents.types import (
     SUBCONTRACTOR_DOCUMENT_TYPE,
+)
+from app.services.dashboard.project_readiness import is_processing_readiness
+from app.services.dashboard.readiness_presentation import (
+    primary_issue_label,
 )
 from app.services.subcontractors.coi_summary import (
     get_subcontractor_coi_summary,
@@ -128,123 +131,122 @@ def _coverage_gap_label(current_coverage, required_coverage):
 
 def _doc_status_label(status):
     if status == "analyzed":
-        return "Analyzed"
+        return "ANALYZED"
 
     if status == "failed":
-        return "Failed"
+        return "FAILED"
 
-    return "Not Analyzed"
+    return "PROCESSING"
 
 
-def _coi_document_view_model(doc, sub, readiness_impacts):
-    extracted = doc.ai_extracted_data or {}
-    compliance = doc.ai_compliance_result or {}
-    general_liability = extracted.get("general_liability") or {}
-
+def _coi_document_view_model(doc):
     return {
         "document": doc,
         "status": _doc_status_label(doc.ai_status),
-        "expiration": (
-            extracted.get("expiration_date")
-            or (
-                sub.coi_expiration.strftime("%m/%d/%Y")
-                if sub.coi_expiration
-                else "Not available"
-            )
-        ),
-        "general_liability": _money_label(
-            extract_coi_coverage(extracted)
-        ),
-        "general_liability_each_occurrence": _money_label(
-            general_liability.get("each_occurrence")
-        ),
-        "general_liability_general_aggregate": _money_label(
-            general_liability.get("general_aggregate")
-        ),
-        "general_liability_products_completed_operations": _money_label(
-            general_liability.get("products_completed_operations")
-        ),
-        "confidence": _confidence_label(
-            extracted.get("confidence")
-            or doc.ai_confidence
-        ),
-        "evidence_state": compliance.get("status") or "Not available",
-        "issues": compliance.get("issues") or [],
-        "warnings": compliance.get("warnings") or [],
-        "readiness_impacts": readiness_impacts,
     }
 
 
-def _confidence_label(value):
-    if value is None:
-        return "Not available"
-
-    try:
-        confidence = float(value)
-    except (TypeError, ValueError):
-        return "Not available"
-
-    if confidence <= 1:
-        confidence *= 100
-
-    return f"{confidence:.0f}%"
-
-
-def _sub_readiness_impacts(sub):
-    impacts = []
-    evidence_coverage = _active_coverage_for_subcontractor(sub)
+def _sub_project_readiness_rows(sub):
+    evidence = _validated_coi_evidence(sub)
+    rows = []
 
     for link in sub.projects:
         readiness = calculate_readiness(link)
-        reason = (
-            readiness["reasons"][0]["message"]
-            if readiness.get("reasons")
-            else "No blocking issue."
-        )
-        impacts.append(
+        status = _project_readiness_status(readiness)
+
+        if status == "READY":
+            issue = _ready_project_issue(link, evidence)
+        elif status == "CHECKING":
+            issue = "BuildSure is reviewing the latest COI."
+        else:
+            issue = primary_issue_label(
+                readiness,
+                link.project,
+                sub,
+                evidence,
+                coverage_label=_money_label,
+            )
+
+        rows.append(
             {
-                "project": link.project.name if link.project else "Project",
-                "status": readiness["status"],
-                "reason": reason,
-                "current_coverage": _money_label(
-                    _conservative_coverage(
-                        evidence_coverage,
-                        link.coverage_limit,
-                    )
-                ),
-                "required_coverage": (
-                    _money_label(link.project.required_coverage)
-                    if link.project and link.project.required_coverage
-                    else "No minimum"
-                ),
-                "coverage_gap": _coverage_gap_label(
-                    _conservative_coverage(
-                        evidence_coverage,
-                        link.coverage_limit,
-                    ),
-                    link.project.required_coverage if link.project else None,
-                ),
+                "project": link.project,
+                "status": status,
+                "issue": issue,
             }
         )
 
-    return impacts
+    return sorted(
+        rows,
+        key=lambda row: row["project"].name.lower() if row["project"] else "",
+    )
 
 
-def _active_coverage_for_subcontractor(sub):
-    validated_evidence = [
-        item
-        for item in collect_coi_evidence(sub)
-        if item.validated
-    ]
+def _project_readiness_status(readiness):
+    if readiness["status"] == "READY":
+        return "READY"
 
-    if not validated_evidence:
-        return None
+    if is_processing_readiness(readiness):
+        return "CHECKING"
 
-    return validated_evidence[0].value.get("coverage")
+    return "BLOCKED"
 
 
-def _conservative_coverage(evidence_coverage, manual_coverage):
-    return evidence_coverage
+def _ready_project_issue(link, evidence):
+    project = link.project
+    coverage = evidence.value.get("coverage") if evidence else None
+    required_coverage = getattr(project, "required_coverage", None)
+
+    if coverage is not None and required_coverage:
+        return (
+            f"GL {_money_label(coverage)} / "
+            f"Required {_money_label(required_coverage)}"
+        )
+
+    return "Meets project requirement"
+
+
+def _validated_coi_evidence(sub):
+    for evidence in collect_coi_evidence(sub):
+        if evidence.validated:
+            return evidence
+
+    return None
+
+
+def _coi_summary_view_model(sub):
+    summary = get_subcontractor_coi_summary(sub)
+    detail = "No COI on file."
+
+    if summary.status == "CHECKING":
+        detail = "BuildSure is reviewing the latest COI."
+    elif summary.expiration:
+        prefix = "Expired" if summary.status == "EXPIRED" else "Expires"
+        detail = f"{prefix} {_date_with_year_label(summary.expiration)}"
+
+    coverage = (
+        f"GL Coverage {_money_label(summary.coverage)}"
+        if summary.has_coverage
+        else None
+    )
+
+    return {
+        "status": summary.status,
+        "detail": detail,
+        "coverage": coverage,
+    }
+
+
+def _date_with_year_label(value):
+    if not value:
+        return ""
+
+    if isinstance(value, datetime):
+        value = value.date()
+
+    if isinstance(value, str):
+        return value
+
+    return value.strftime("%b %d, %Y").replace(" 0", " ")
 
 
 def _analyze_uploaded_documents(document_ids):
@@ -517,14 +519,14 @@ def view_sub_documents(sub_id):
         .all()
     )
 
-    readiness_impacts = _sub_readiness_impacts(sub)
-
     return render_template(
         "view_sub_documents.html",
         sub=sub,
         documents=documents,
+        coi_summary=_coi_summary_view_model(sub),
+        project_readiness_rows=_sub_project_readiness_rows(sub),
         document_rows=[
-            _coi_document_view_model(doc, sub, readiness_impacts)
+            _coi_document_view_model(doc)
             for doc in documents
         ],
     )
