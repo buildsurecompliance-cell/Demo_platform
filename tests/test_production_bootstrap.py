@@ -1,5 +1,6 @@
 import importlib
 import os
+import sys
 import tempfile
 import unittest
 
@@ -13,6 +14,7 @@ from app import create_app
 from app.config import (
     TestingConfig,
     development_database_path,
+    is_test_process,
 )
 from app.extensions import db
 
@@ -199,6 +201,32 @@ class ProductionBootstrapTest(unittest.TestCase):
             "Refusing to run destructive test database operation",
         ):
             create_app(UnsafeTestingConfig)
+
+    def test_test_process_rejects_default_app_pointing_to_development_database(self):
+        class UnsafeRuntimeConfig:
+            TESTING = False
+            DEBUG = False
+            SECRET_KEY = "test-secret"
+            SQLALCHEMY_DATABASE_URI = (
+                "sqlite:///" + development_database_path()
+            )
+            SQLALCHEMY_TRACK_MODIFICATIONS = False
+            STORAGE_BACKEND = "local"
+            UPLOAD_FOLDER = tempfile.gettempdir()
+            WTF_CSRF_ENABLED = True
+            RATELIMIT_ENABLED = False
+
+        with patch.object(sys, "argv", ["python", "-m", "unittest", "discover"]):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Refusing to run destructive test database operation",
+            ):
+                create_app(UnsafeRuntimeConfig)
+
+    def test_importing_unittest_does_not_mark_normal_runtime_as_test_process(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch.object(sys, "argv", ["flask", "run"]):
+                self.assertFalse(is_test_process())
 
     def test_boolean_environment_values_are_parsed_explicitly(self):
         with patch.dict(

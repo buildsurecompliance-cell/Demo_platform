@@ -1,4 +1,5 @@
 import os
+import sys
 
 from datetime import timedelta
 from urllib.parse import unquote
@@ -109,6 +110,38 @@ def assert_safe_test_database_uri(database_uri):
             "Refusing to run destructive test database operation "
             "against development database."
         )
+
+
+def is_test_process():
+    test_command_names = {
+        "pytest",
+        "pytest.exe",
+        "py.test",
+        "py.test.exe",
+        "unittest",
+        "unittest.py",
+    }
+
+    for arg in sys.argv:
+        normalized = os.path.normpath(arg).lower()
+        command_name = os.path.basename(normalized)
+
+        if command_name in test_command_names:
+            return True
+
+        path_parts = set(normalized.split(os.sep))
+
+        if "unittest" in path_parts and command_name == "__main__.py":
+            return True
+
+    return bool(
+        os.getenv("PYTEST_CURRENT_TEST")
+    )
+
+
+def assert_safe_runtime_database_uri(database_uri):
+    if is_test_process():
+        assert_safe_test_database_uri(database_uri)
 
 
 def _testing_database_url():

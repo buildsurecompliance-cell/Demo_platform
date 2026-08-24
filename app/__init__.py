@@ -5,6 +5,7 @@ from flask import Flask
 from flask_login import current_user
 
 from app.config import (
+    assert_safe_runtime_database_uri,
     assert_safe_test_database_uri,
     get_config,
 )
@@ -45,6 +46,10 @@ def create_app(config_object=None):
 
     if app.config.get("TESTING"):
         assert_safe_test_database_uri(
+            app.config.get("SQLALCHEMY_DATABASE_URI")
+        )
+    else:
+        assert_safe_runtime_database_uri(
             app.config.get("SQLALCHEMY_DATABASE_URI")
         )
 
