@@ -46,19 +46,21 @@ def _money_short(value):
     abs_amount = abs(amount)
 
     if abs_amount >= 1_000_000_000:
-        return f"${amount / 1_000_000_000:.1f}B"
+        formatted = amount / 1_000_000_000
+        suffix = "B"
+    elif abs_amount >= 1_000_000:
+        formatted = amount / 1_000_000
+        suffix = "M"
+    elif abs_amount >= 1_000:
+        formatted = amount / 1_000
+        suffix = "K"
+    else:
+        return f"${amount:,.0f}"
 
-    if abs_amount >= 1_000_000:
-        return f"${amount / 1_000_000:.1f}M"
+    if formatted.is_integer():
+        return f"${int(formatted)}{suffix}"
 
-    if abs_amount >= 1_000:
-        return f"${amount / 1_000:.1f}K"
-
-    return f"${amount:,.0f}"
-
-
-def _money_full(value):
-    return f"${float(value or 0):,.0f}"
+    return f"${formatted:.1f}{suffix}"
 
 
 def _coverage_label(value):
@@ -66,13 +68,7 @@ def _coverage_label(value):
         return "No minimum"
 
     amount = int(value)
-    presets = {
-        1_000_000: "$1M",
-        2_000_000: "$2M",
-        5_000_000: "$5M",
-    }
-
-    return presets.get(amount, _money_full(amount))
+    return _money_short(amount)
 
 
 def _short_date_label(value):

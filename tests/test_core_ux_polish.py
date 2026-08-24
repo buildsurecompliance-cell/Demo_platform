@@ -165,6 +165,9 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertIn("Ready Projects", body)
         self.assertIn("Checking Projects", body)
         self.assertIn("Needs Attention", body)
+        self.assertIn("Items that need your action.", body)
+        self.assertNotIn("Items where a GC action is available.", body)
+        self.assertNotIn("Manage your COIs efficiently", body)
         self.assertIn("Blocked Projects", body)
         self.assertEqual(body.count('class="ux-metric"'), 4)
         self.assertNotIn("Plan Capacity", body)
@@ -597,7 +600,7 @@ class CoreUXPolishTest(unittest.TestCase):
         with self.app.app_context():
             project = Project(
                 name="Correction Project",
-                required_coverage=5_000_000,
+                required_coverage=10_000_000,
                 user_id=self.user_id,
                 organization_id=self.organization_id,
             )
@@ -612,7 +615,7 @@ class CoreUXPolishTest(unittest.TestCase):
             link = ProjectSubcontractor(
                 project_id=project.id,
                 subcontractor_id=sub.id,
-                coverage_limit=10_000_000,
+                coverage_limit=9_000_000,
             )
             doc = Document(
                 filename="subcontractors/1/coi.pdf",
@@ -654,9 +657,11 @@ class CoreUXPolishTest(unittest.TestCase):
         body = self.client.get("/dashboard").get_data(as_text=True)
 
         self.assertIn("Correction Sub", body)
-        self.assertIn("GL $2M / Required $5M", body)
+        self.assertIn("GL $2M / Required $10M", body)
+        self.assertNotIn("Required $10,000,000", body)
+        self.assertNotIn("$10.0M", body)
         self.assertIn("Request Corrected COI", body)
-        self.assertNotIn("$10M", body)
+        self.assertNotIn("$9M", body)
 
     def test_failed_document_analysis_shows_review_documents_action(self):
         with self.app.app_context():
