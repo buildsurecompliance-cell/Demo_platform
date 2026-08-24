@@ -30,6 +30,9 @@ from app.services.dashboard.project_readiness import (
     dashboard_readiness_for_project,
     is_processing_readiness,
 )
+from app.services.dashboard.readiness_presentation import (
+    primary_issue_label,
+)
 from app.services.compliance_evidence_service import (
     collect_coi_evidence,
 )
@@ -152,12 +155,12 @@ def _attention_item(project, link, readiness):
         for reason in readiness.get("reasons", [])
     ]
     evidence = _validated_coi_evidence(link.subcontractor)
-    issue = _issue_label(
-        reason_codes,
+    issue = primary_issue_label(
         readiness,
         project,
         link.subcontractor,
         evidence,
+        coverage_label=_coverage_label,
     )
     action = _action_for_item(
         reason_codes,
@@ -185,79 +188,14 @@ def _validated_coi_evidence(subcontractor):
     return None
 
 
-def _issue_label(reason_codes, readiness, project, subcontractor, evidence):
-    if "COI_MISSING" in reason_codes:
-        return "COI missing"
-
-    if "COI_EXPIRED" in reason_codes:
-        expiration = _coi_expiration_for_issue(subcontractor, evidence)
-        if expiration:
-            return f"COI expired {_short_date_label(expiration)}"
-
-        return "COI expired"
-
-    if "COVERAGE_INSUFFICIENT" in reason_codes:
-        current = _coi_coverage_for_issue(evidence)
-        required = getattr(project, "required_coverage", None)
-        if current is not None and required:
-            return (
-                f"GL {_coverage_label(current)} / "
-                f"Required {_coverage_label(required)}"
-            )
-
-        return "GL coverage below requirement"
-
-    if (
-        "COI_DOCUMENT_UNREADABLE" in reason_codes
-        or "COI_LOW_CONFIDENCE" in reason_codes
-        or "COI_VALIDATOR_FAILED" in reason_codes
-    ):
-        return "COI analysis failed"
-
-    if "COI_DOCUMENT_PARTIAL" in reason_codes:
-        return "COI analysis incomplete"
-
-    if "COVERAGE_EVIDENCE_MISSING" in reason_codes:
-        return "Validated GL coverage missing"
-
-    if "COI_EXPIRING_SOON" in reason_codes:
-        expiration = _coi_expiration_for_issue(subcontractor, evidence)
-        if expiration:
-            return f"COI expires {_short_date_label(expiration)}"
-
-        return "COI expiring soon"
-
-    if readiness.get("reasons"):
-        return readiness["reasons"][0].get(
-            "message",
-            "Compliance needs review.",
-        )
-
-    return "Compliance needs review."
-
-
-def _coi_expiration_for_issue(subcontractor, evidence):
-    if evidence:
-        expiration = evidence.value.get("expiration_date")
-        if expiration:
-            return expiration
-
-    return getattr(subcontractor, "coi_expiration", None)
-
-
-def _coi_coverage_for_issue(evidence):
-    if not evidence:
-        return None
-
-    return evidence.value.get("coverage")
-
-
 def _action_for_item(reason_codes, project, subcontractor):
     if (
         "COI_DOCUMENT_UNREADABLE" in reason_codes
         or "COI_DOCUMENT_PARTIAL" in reason_codes
         or "COI_LOW_CONFIDENCE" in reason_codes
         or "COI_VALIDATOR_FAILED" in reason_codes
+        or "AI_CONFIDENCE_LOW" in reason_codes
+        or "AI_VALIDATION_FAILED" in reason_codes
     ):
         return {
             "label": "Review Documents",

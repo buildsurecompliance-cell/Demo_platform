@@ -869,10 +869,13 @@ class ProjectContractAutoFillTest(unittest.TestCase):
         body = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Contract Extraction", body)
-        self.assertIn("Applied to project", body)
-        self.assertIn("$4,850,000", body)
-        self.assertIn("&lt;script&gt;Bad&lt;/script&gt;", body)
+        self.assertIn("contract.pdf", body)
+        self.assertIn("Contract", body)
+        self.assertIn("ANALYZED", body)
+        self.assertNotIn("Contract Extraction", body)
+        self.assertNotIn("Applied to project", body)
+        self.assertNotIn("$4,850,000", body)
+        self.assertNotIn("&lt;script&gt;Bad&lt;/script&gt;", body)
         self.assertNotIn("<script>Bad</script>", body)
 
     def test_project_view_shows_invalid_status_for_contract_fields(self):
@@ -917,7 +920,8 @@ class ProjectContractAutoFillTest(unittest.TestCase):
         body = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Invalid", body)
+        self.assertIn("contract.pdf", body)
+        self.assertNotIn("Invalid", body)
 
     def test_coi_auto_fill_and_readiness_still_work(self):
         with self.app.app_context():

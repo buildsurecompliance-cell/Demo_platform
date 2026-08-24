@@ -697,7 +697,7 @@ class CoreUXPolishTest(unittest.TestCase):
         body = self.client.get("/dashboard").get_data(as_text=True)
 
         self.assertIn("Review Sub", body)
-        self.assertIn("COI analysis failed", body)
+        self.assertIn("COI analysis needs review", body)
         self.assertIn("Review Documents", body)
         self.assertNotIn("Add Email", body)
 
@@ -717,7 +717,7 @@ class CoreUXPolishTest(unittest.TestCase):
         self.assertNotIn("<th scope=\"col\">Trade</th>", body)
         self.assertNotIn("<th scope=\"col\">Coverage</th>", body)
 
-    def test_project_view_shows_final_status_and_contract_extraction(self):
+    def test_project_view_shows_reduced_operational_summary(self):
         project_id, _ = self.create_project_subcontractor()
         self.login()
 
@@ -726,17 +726,21 @@ class CoreUXPolishTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("This project is ready to mobilize.", body)
-        self.assertIn("Document Intelligence Summary", body)
-        self.assertIn(
-            "Document analysis results do not replace final mobilization readiness.",
-            body,
-        )
-        self.assertIn("COI Expiration", body)
+        self.assertIn("Required GL", body)
+        self.assertIn("Project End Date", body)
+        self.assertIn("Who can work today?", body)
+        self.assertIn("COI expires", body)
+        self.assertIn("Project Documents", body)
+        self.assertIn("contract.pdf", body)
+        self.assertIn("ANALYZED", body)
+        self.assertNotIn("Document Intelligence Summary", body)
+        self.assertNotIn("Risk Level", body)
+        self.assertNotIn("Contract Value", body)
+        self.assertNotIn("Start Date", body)
+        self.assertNotIn("Days Remaining", body)
         self.assertNotIn("Coverage Gap", body)
-        self.assertIn("Contract Extraction", body)
-        self.assertIn("Preserved", body)
-        self.assertIn("Applied", body)
-        self.assertIn("No Owner Requirements uploaded yet.", body)
+        self.assertNotIn("Contract Extraction", body)
+        self.assertNotIn("No Owner Requirements uploaded yet.", body)
 
     def test_unsupported_project_documents_do_not_show_analyze(self):
         project_id, _ = self.create_project_subcontractor()
@@ -744,11 +748,8 @@ class CoreUXPolishTest(unittest.TestCase):
 
         response = self.client.get(f"/project/{project_id}")
         body = response.get_data(as_text=True)
-        scope_index = body.index("<h3>Scope</h3>")
-        owner_index = body.index("<h3>Owner Requirements</h3>")
-        scope_block = body[scope_index:owner_index]
 
-        self.assertNotIn(">Analyze<", scope_block)
+        self.assertNotIn(">Analyze<", body)
 
     def test_subcontractor_document_view_separates_intelligence_and_decision(self):
         _, sub_id = self.create_project_subcontractor()

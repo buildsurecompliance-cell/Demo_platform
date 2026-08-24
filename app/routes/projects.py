@@ -1,11 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
 import logging
-from types import SimpleNamespace
-
-from app.services.projects.project_ai_summary_service import (
-    get_project_ai_summary,
-)
 from flask import (
     abort,
     Blueprint,
@@ -53,9 +48,6 @@ from app.services.documents.types import (
     normalize_project_document_type,
     supports_automatic_analysis,
 )
-from app.services.compliance_officer import (
-    generate_compliance_advice,
-)
 from app.services.compliance_evidence_service import (
     collect_coi_evidence,
 )
@@ -73,6 +65,10 @@ from app.services.plan_capacity import (
 )
 from app.services.dashboard.project_readiness import (
     dashboard_readiness_for_project,
+    is_processing_readiness,
+)
+from app.services.dashboard.readiness_presentation import (
+    primary_issue_label,
 )
 
 
@@ -177,8 +173,9 @@ def _mobilization_label(status):
 def _mobilization_message(label):
     messages = {
         "READY": "This project is ready to mobilize.",
-        "PENDING": "This project requires review before mobilization.",
         "BLOCKED": "One or more subcontractors cannot work today.",
+        "CHECKING": "BuildSure is checking subcontractor documents.",
+        "NO SUBCONTRACTORS": "No subcontractors assigned.",
     }
 
     return messages[label]
@@ -297,101 +294,51 @@ def _add_missing_project_links(project, subcontractor_ids):
 
 
 def _project_subcontractor_view_model(project_subcontractor):
-    advice_available = True
-
-    try:
-        advice = generate_compliance_advice(project_subcontractor)
-    except Exception:
-        logger.error(
-            "Compliance advice unavailable for project_subcontractor_id=%s",
-            getattr(
-                project_subcontractor,
-                "id",
-                None,
-            ),
-        )
-        advice_available = False
-        advice = _fallback_compliance_advice(project_subcontractor)
-
-    current_coverage = _active_coverage_for_project_subcontractor(
-        project_subcontractor
-    )
-    required_coverage = getattr(
-        project_subcontractor.project,
-        "required_coverage",
-        None,
-    )
-    coverage_gap = None
-
-    if current_coverage is not None and required_coverage:
-        coverage_gap = max(
-            int(required_coverage) - int(current_coverage or 0),
-            0,
-        )
-
-    primary_action = advice.actions[0] if advice.actions else None
+    readiness = project_subcontractor.readiness
+    status = _operational_subcontractor_status(readiness)
+    evidence = _validated_coi_evidence(project_subcontractor.subcontractor)
     latest_request = _latest_document_request(project_subcontractor)
-    display_reason = _display_reason(
-        advice.summary,
-        current_coverage,
-        required_coverage,
-        coverage_gap,
+    issue = _project_subcontractor_issue(
+        project_subcontractor,
+        readiness,
+        evidence,
+        latest_request,
     )
-    display_action = _display_action(
-        primary_action.description if primary_action else None,
-        required_coverage,
-        coverage_gap,
+    action = _project_subcontractor_action(
+        project_subcontractor,
+        readiness,
+        status,
+        latest_request,
     )
 
     return {
         "project_subcontractor": project_subcontractor,
-        "advice": advice,
-        "advice_available": advice_available,
-        "status": advice.status,
-        "current_coverage": _coverage_label(current_coverage),
-        "required_coverage": _coverage_label(required_coverage),
-        "coverage_gap": (
-            _coverage_label(coverage_gap)
-            if coverage_gap
-            else "No gap"
-        ),
-        "coi_expiration": (
-            project_subcontractor.subcontractor.coi_expiration.strftime(
-                "%m/%d/%Y"
-            )
-            if project_subcontractor.subcontractor.coi_expiration
-            else "Not available"
-        ),
-        "primary_reason": display_reason,
-        "recommended_action": display_action,
-        "action_priority": (
-            primary_action.priority
-            if primary_action
-            else "LOW"
-        ),
-        "document_request": latest_request,
+        "status": status,
+        "issue": issue,
         "document_request_status": _document_request_status_label(
             latest_request
         ),
-        "document_request_cta": _document_request_cta_label(
-            latest_request,
-            advice.status,
+        "action": action,
+        "coi_expiration": (
+            _date_with_year_label(
+                _coi_expiration_for_project_subcontractor(
+                    project_subcontractor
+                )
+            )
+            or "Not available"
         ),
-        "show_operational_action": bool(display_action),
-        "show_more_actions": not _has_coverage_gap(
-            current_coverage,
-            required_coverage,
-            coverage_gap,
-        ),
+        "sort": _project_subcontractor_sort(status, latest_request, issue),
     }
 
 
-def _fallback_compliance_advice(project_subcontractor):
-    return SimpleNamespace(
-        status=project_subcontractor.readiness_status,
-        summary="Compliance advice unavailable.",
-        actions=(),
-    )
+def _operational_subcontractor_status(readiness):
+    if readiness["status"] == "READY":
+        return "READY"
+
+    if is_processing_readiness(readiness):
+        return "CHECKING"
+
+    return "BLOCKED"
 
 
 def _latest_document_request(project_subcontractor):
@@ -405,42 +352,6 @@ def _latest_document_request(project_subcontractor):
         .order_by(DocumentRequest.created_at.desc())
         .first()
     )
-
-
-def _display_reason(summary, current_coverage, required_coverage, coverage_gap):
-    if _has_coverage_gap(current_coverage, required_coverage, coverage_gap):
-        return "GL coverage is below requirement."
-
-    return summary
-
-
-def _display_action(action_description, required_coverage, coverage_gap):
-    if coverage_gap and required_coverage:
-        return (
-            "A corrected COI with at least "
-            f"{_coverage_label(required_coverage)} GL coverage is required."
-        )
-
-    return action_description
-
-
-def _document_request_cta_label(document_request, status):
-    if status == "READY":
-        return None
-
-    if (
-        document_request
-        and document_request.status == DOCUMENT_REQUEST_PENDING
-    ):
-        return "Resend"
-
-    if (
-        document_request
-        and document_request.status == DOCUMENT_REQUEST_COMPLETED
-    ):
-        return "Request Corrected COI"
-
-    return "Request COI"
 
 
 def _document_request_status_label(document_request):
@@ -468,23 +379,215 @@ def _document_request_status_label(document_request):
     return None
 
 
+def _project_subcontractor_issue(
+    project_subcontractor,
+    readiness,
+    evidence,
+    latest_request,
+):
+    if (
+        latest_request
+        and latest_request.status == DOCUMENT_REQUEST_PENDING
+    ):
+        return "Waiting on subcontractor"
+
+    codes = {
+        reason.get("code")
+        for reason in readiness.get("reasons", [])
+    }
+
+    if (
+        "COI_DOCUMENT_UNREADABLE" in codes
+        or "COI_LOW_CONFIDENCE" in codes
+        or "COI_VALIDATOR_FAILED" in codes
+        or "AI_CONFIDENCE_LOW" in codes
+        or "AI_VALIDATION_FAILED" in codes
+    ):
+        return "COI analysis needs review"
+
+    if is_processing_readiness(readiness):
+        return "BuildSure is reviewing the latest COI."
+
+    if readiness["status"] == "READY":
+        expiration = _coi_expiration_for_project_subcontractor(
+            project_subcontractor
+        )
+        if expiration:
+            return f"COI expires {_date_with_year_label(expiration)}"
+
+        return "Ready to work"
+
+    return primary_issue_label(
+        readiness,
+        project_subcontractor.project,
+        project_subcontractor.subcontractor,
+        evidence,
+        coverage_label=_coverage_label,
+    )
+
+
+def _project_subcontractor_action(
+    project_subcontractor,
+    readiness,
+    status,
+    latest_request,
+):
+    sub = project_subcontractor.subcontractor
+
+    if status == "READY":
+        return _link_action(
+            "View Documents",
+            "subcontractors.view_sub_documents",
+            {"sub_id": sub.id},
+        )
+
+    if status == "CHECKING":
+        return None
+
+    codes = {
+        reason.get("code")
+        for reason in readiness.get("reasons", [])
+    }
+
+    if (
+        "COI_DOCUMENT_UNREADABLE" in codes
+        or "COI_DOCUMENT_PARTIAL" in codes
+        or "COI_LOW_CONFIDENCE" in codes
+        or "COI_VALIDATOR_FAILED" in codes
+        or "AI_CONFIDENCE_LOW" in codes
+        or "AI_VALIDATION_FAILED" in codes
+    ):
+        return _link_action(
+            "Review Documents",
+            "subcontractors.view_sub_documents",
+            {"sub_id": sub.id},
+        )
+
+    if not (sub.email or "").strip():
+        return _link_action(
+            "Add Email",
+            "subcontractors.edit_sub",
+            {"id": sub.id},
+        )
+
+    if (
+        latest_request
+        and latest_request.status == DOCUMENT_REQUEST_PENDING
+    ):
+        return _post_action(
+            "Resend",
+            "document_requests.request_coi",
+            {
+                "project_id": project_subcontractor.project_id,
+                "subcontractor_id": project_subcontractor.subcontractor_id,
+            },
+        )
+
+    if (
+        latest_request
+        and latest_request.status == DOCUMENT_REQUEST_COMPLETED
+    ):
+        return _post_action(
+            "Request Corrected COI",
+            "document_requests.request_coi",
+            {
+                "project_id": project_subcontractor.project_id,
+                "subcontractor_id": project_subcontractor.subcontractor_id,
+            },
+        )
+
+    if "COVERAGE_INSUFFICIENT" in codes:
+        return _post_action(
+            "Request Corrected COI",
+            "document_requests.request_coi",
+            {
+                "project_id": project_subcontractor.project_id,
+                "subcontractor_id": project_subcontractor.subcontractor_id,
+            },
+        )
+
+    return _post_action(
+        "Request COI",
+        "document_requests.request_coi",
+        {
+            "project_id": project_subcontractor.project_id,
+            "subcontractor_id": project_subcontractor.subcontractor_id,
+        },
+    )
+
+
+def _link_action(label, endpoint, params):
+    return {
+        "kind": "link",
+        "label": label,
+        "endpoint": endpoint,
+        "params": params,
+    }
+
+
+def _post_action(label, endpoint, params):
+    return {
+        "kind": "post",
+        "label": label,
+        "endpoint": endpoint,
+        "params": params,
+    }
+
+
+def _project_subcontractor_sort(status, latest_request, issue):
+    if status == "BLOCKED" and not (
+        latest_request
+        and latest_request.status == DOCUMENT_REQUEST_PENDING
+    ):
+        return 0
+
+    if status == "BLOCKED":
+        return 1
+
+    if status == "CHECKING":
+        return 2
+
+    return 3
+
+
 def _short_date_label(value):
     if not value:
         return ""
 
+    if isinstance(value, datetime):
+        value = value.date()
+
+    if isinstance(value, str):
+        return value
+
     return value.strftime("%b %d").replace(" 0", " ")
 
 
-def _has_coverage_gap(current_coverage, required_coverage, coverage_gap):
-    return (
-        current_coverage is not None
-        and required_coverage
-        and coverage_gap
-        and coverage_gap > 0
-    )
+def _date_with_year_label(value):
+    if not value:
+        return ""
+
+    if isinstance(value, datetime):
+        value = value.date()
+
+    if isinstance(value, str):
+        return value
+
+    return value.strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def _active_coverage_for_project_subcontractor(project_subcontractor):
+def _validated_coi_evidence(subcontractor):
+    if not subcontractor:
+        return None
+
+    for evidence in collect_coi_evidence(subcontractor):
+        if evidence.validated:
+            return evidence
+
+    return None
+
+
+def _coi_expiration_for_project_subcontractor(project_subcontractor):
     subcontractor = getattr(
         project_subcontractor,
         "subcontractor",
@@ -499,51 +602,58 @@ def _active_coverage_for_project_subcontractor(project_subcontractor):
         ]
 
         if validated_evidence:
-            coverage = validated_evidence[0].value.get("coverage")
+            expiration = validated_evidence[0].value.get("expiration_date")
 
-            if coverage:
-                return coverage
+            if expiration:
+                return expiration
+
+        return getattr(
+            subcontractor,
+            "coi_expiration",
+            None,
+        )
 
     return None
 
 
 def _project_summary_view_model(project):
-    status = project.mobilization_status
-    label = _mobilization_label(status)
+    label = dashboard_readiness_for_project(project)
+
+    if label == "NEEDS ATTENTION":
+        label = "BLOCKED"
 
     return {
         "name": project.name,
         "status": label,
         "message": _mobilization_message(label),
-        "risk": project.risk_level,
-        "contract_value": _money_short(project.contract_value),
-        "contract_value_full": _money_full(project.contract_value),
         "required_coverage": _coverage_label(project.required_coverage),
-        "start_date": (
-            project.start_date.strftime("%m/%d/%Y")
-            if project.start_date
-            else "Not scheduled"
-        ),
         "end_date": (
             project.end_date.strftime("%m/%d/%Y")
             if project.end_date
             else "Not scheduled"
         ),
-        "days_remaining": (
-            f"{project.days_remaining} days"
-            if project.days_remaining is not None
-            else "Not scheduled"
-        ),
+        "subcontractor_count": len(project.subs),
     }
 
 
-def _document_type_view(doc_type, docs):
+def _document_view_model(doc):
     return {
-        "type": doc_type,
-        "documents": docs,
-        "supports_analysis": supports_automatic_analysis(doc_type),
-        "empty_message": f"No {doc_type} uploaded yet.",
+        "document": doc,
+        "status": _project_document_status_label(doc),
     }
+
+
+def _project_document_status_label(doc):
+    if not supports_automatic_analysis(doc.document_type):
+        return "UPLOADED"
+
+    if doc.ai_status == "analyzed":
+        return "ANALYZED"
+
+    if doc.ai_status == "failed":
+        return "FAILED"
+
+    return "PROCESSING"
 
 
 def _analyze_created_contract_documents(document_ids):
@@ -965,10 +1075,6 @@ def view_project(project_id):
         .first_or_404()
     )
 
-    ai_summary = get_project_ai_summary(
-        project.id
-    )
-
     links = (
         ProjectSubcontractor.query
         .options(joinedload(ProjectSubcontractor.subcontractor))
@@ -976,32 +1082,41 @@ def view_project(project_id):
         .all()
     )
 
-    subcontractor_rows = [
-        _project_subcontractor_view_model(link)
-        for link in links
-    ]
-
-    docs = (
-        Document.query
-        .filter_by(project_id=project.id)
-        .order_by(
-            Document.document_type,
-            Document.version.desc(),
-        )
-        .all()
+    subcontractor_rows = sorted(
+        [
+            _project_subcontractor_view_model(link)
+            for link in links
+        ],
+        key=lambda row: (
+            row["sort"],
+            row["project_subcontractor"].subcontractor.name.lower(),
+        ),
     )
 
-    documents = defaultdict(list)
+    ready_count = sum(
+        1
+        for row in subcontractor_rows
+        if row["status"] == "READY"
+    )
+    blocked_count = sum(
+        1
+        for row in subcontractor_rows
+        if row["status"] == "BLOCKED"
+    )
+    checking_count = sum(
+        1
+        for row in subcontractor_rows
+        if row["status"] == "CHECKING"
+    )
 
-    for doc in docs:
-        documents[doc.document_type].append(doc)
-
-    document_groups = [
-        _document_type_view(
-            doc_type,
-            documents.get(doc_type, []),
+    document_rows = [
+        _document_view_model(doc)
+        for doc in (
+            Document.query
+            .filter_by(project_id=project.id)
+            .order_by(Document.uploaded_at.desc())
+            .all()
         )
-        for doc_type in PROJECT_DOCUMENT_TYPES
     ]
 
     return render_template(
@@ -1009,10 +1124,11 @@ def view_project(project_id):
         project=project,
         project_summary=_project_summary_view_model(project),
         subcontractor_rows=subcontractor_rows,
-        documents=dict(documents),
-        document_groups=document_groups,
+        ready_count=ready_count,
+        blocked_count=blocked_count,
+        checking_count=checking_count,
+        document_rows=document_rows,
         project_document_types=PROJECT_DOCUMENT_TYPES,
-        ai_summary=ai_summary,
     )
 
 

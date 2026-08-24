@@ -1,8 +1,7 @@
 import os
 import unittest
 
-from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 
@@ -53,18 +52,15 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
             )
             self.other_user.set_password("password123")
 
-            db.session.add_all(
-                [
-                    self.user,
-                    self.other_user,
-                ]
-            )
+            db.session.add_all([self.user, self.other_user])
             db.session.flush()
+
             self.organization = create_default_organization_for_user(self.user)
             self.other_organization = create_default_organization_for_user(
                 self.other_user
             )
             db.session.commit()
+
             self.user_id = self.user.id
             self.other_user_id = self.other_user.id
             self.organization_id = self.organization.id
@@ -76,695 +72,506 @@ class ProjectComplianceAdviceViewTest(unittest.TestCase):
             db.drop_all()
             db.engine.dispose()
 
-    def login(self, user_id):
+    def login(self, user_id=None, organization_id=None):
         with self.client.session_transaction() as session:
-            session["_user_id"] = str(user_id)
+            session["_user_id"] = str(user_id or self.user_id)
             session["_fresh"] = True
-            if user_id == self.user_id:
-                session["active_organization_id"] = self.organization_id
-            elif user_id == self.other_user_id:
-                session["active_organization_id"] = self.other_organization_id
-
-    def make_project_with_subs(self, statuses):
-        with self.app.app_context():
-            project = Project(
-                name="Test Project",
-                user_id=self.user_id,
-                organization_id=self.organization_id,
+            session["organization_id"] = organization_id or self.organization_id
+            session["active_organization_id"] = (
+                organization_id or self.organization_id
             )
-            db.session.add(project)
-            db.session.flush()
 
-            for index, status in enumerate(statuses, start=1):
-                sub = Subcontractor(
-                    name=f"Sub {index}",
-                    user_id=self.user_id,
-                    organization_id=self.organization_id,
-                    role="Trade",
-                )
-                db.session.add(sub)
-                db.session.flush()
-                db.session.add(
-                    ProjectSubcontractor(
-                        project_id=project.id,
-                        subcontractor_id=sub.id,
-                    )
-                )
+    def make_project(self, **overrides):
+        project = Project(
+            name=overrides.pop("name", "Test Project"),
+            required_coverage=overrides.pop("required_coverage", 2_000_000),
+            end_date=overrides.pop(
+                "end_date",
+                date.today() + timedelta(days=90),
+            ),
+            user_id=overrides.pop("user_id", self.user_id),
+            organization_id=overrides.pop(
+                "organization_id",
+                self.organization_id,
+            ),
+            **overrides,
+        )
+        db.session.add(project)
+        db.session.flush()
+        return project
 
-            db.session.commit()
-            return project.id
+    def make_subcontractor(self, **overrides):
+        subcontractor = Subcontractor(
+            name=overrides.pop("name", "Subcontractor"),
+            role=overrides.pop("role", "Trade"),
+            email=overrides.pop("email", "sub@example.com"),
+            user_id=overrides.pop("user_id", self.user_id),
+            organization_id=overrides.pop(
+                "organization_id",
+                self.organization_id,
+            ),
+            **overrides,
+        )
+        db.session.add(subcontractor)
+        db.session.flush()
+        return subcontractor
 
-    def make_advice(self, status, summary, actions=()):
-        return SimpleNamespace(
-            status=status,
-            summary=summary,
-            actions=tuple(
-                SimpleNamespace(**action)
-                for action in actions
+    def link(self, project, subcontractor):
+        project_subcontractor = ProjectSubcontractor(
+            project_id=project.id,
+            subcontractor_id=subcontractor.id,
+        )
+        db.session.add(project_subcontractor)
+        db.session.flush()
+        return project_subcontractor
+
+    def add_coi_document(
+        self,
+        subcontractor,
+        expiration=None,
+        coverage=2_000_000,
+        ai_status="analyzed",
+        confidence=0.95,
+        compliance_result=None,
+    ):
+        extracted_data = {
+            "confidence": confidence,
+            "expiration_date": (
+                expiration.isoformat()
+                if hasattr(expiration, "isoformat")
+                else expiration
+            ),
+            "general_liability": {
+                "each_occurrence": coverage,
+                "expiration_date": (
+                    expiration.isoformat()
+                    if hasattr(expiration, "isoformat")
+                    else expiration
+                ),
+            },
+            "general_liability_limit": coverage,
+            "coverage_limit": coverage,
+        }
+        document = Document(
+            filename=f"subcontractors/{subcontractor.id}/coi.pdf",
+            original_name="coi.pdf",
+            document_type="COI",
+            sub_id=subcontractor.id,
+            uploaded_by=self.user_id,
+            ai_status=ai_status,
+            ai_confidence=confidence,
+            ai_extracted_data=extracted_data,
+            ai_compliance_result=(
+                compliance_result
+                if compliance_result is not None
+                else {
+                    "status": "Ready",
+                    "issues": [],
+                    "warnings": [],
+                    "confidence": confidence,
+                }
             ),
         )
+        db.session.add(document)
+        db.session.flush()
+        return document
 
-    def test_route_prepares_advice_for_each_project_subcontractor(self):
-        project_id = self.make_project_with_subs(
-            [
-                "READY",
-                "PENDING",
-            ]
+    def add_request(self, project, subcontractor, status, sent_at=None):
+        document_request = DocumentRequest(
+            organization_id=project.organization_id,
+            project_id=project.id,
+            subcontractor_id=subcontractor.id,
+            document_type="COI",
+            token_hash=hash_document_request_token(
+                f"{project.id}-{subcontractor.id}-{status}"
+            ),
+            status=status,
+            expires_at=datetime.utcnow() + timedelta(days=7),
+            created_by_user_id=self.user_id,
+            last_sent_at=sent_at,
+            completed_at=(
+                sent_at
+                if status == DOCUMENT_REQUEST_COMPLETED
+                else None
+            ),
         )
-        self.login(self.user_id)
+        db.session.add(document_request)
+        db.session.flush()
+        return document_request
 
+    def render_project(self, project_id):
+        self.login()
+        return self.client.get(f"/project/{project_id}")
+
+    def test_project_summary_uses_dashboard_readiness_source(self):
+        with self.app.app_context():
+            project = self.make_project()
+            db.session.commit()
+            project_id = project.id
+
+        self.login()
         with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            side_effect=[
-                self.make_advice("READY", "Ready for mobilization."),
-                self.make_advice(
-                    "PENDING",
-                    "Compliance review is pending.",
-                ),
-            ],
-        ) as advice_mock:
+            "app.routes.projects.dashboard_readiness_for_project",
+            return_value="CHECKING",
+        ) as readiness_mock:
             response = self.client.get(f"/project/{project_id}")
 
         body = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(advice_mock.call_count, 2)
-        self.assertIn("READY", body)
-        self.assertIn("Compliance review is pending.", body)
+        self.assertEqual(readiness_mock.call_count, 1)
+        self.assertIn("CHECKING", body)
+        self.assertIn("BuildSure is checking subcontractor documents.", body)
 
-    def test_view_model_has_predictable_contract(self):
-        project_id = self.make_project_with_subs(["READY"])
-
+    def test_empty_project_is_not_ready(self):
         with self.app.app_context():
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
+            project = self.make_project()
+            db.session.commit()
+            project_id = project.id
 
-            with patch(
-                "app.routes.projects.generate_compliance_advice",
-                return_value=self.make_advice(
-                    "READY",
-                    "Ready for mobilization.",
-                ),
-            ):
-                row = project_routes._project_subcontractor_view_model(link)
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("NO SUBCONTRACTORS", body)
+        self.assertIn("No subcontractors assigned.", body)
+        self.assertNotIn("This project is ready to mobilize.", body)
+
+    def test_ready_row_shows_status_expiration_and_documents_action_only(self):
+        with self.app.app_context():
+            project = self.make_project()
+            subcontractor = self.make_subcontractor(name="Ready Sub")
+            self.link(project, subcontractor)
+            self.add_coi_document(
+                subcontractor,
+                expiration=date.today() + timedelta(days=90),
+                coverage=2_000_000,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("Ready Sub", body)
+        self.assertIn("READY", body)
+        self.assertIn("COI expires", body)
+        self.assertIn("View Documents", body)
+        self.assertNotIn("Coverage Gap", body)
+        self.assertNotIn("Recommended Action", body)
+        self.assertNotIn("More actions", body)
+        self.assertNotIn("Request COI", body)
+
+    def test_coverage_blocker_uses_validated_evidence_only(self):
+        with self.app.app_context():
+            project = self.make_project(required_coverage=5_000_000)
+            subcontractor = self.make_subcontractor(name="Coverage Sub")
+            link = self.link(project, subcontractor)
+            link.coverage_limit = 9_000_000
+            self.add_coi_document(
+                subcontractor,
+                expiration=date.today() + timedelta(days=90),
+                coverage=2_000_000,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("Coverage Sub", body)
+        self.assertIn("GL $2M / Required $5M", body)
+        self.assertIn("Request Corrected COI", body)
+        self.assertNotIn("$9M", body)
+
+    def test_expired_coi_is_primary_issue_even_with_coverage_gap(self):
+        with self.app.app_context():
+            project = self.make_project(required_coverage=5_000_000)
+            subcontractor = self.make_subcontractor(name="Expired Coverage Sub")
+            self.link(project, subcontractor)
+            self.add_coi_document(
+                subcontractor,
+                expiration=date(2025, 6, 30),
+                coverage=2_000_000,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        project_body = self.render_project(project_id).get_data(as_text=True)
+        dashboard_body = self.client.get("/dashboard").get_data(as_text=True)
+
+        self.assertIn("COI expired Jun 30, 2025", project_body)
+        self.assertIn("COI expired Jun 30, 2025", dashboard_body)
+        self.assertNotIn("GL $2M / Required $5M", project_body)
+        self.assertNotIn("GL $2M / Required $5M", dashboard_body)
+
+    def test_pending_request_shows_waiting_and_resend(self):
+        with self.app.app_context():
+            project = self.make_project()
+            subcontractor = self.make_subcontractor(name="Waiting Sub")
+            self.link(project, subcontractor)
+            self.add_request(
+                project,
+                subcontractor,
+                DOCUMENT_REQUEST_PENDING,
+                sent_at=datetime(2026, 8, 20),
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("Waiting on subcontractor", body)
+        self.assertIn("COI request sent Aug 20", body)
+        self.assertIn(">Resend<", body)
+        self.assertNotIn(">Request COI<", body)
+
+    def test_completed_invalid_coi_requests_corrected_coi(self):
+        with self.app.app_context():
+            project = self.make_project(required_coverage=5_000_000)
+            subcontractor = self.make_subcontractor(name="Completed Sub")
+            self.link(project, subcontractor)
+            self.add_coi_document(
+                subcontractor,
+                expiration=date.today() + timedelta(days=90),
+                coverage=2_000_000,
+            )
+            self.add_request(
+                project,
+                subcontractor,
+                DOCUMENT_REQUEST_COMPLETED,
+                sent_at=datetime(2026, 8, 20),
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("GL $2M / Required $5M", body)
+        self.assertIn("COI received Aug 20", body)
+        self.assertIn("Request Corrected COI", body)
+
+    def test_missing_email_shows_add_email(self):
+        with self.app.app_context():
+            project = self.make_project()
+            subcontractor = self.make_subcontractor(
+                name="No Email Sub",
+                email="",
+            )
+            self.link(project, subcontractor)
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("COI missing", body)
+        self.assertIn("Add Email", body)
+
+    def test_processing_document_is_checking_without_request_action(self):
+        with self.app.app_context():
+            project = self.make_project(required_coverage=2_000_000)
+            subcontractor = self.make_subcontractor(name="Checking Sub")
+            self.link(project, subcontractor)
+            self.add_coi_document(
+                subcontractor,
+                expiration=None,
+                coverage=None,
+                ai_status="not_analyzed",
+                compliance_result=None,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("Checking Sub", body)
+        self.assertIn("CHECKING", body)
+        self.assertIn("BuildSure is reviewing the latest COI.", body)
+        self.assertNotIn("Request COI", body)
+
+    def test_analysis_failure_shows_review_documents(self):
+        with self.app.app_context():
+            project = self.make_project()
+            subcontractor = self.make_subcontractor(name="Failed Sub")
+            self.link(project, subcontractor)
+            self.add_coi_document(
+                subcontractor,
+                expiration=None,
+                coverage=None,
+                ai_status="failed",
+                compliance_result=None,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("COI analysis needs review", body)
+        self.assertIn("Review Documents", body)
+
+    def test_project_documents_are_simple_table_without_intelligence_cards(self):
+        with self.app.app_context():
+            project = self.make_project()
+            db.session.add_all(
+                [
+                    Document(
+                        filename="projects/1/contract.pdf",
+                        original_name="contract.pdf",
+                        document_type="Contract",
+                        project_id=project.id,
+                        uploaded_by=self.user_id,
+                        ai_status="analyzed",
+                        ai_extracted_data={
+                            "project_name": "<script>Bad</script>",
+                            "contract_value": 4_850_000,
+                        },
+                        ai_compliance_result={"status": "Ready"},
+                    ),
+                    Document(
+                        filename="projects/1/contract-processing.pdf",
+                        original_name="contract-processing.pdf",
+                        document_type="Contract",
+                        project_id=project.id,
+                        uploaded_by=self.user_id,
+                        ai_status="not_analyzed",
+                    ),
+                    Document(
+                        filename="projects/1/contract-failed.pdf",
+                        original_name="contract-failed.pdf",
+                        document_type="Contract",
+                        project_id=project.id,
+                        uploaded_by=self.user_id,
+                        ai_status="failed",
+                    ),
+                    Document(
+                        filename="projects/1/scope.pdf",
+                        original_name="scope.pdf",
+                        document_type="Scope",
+                        project_id=project.id,
+                        uploaded_by=self.user_id,
+                        ai_status="not_analyzed",
+                    ),
+                    Document(
+                        filename="projects/1/owner.pdf",
+                        original_name="owner.pdf",
+                        document_type="Owner Requirements",
+                        project_id=project.id,
+                        uploaded_by=self.user_id,
+                        ai_status="not_analyzed",
+                    ),
+                ]
+            )
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("Project Documents", body)
+        self.assertIn("contract.pdf", body)
+        self.assertIn("ANALYZED", body)
+        self.assertIn("contract-processing.pdf", body)
+        self.assertIn("PROCESSING", body)
+        self.assertIn("contract-failed.pdf", body)
+        self.assertIn("FAILED", body)
+        self.assertIn("scope.pdf", body)
+        self.assertIn("owner.pdf", body)
+        self.assertIn("UPLOADED", body)
+        self.assertNotIn("Document Intelligence Summary", body)
+        self.assertNotIn("Contract Extraction", body)
+        self.assertNotIn("Risk Level", body)
+        self.assertNotIn("<script>Bad</script>", body)
+
+    def test_project_without_documents_shows_single_empty_message(self):
+        with self.app.app_context():
+            project = self.make_project()
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertIn("No project documents uploaded.", body)
+        self.assertNotIn("No Owner Requirements uploaded yet.", body)
+
+    def test_subcontractors_are_sorted_by_operational_priority(self):
+        with self.app.app_context():
+            project = self.make_project(required_coverage=5_000_000)
+            blocked = self.make_subcontractor(name="Blocked Sub")
+            handled = self.make_subcontractor(name="Handled Sub")
+            checking = self.make_subcontractor(name="Checking Sub")
+            ready = self.make_subcontractor(name="Ready Sub")
+            self.link(project, ready)
+            self.add_coi_document(
+                ready,
+                expiration=date.today() + timedelta(days=90),
+                coverage=5_000_000,
+            )
+            self.link(project, checking)
+            self.add_coi_document(
+                checking,
+                ai_status="not_analyzed",
+                coverage=None,
+            )
+            self.link(project, handled)
+            self.add_request(
+                project,
+                handled,
+                DOCUMENT_REQUEST_PENDING,
+                sent_at=datetime(2026, 8, 20),
+            )
+            self.link(project, blocked)
+            db.session.commit()
+            project_id = project.id
+
+        body = self.render_project(project_id).get_data(as_text=True)
+
+        self.assertLess(body.index("Blocked Sub"), body.index("Handled Sub"))
+        self.assertLess(body.index("Handled Sub"), body.index("Checking Sub"))
+        self.assertLess(body.index("Checking Sub"), body.index("Ready Sub"))
+
+    def test_project_view_preserves_tenant_isolation(self):
+        with self.app.app_context():
+            project = self.make_project(
+                user_id=self.other_user_id,
+                organization_id=self.other_organization_id,
+            )
+            db.session.commit()
+            project_id = project.id
+
+        self.login(self.user_id, self.organization_id)
+        response = self.client.get(f"/project/{project_id}")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_templates_do_not_call_business_services(self):
+        for template_path in (
+            "app/templates/dashboard.html",
+            "app/templates/view_project.html",
+            "app/templates/view_sub_documents.html",
+        ):
+            with open(template_path, encoding="utf-8") as template:
+                content = template.read()
+
+            self.assertNotIn("calculate_readiness", content)
+            self.assertNotIn("generate_compliance_advice", content)
+            self.assertNotIn("analyze_and_save_document", content)
+            self.assertNotIn("ai_extracted_data|safe", content)
+
+    def test_view_model_contract_is_predictable(self):
+        with self.app.app_context():
+            project = self.make_project()
+            subcontractor = self.make_subcontractor()
+            link = self.link(project, subcontractor)
+            db.session.commit()
+
+            row = project_routes._project_subcontractor_view_model(link)
 
         self.assertEqual(
             set(row.keys()),
             {
                 "project_subcontractor",
-                "advice",
-                "advice_available",
                 "status",
-                "current_coverage",
-                "required_coverage",
-                "coverage_gap",
-                "coi_expiration",
-                "primary_reason",
-                "recommended_action",
-                "action_priority",
-                "document_request",
+                "issue",
                 "document_request_status",
-                "document_request_cta",
-                "show_operational_action",
-                "show_more_actions",
+                "action",
+                "coi_expiration",
+                "sort",
             },
         )
-        self.assertTrue(row["advice_available"])
-        self.assertEqual(row["advice"].status, "READY")
-        self.assertEqual(row["status"], "READY")
-
-    def test_view_model_fallback_has_predictable_contract(self):
-        project_id = self.make_project_with_subs(["READY"])
-
-        with self.app.app_context():
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
-
-            with patch(
-                "app.routes.projects.generate_compliance_advice",
-                side_effect=RuntimeError("boom"),
-            ):
-                row = project_routes._project_subcontractor_view_model(link)
-
-        self.assertFalse(row["advice_available"])
-        self.assertEqual(row["advice"].summary, "Compliance advice unavailable.")
-        self.assertEqual(row["advice"].actions, ())
-        self.assertIsNone(row["recommended_action"])
-        self.assertIn(
-            row["advice"].status,
-            {
-                "READY",
-                "PENDING",
-                "BLOCKED",
-            },
-        )
-
-    def test_ready_renders_simple_status_without_empty_actions(self):
-        project_id = self.make_project_with_subs(["READY"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "READY",
-                "Ready for mobilization.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("READY", body)
-        self.assertNotIn("Ready for mobilization.", body)
-        self.assertNotIn("Recommended Action", body)
-        self.assertNotIn("<ul class=\"mb-0\">", body)
-
-    def test_pending_renders_summary_and_actions(self):
-        project_id = self.make_project_with_subs(["PENDING"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "PENDING",
-                "Compliance review is pending.",
-                actions=[
-                    {
-                        "title": "Wait until document analysis completes.",
-                        "description": "Review again after processing.",
-                        "priority": "MEDIUM",
-                    },
-                ],
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("PENDING", body)
-        self.assertIn("Compliance review is pending.", body)
-        self.assertIn("Wait until document analysis completes.", body)
-        self.assertIn("Recommended Action", body)
-
-    def test_blocked_renders_simplified_coverage_action_without_priority(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-        self.login(self.user_id)
-
-        with self.app.app_context():
-            project = db.session.get(Project, project_id)
-            project.required_coverage = 5_000_000
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
-            sub = link.subcontractor
-            doc = Document(
-                filename="subcontractors/1/coi.pdf",
-                original_name="coi.pdf",
-                document_type="COI",
-                sub_id=sub.id,
-                uploaded_by=self.user_id,
-                ai_status="analyzed",
-                ai_confidence=0.95,
-                ai_extracted_data={
-                    "expiration_date": "2027-05-01",
-                    "coverage_limit": 2_000_000,
-                    "general_liability": {
-                        "each_occurrence": 2_000_000,
-                        "expiration_date": "2027-05-01",
-                    },
-                    "confidence": 0.95,
-                },
-                ai_compliance_result={
-                    "is_coi": True,
-                    "validator": {"valid": True, "errors": []},
-                    "confidence": 0.95,
-                },
-            )
-            db.session.add(doc)
-            db.session.commit()
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "Mobilization blocked because insurance coverage is below the project requirement.",
-                actions=[
-                    {
-                        "title": "Review insurance coverage.",
-                        "description": "Confirm coverage meets the project requirement.",
-                        "priority": "HIGH",
-                    },
-                ],
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("BLOCKED", body)
-        self.assertIn("GL coverage is below requirement.", body)
-        self.assertIn(
-            "A corrected COI with at least $5M GL coverage is required.",
-            body,
-        )
-        self.assertNotIn("Priority: HIGH", body)
-        self.assertNotIn(
-            "Confirm coverage meets the project requirement.",
-            body,
-        )
-        self.assertNotIn(
-            "Mobilization blocked because insurance coverage is below the project requirement.",
-            body,
-        )
-        self.assertIn("Current GL", body)
-        self.assertIn("Required GL", body)
-        self.assertIn("Coverage Gap", body)
-        self.assertIn("$2M", body)
-        self.assertIn("$5M", body)
-        self.assertIn("$3M", body)
-
-    def test_project_without_subcontractors_still_renders(self):
-        project_id = self.make_project_with_subs([])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-        ) as advice_mock:
-            response = self.client.get(f"/project/{project_id}")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(
-            "No subcontractors linked.",
-            response.get_data(as_text=True),
-        )
-        advice_mock.assert_not_called()
-
-    def test_compliance_officer_failure_does_not_break_page(self):
-        project_id = self.make_project_with_subs(["READY"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            side_effect=RuntimeError("boom"),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Compliance advice unavailable.", body)
-        self.assertIn("BLOCKED", body)
-        self.assertNotIn("<ul class=\"mb-0\">", body)
-
-    def test_failure_in_one_link_does_not_block_other_links(self):
-        project_id = self.make_project_with_subs(
-            [
-                "BLOCKED",
-                "READY",
-            ]
-        )
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            side_effect=[
-                RuntimeError("boom"),
-                self.make_advice(
-                    "READY",
-                    "Ready for mobilization.",
-                ),
-            ],
-        ) as advice_mock:
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(advice_mock.call_count, 2)
-        self.assertIn("Compliance advice unavailable.", body)
-        self.assertIn("READY", body)
-
-    def test_user_cannot_access_project_from_other_user(self):
-        with self.app.app_context():
-            project = Project(
-                name="Other Project",
-                user_id=self.other_user_id,
-                organization_id=self.other_organization_id,
-            )
-            db.session.add(project)
-            db.session.commit()
-            project_id = project.id
-
-        self.login(self.user_id)
-
-        response = self.client.get(f"/project/{project_id}")
-
-        self.assertEqual(response.status_code, 404)
-
-    def test_unauthorized_project_does_not_call_compliance_officer(self):
-        with self.app.app_context():
-            project = Project(
-                name="Other Project",
-                user_id=self.other_user_id,
-                organization_id=self.other_organization_id,
-            )
-            db.session.add(project)
-            db.session.commit()
-            project_id = project.id
-
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.generate_compliance_advice",
-        ) as advice_mock:
-            response = self.client.get(f"/project/{project_id}")
-
-        self.assertEqual(response.status_code, 404)
-        advice_mock.assert_not_called()
-
-    def test_template_does_not_call_business_service_directly(self):
-        with open(
-            "app/templates/view_project.html",
-            encoding="utf-8",
-        ) as template:
-            content = template.read()
-
-        self.assertNotIn("generate_compliance_advice", content)
-        self.assertNotIn("calculate_readiness", content)
-        self.assertNotIn("readiness_status", content)
-
-    def test_request_coi_cta_without_previous_request(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "COI is missing.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("Request COI", body)
-        self.assertNotIn("Request Corrected COI", body)
-
-    def test_pending_request_shows_sent_and_resend(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-
-        with self.app.app_context():
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
-            request = DocumentRequest(
-                organization_id=self.organization_id,
-                project_id=project_id,
-                subcontractor_id=link.subcontractor_id,
-                document_type="COI",
-                token_hash=hash_document_request_token("pending-token"),
-                status=DOCUMENT_REQUEST_PENDING,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=7),
-                created_by_user_id=self.user_id,
-            )
-            request.last_sent_at = datetime(2026, 8, 20, 12, 0, 0)
-            db.session.add(request)
-            db.session.commit()
-
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "COI is missing.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("COI request sent Aug 20", body)
-        self.assertIn("Resend", body)
-        self.assertNotIn("Request Corrected COI", body)
-
-    def test_completed_blocked_request_shows_corrected_cta(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-
-        with self.app.app_context():
-            project = db.session.get(Project, project_id)
-            project.required_coverage = 5_000_000
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
-            request = DocumentRequest(
-                organization_id=self.organization_id,
-                project_id=project_id,
-                subcontractor_id=link.subcontractor_id,
-                document_type="COI",
-                token_hash=hash_document_request_token("completed-token"),
-                status=DOCUMENT_REQUEST_COMPLETED,
-                expires_at=datetime.now(timezone.utc),
-                completed_at=datetime(2026, 8, 20, 12, 0, 0),
-                created_by_user_id=self.user_id,
-            )
-            db.session.add(request)
-            db.session.commit()
-
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "COI is still insufficient.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("COI received Aug 20", body)
-        self.assertIn("Request Corrected COI", body)
-        self.assertNotIn(">Request COI</button>", body)
-
-    def test_request_corrected_coi_creates_new_request(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-
-        with self.app.app_context():
-            link = ProjectSubcontractor.query.filter_by(
-                project_id=project_id,
-            ).first()
-            link.subcontractor.email = "sub@example.com"
-            old_request = DocumentRequest(
-                organization_id=self.organization_id,
-                project_id=project_id,
-                subcontractor_id=link.subcontractor_id,
-                document_type="COI",
-                token_hash=hash_document_request_token("completed-token"),
-                status=DOCUMENT_REQUEST_COMPLETED,
-                expires_at=datetime.now(timezone.utc),
-                completed_at=datetime.now(timezone.utc),
-                created_by_user_id=self.user_id,
-            )
-            db.session.add(old_request)
-            db.session.commit()
-            old_request_id = old_request.id
-            old_token_hash = old_request.token_hash
-            subcontractor_id = link.subcontractor_id
-
-        self.login(self.user_id)
-
-        with patch(
-            "app.services.document_requests.send_email_reminder",
-            return_value=True,
-        ):
-            response = self.client.post(
-                f"/project/{project_id}/subcontractor/{subcontractor_id}/request-coi"
-            )
-
-        self.assertEqual(response.status_code, 302)
-
-        with self.app.app_context():
-            requests = DocumentRequest.query.order_by(
-                DocumentRequest.id.asc()
-            ).all()
-            self.assertEqual(len(requests), 2)
-            self.assertEqual(requests[0].id, old_request_id)
-            self.assertEqual(requests[0].status, DOCUMENT_REQUEST_COMPLETED)
-            self.assertEqual(requests[0].token_hash, old_token_hash)
-            self.assertEqual(requests[1].status, DOCUMENT_REQUEST_PENDING)
-            self.assertNotEqual(requests[1].token_hash, old_token_hash)
-
-    def test_ready_card_does_not_show_correction_cta(self):
-        project_id = self.make_project_with_subs(["READY"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "READY",
-                "Ready for mobilization.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("READY", body)
-        self.assertNotIn("Request Corrected COI", body)
-        self.assertNotIn("Request COI", body)
-        self.assertNotIn("Recommended Action", body)
-
-    def test_summary_and_actions_are_escaped(self):
-        project_id = self.make_project_with_subs(["PENDING"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "PENDING",
-                "<script>alert('summary')</script>",
-                actions=[
-                    {
-                        "title": "<script>alert('title')</script>",
-                        "description": "<script>alert('description')</script>",
-                        "priority": "MEDIUM",
-                    },
-                ],
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertNotIn("<script>alert('summary')</script>", body)
-        self.assertNotIn("<script>alert('title')</script>", body)
-        self.assertNotIn("<script>alert('description')</script>", body)
-        self.assertIn("&lt;script&gt;alert(&#39;summary&#39;)&lt;/script&gt;", body)
-
-    def test_actions_remain_in_officer_order(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "Mobilization blocked.",
-                actions=[
-                    {
-                        "title": "First action.",
-                        "description": "First description.",
-                        "priority": "HIGH",
-                    },
-                    {
-                        "title": "Second action.",
-                        "description": "Second description.",
-                        "priority": "MEDIUM",
-                    },
-                ],
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertLess(
-            body.index("First action."),
-            body.index("Second action."),
-        )
-
-    def test_actions_are_visual_guidance_not_new_functional_buttons(self):
-        project_id = self.make_project_with_subs(["PENDING"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "PENDING",
-                "Compliance review is pending.",
-                actions=[
-                    {
-                        "title": "Upload a valid Certificate of Insurance.",
-                        "description": "Add a current COI.",
-                        "priority": "MEDIUM",
-                    },
-                ],
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("Upload a valid Certificate of Insurance.", body)
-        self.assertNotIn("Send Email", body)
-        self.assertNotIn("Approve", body)
-
-    def test_project_summary_uses_final_readiness_language(self):
-        project_id = self.make_project_with_subs(["BLOCKED"])
-        self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=SimpleNamespace(
-                score=100,
-                ready=3,
-                pending=0,
-                blocked=0,
-                risk="Low",
-                mobilization="Project Ready",
-                revenue_at_risk=0,
-                critical_issues=[],
-            ),
-        ), patch(
-            "app.routes.projects.generate_compliance_advice",
-            return_value=self.make_advice(
-                "BLOCKED",
-                "Mobilization blocked.",
-            ),
-        ):
-            response = self.client.get(f"/project/{project_id}")
-
-        body = response.get_data(as_text=True)
-        self.assertIn("Document Intelligence Summary", body)
-        self.assertIn(
-            "Document analysis results do not replace final mobilization readiness.",
-            body,
-        )
-        self.assertIn("One or more subcontractors cannot work today.", body)
 
 
 if __name__ == "__main__":

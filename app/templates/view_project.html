@@ -6,32 +6,19 @@
 <span class="ux-status ux-status-{{ normalized }}">{{ status }}</span>
 {%- endmacro %}
 
-{% macro contract_field_status(status) -%}
-{% if status == "applied" -%}
-Applied
-{% elif status == "preserved" -%}
-Preserved
-{% elif status == "low_confidence" -%}
-Low Confidence
-{% elif status == "invalid" -%}
-Invalid
-{% else -%}
-Not Found
-{% endif -%}
-{%- endmacro %}
-
-{% macro contract_field_sr_status(status) -%}
-{% if status == "applied" -%}
-Applied to project
-{% elif status == "preserved" -%}
-Preserved manual value
-{% elif status == "low_confidence" -%}
-Low confidence extraction
-{% elif status == "invalid" -%}
-Invalid extraction
-{% else -%}
-Not found
-{% endif -%}
+{% macro action_control(action) -%}
+{% if action %}
+{% if action.kind == "post" %}
+<form method="POST" action="{{ url_for(action.endpoint, **action.params) }}">
+{{ csrf_input() }}
+<button type="submit" class="ux-btn ux-btn-secondary">{{ action.label }}</button>
+</form>
+{% else %}
+<a href="{{ url_for(action.endpoint, **action.params) }}" class="ux-btn ux-btn-primary">{{ action.label }}</a>
+{% endif %}
+{% else %}
+<span class="ux-help">None</span>
+{% endif %}
 {%- endmacro %}
 
 <div class="ux-page">
@@ -40,196 +27,97 @@ Not found
 <div class="ux-page-header mb-0">
 <div>
 <h1 id="project-summary">{{ project_summary.name }}</h1>
-<p class="ux-help mb-0">Final project readiness uses BuildSure readiness, not raw AI output.</p>
+<p class="ux-help mb-0">{{ project_summary.message }}</p>
 </div>
 <div>
 {{ status_badge(project_summary.status) }}
 </div>
 </div>
 
-<div class="ux-soft mt-3">
-<strong>{{ project_summary.status }}</strong>
-<p class="mb-0">{{ project_summary.message }}</p>
-</div>
-
 <div class="ux-grid mt-3">
 <div class="ux-metric">
-<span class="ux-metric-value">{{ project_summary.risk }}</span>
-<span class="ux-metric-label">Risk Level</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value" title="{{ project_summary.contract_value_full }}">{{ project_summary.contract_value }}</span>
-<span class="ux-metric-label">Contract Value</span>
-</div>
-<div class="ux-metric">
 <span class="ux-metric-value">{{ project_summary.required_coverage }}</span>
-<span class="ux-metric-label">Required General Liability</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ project_summary.start_date }}</span>
-<span class="ux-metric-label">Start Date</span>
+<span class="ux-metric-label">Required GL</span>
 </div>
 <div class="ux-metric">
 <span class="ux-metric-value">{{ project_summary.end_date }}</span>
-<span class="ux-metric-label">End Date</span>
+<span class="ux-metric-label">Project End Date</span>
 </div>
 <div class="ux-metric">
-<span class="ux-metric-value">{{ project_summary.days_remaining }}</span>
-<span class="ux-metric-label">Days Remaining</span>
+<span class="ux-metric-value">{{ project_summary.subcontractor_count }}</span>
+<span class="ux-metric-label">Subcontractors</span>
 </div>
+</div>
+
+<div class="form-actions mt-3">
+<a href="{{ url_for('projects.list_projects') }}" class="ux-btn ux-btn-secondary">Back to Projects</a>
+<a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="ux-btn ux-btn-primary">Edit Project</a>
 </div>
 </section>
-
-{% if ai_summary %}
-<section class="ux-card" aria-labelledby="document-summary">
-<div class="ux-card-header">
-<div>
-<h2 id="document-summary">Document Intelligence Summary</h2>
-<p class="ux-help mb-0">Document analysis results do not replace final mobilization readiness.</p>
-</div>
-</div>
-
-<div class="ux-grid">
-<div class="ux-metric">
-<span class="ux-metric-value">{{ ai_summary.score }}%</span>
-<span class="ux-metric-label">AI Score</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ ai_summary.ready }}</span>
-<span class="ux-metric-label">Ready by Analysis</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ ai_summary.pending }}</span>
-<span class="ux-metric-label">Pending by Analysis</span>
-</div>
-<div class="ux-metric">
-<span class="ux-metric-value">{{ ai_summary.blocked }}</span>
-<span class="ux-metric-label">Blocked by Analysis</span>
-</div>
-</div>
-
-<div class="ux-soft">
-<strong>Analysis risk:</strong> {{ ai_summary.risk }}
-<br>
-<strong>Analysis mobilization label:</strong> {{ ai_summary.mobilization }}
-<br>
-<strong>Revenue at Risk:</strong> ${{ "{:,.0f}".format(ai_summary.revenue_at_risk or 0) }}
-</div>
-
-{% if ai_summary.critical_issues %}
-<div class="mt-3">
-<h3 class="h6">Document Issues</h3>
-{% for item in ai_summary.critical_issues %}
-<div class="ux-soft mb-2">
-<strong>{{ item.subcontractor }}</strong> - {{ item.document_type }}
-{% for issue in item.issues %}
-<div class="ux-help">{{ issue.message if issue.message else issue.get("message") }}</div>
-{% endfor %}
-</div>
-{% endfor %}
-</div>
-{% endif %}
-</section>
-{% endif %}
 
 <section class="ux-card" aria-labelledby="project-subcontractors">
 <div class="ux-card-header">
+<div>
 <h2 id="project-subcontractors">Subcontractors</h2>
+<p class="ux-help mb-0">Who can work today?</p>
+</div>
+{% if subcontractor_rows %}
+<div class="ux-actions">
+<span class="ux-status ux-status-ready">{{ ready_count }} Ready</span>
+<span class="ux-status ux-status-blocked">{{ blocked_count }} Blocked</span>
+<span class="ux-status ux-status-checking">{{ checking_count }} Checking</span>
+</div>
+{% endif %}
 </div>
 
 {% if subcontractor_rows %}
-<div class="ux-grid-lg">
+<div class="ux-table-wrap">
+<table class="ux-table">
+<caption class="ux-sr-only">Project subcontractor readiness</caption>
+<thead>
+<tr>
+<th scope="col">Subcontractor</th>
+<th scope="col">Trade</th>
+<th scope="col">Status</th>
+<th scope="col">Issue / State</th>
+<th scope="col">Action</th>
+</tr>
+</thead>
+<tbody>
 {% for row in subcontractor_rows %}
 {% set ps = row.project_subcontractor %}
-{% set advice = row.advice %}
-<article class="ux-card mb-0">
-<div class="ux-card-header">
-<div>
-<h3>{{ ps.subcontractor.name }}</h3>
-<p class="ux-help mb-0">{{ ps.subcontractor.role or "Not specified" }}</p>
-</div>
-{{ status_badge(row.status) }}
-</div>
-
-<div class="ux-grid">
-{% if row.status == "READY" %}
-<div>
-<span class="ux-label">COI Expiration</span>
-<strong>{{ row.coi_expiration }}</strong>
-</div>
-{% else %}
-<div>
-<span class="ux-label">Current GL</span>
-<strong>{{ row.current_coverage }}</strong>
-</div>
-<div>
-<span class="ux-label">Required GL</span>
-<strong>{{ row.required_coverage }}</strong>
-</div>
-<div>
-<span class="ux-label">Coverage Gap</span>
-<strong>{{ row.coverage_gap }}</strong>
-</div>
-<div>
-<span class="ux-label">COI Expiration</span>
-<strong>{{ row.coi_expiration }}</strong>
-</div>
-{% endif %}
-</div>
-
-{% if row.status != "READY" %}
-<div class="ux-soft mt-3">
-<strong>Reason</strong>
-<p class="mb-2">{{ row.primary_reason }}</p>
-{% if row.show_operational_action %}
-<strong>Recommended Action</strong>
-<p class="mb-2">{{ row.recommended_action }}</p>
-{% endif %}
-</div>
-{% endif %}
-
-{% if row.status != "READY" %}
-<div class="ux-soft mt-3">
+<tr>
+<td>{{ ps.subcontractor.name }}</td>
+<td>{{ ps.subcontractor.role or "Not specified" }}</td>
+<td>{{ status_badge(row.status) }}</td>
+<td>
+{{ row.issue }}
 {% if row.document_request_status %}
-<p class="mb-2">{{ row.document_request_status }}</p>
+<div class="ux-help">{{ row.document_request_status }}</div>
 {% endif %}
-<form method="POST" action="{{ url_for('document_requests.request_coi', project_id=project.id, subcontractor_id=ps.subcontractor.id) }}">
-{{ csrf_input() }}
-<button type="submit" class="ux-btn ux-btn-warning">{{ row.document_request_cta }}</button>
-</form>
-</div>
-{% endif %}
-
-{% if advice.actions and row.show_more_actions %}
-<details class="mt-3">
-<summary>More actions</summary>
-<div class="mt-2">
-{% for action in advice.actions %}
-<div class="ux-soft mb-2">
-<strong>{{ action.title }}</strong>
-<div class="ux-help">{{ action.description }}</div>
-</div>
+</td>
+<td>{{ action_control(row.action) }}</td>
+</tr>
 {% endfor %}
-</div>
-</details>
-{% endif %}
-
-<div class="mt-3">
-<a href="{{ url_for('subcontractors.view_sub_documents', sub_id=ps.subcontractor.id) }}" class="ux-btn ux-btn-primary">
-View Documents
-</a>
-</div>
-</article>
-{% endfor %}
+</tbody>
+</table>
 </div>
 {% else %}
-<div class="ux-empty">No subcontractors linked.</div>
+<div class="ux-empty">
+No subcontractors assigned.
+<div class="mt-3">
+<a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="ux-btn ux-btn-primary">Edit Project</a>
+</div>
+</div>
 {% endif %}
 </section>
 
 <section class="ux-card" aria-labelledby="project-documents">
 <div class="ux-card-header">
+<div>
 <h2 id="project-documents">Project Documents</h2>
+<p class="ux-help mb-0">Upload and manage files attached to this project.</p>
+</div>
 </div>
 
 <form action="{{ url_for('projects.upload_project_document', project_id=project.id) }}" method="POST" enctype="multipart/form-data" class="form-actions mb-3">
@@ -243,49 +131,27 @@ View Documents
 <button type="submit" class="ux-btn ux-btn-secondary">Upload Document</button>
 </form>
 
-{% for group in document_groups %}
-<div class="ux-card">
-<div class="ux-card-header">
-<h3>{{ group.type }}</h3>
-{% if group.supports_analysis %}
-<span class="ux-status ux-status-info">Analysis supported</span>
-{% else %}
-<span class="ux-status ux-status-neutral">No analysis yet</span>
-{% endif %}
-</div>
-
-{% if group.documents %}
+{% if document_rows %}
 <div class="ux-table-wrap">
 <table class="ux-table">
-<caption class="ux-sr-only">{{ group.type }} documents</caption>
+<caption class="ux-sr-only">Project documents</caption>
 <thead>
 <tr>
 <th scope="col">File</th>
-<th scope="col">Version</th>
-<th scope="col">Upload Date</th>
-<th scope="col">Analysis</th>
+<th scope="col">Type</th>
+<th scope="col">Uploaded</th>
+<th scope="col">Status</th>
 <th scope="col">Actions</th>
 </tr>
 </thead>
 <tbody>
-{% for doc in group.documents %}
+{% for row in document_rows %}
+{% set doc = row.document %}
 <tr>
 <td><a href="{{ url_for('documents.view_document', doc_id=doc.id) }}">{{ doc.original_name }}</a></td>
-<td>v{{ doc.version }}</td>
+<td>{{ doc.document_type }}</td>
 <td>{{ doc.uploaded_at|format_local_time }}</td>
-<td>
-{% if group.supports_analysis %}
-{% if doc.ai_status == "analyzed" %}
-<span class="ux-status ux-status-success">Analyzed</span>
-{% elif doc.ai_status == "failed" %}
-<span class="ux-status ux-status-danger">Failed</span>
-{% else %}
-<span class="ux-status ux-status-neutral">Not Analyzed</span>
-{% endif %}
-{% else %}
-<span class="ux-status ux-status-neutral">Not supported</span>
-{% endif %}
-</td>
+<td>{{ status_badge(row.status) }}</td>
 <td>
 <div class="ux-actions">
 <a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" class="ux-btn ux-btn-primary">Open</a>
@@ -297,60 +163,13 @@ View Documents
 </div>
 </td>
 </tr>
-
-{% if doc.document_type == "Contract" and doc.ai_status == "analyzed" and doc.ai_extracted_data %}
-{% set extraction = doc.ai_extracted_data %}
-{% set autofill = (doc.ai_compliance_result or {}).get("project_auto_fill", {}) %}
-{% set fields = autofill.get("fields", {}) %}
-<tr>
-<td colspan="5">
-<div class="ux-soft">
-<h4 class="h6">Contract Extraction</h4>
-<div class="ux-extraction-grid">
-<div class="ux-extraction-card">
-<strong>Project Name</strong>
-<div>{{ extraction.get("project_name") or "Not found" }}</div>
-<span class="ux-status ux-status-neutral">{{ contract_field_status(fields.get("project_name", {}).get("status", "not_found")) }}<span class="ux-sr-only">{{ contract_field_sr_status(fields.get("project_name", {}).get("status", "not_found")) }}</span></span>
-</div>
-<div class="ux-extraction-card">
-<strong>Contract Value</strong>
-<div>{% if extraction.get("contract_value") is not none %}${{ "{:,.0f}".format(extraction.get("contract_value")) }}{% else %}Not found{% endif %}</div>
-<span class="ux-status ux-status-neutral">{{ contract_field_status(fields.get("contract_value", {}).get("status", "not_found")) }}<span class="ux-sr-only">{{ contract_field_sr_status(fields.get("contract_value", {}).get("status", "not_found")) }}</span></span>
-</div>
-<div class="ux-extraction-card">
-<strong>Start Date</strong>
-<div>{{ extraction.get("start_date") or "Not found" }}</div>
-<span class="ux-status ux-status-neutral">{{ contract_field_status(fields.get("start_date", {}).get("status", "not_found")) }}<span class="ux-sr-only">{{ contract_field_sr_status(fields.get("start_date", {}).get("status", "not_found")) }}</span></span>
-</div>
-<div class="ux-extraction-card">
-<strong>End Date</strong>
-<div>{{ extraction.get("end_date") or "Not found" }}</div>
-<span class="ux-status ux-status-neutral">{{ contract_field_status(fields.get("end_date", {}).get("status", "not_found")) }}<span class="ux-sr-only">{{ contract_field_sr_status(fields.get("end_date", {}).get("status", "not_found")) }}</span></span>
-</div>
-<div class="ux-extraction-card">
-<strong>Minimum General Liability</strong>
-<div>{% if extraction.get("required_coverage") is not none %}${{ "{:,.0f}".format(extraction.get("required_coverage")) }}{% else %}Not found{% endif %}</div>
-<span class="ux-status ux-status-neutral">{{ contract_field_status(fields.get("required_coverage", {}).get("status", "not_found")) }}<span class="ux-sr-only">{{ contract_field_sr_status(fields.get("required_coverage", {}).get("status", "not_found")) }}</span></span>
-</div>
-<div class="ux-extraction-card">
-<strong>Confidence</strong>
-<div>{{ "{:.0%}".format(extraction.get("confidence") or 0) }}</div>
-</div>
-</div>
-</div>
-</td>
-</tr>
-{% endif %}
-
 {% endfor %}
 </tbody>
 </table>
 </div>
 {% else %}
-<div class="ux-empty">{{ group.empty_message }}</div>
+<div class="ux-empty">No project documents uploaded.</div>
 {% endif %}
-</div>
-{% endfor %}
 </section>
 
 </div>

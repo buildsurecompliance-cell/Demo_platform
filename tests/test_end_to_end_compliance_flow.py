@@ -167,12 +167,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
 
     def render_project(self, project_id):
         self.login(self.user_id)
-
-        with patch(
-            "app.routes.projects.get_project_ai_summary",
-            return_value=None,
-        ):
-            return self.client.get(f"/project/{project_id}")
+        return self.client.get(f"/project/{project_id}")
 
     def assert_view_status(self, project_id, status, summary):
         response = self.render_project(project_id)
@@ -209,9 +204,9 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
         body = self.assert_view_status(
             project_id,
             "BLOCKED",
-            "Mobilization blocked because a Certificate of Insurance is missing.",
+            "COI missing",
         )
-        self.assertIn("Upload a valid Certificate of Insurance.", body)
+        self.assertIn("Add Email", body)
 
     def test_blocked_expired_coi_has_single_reason_and_view_matches(self):
         with self.app.app_context():
@@ -242,7 +237,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
         body = self.assert_view_status(
             project_id,
             "BLOCKED",
-            "Mobilization blocked because the Certificate of Insurance expired.",
+            "COI expired",
         )
         self.assertNotIn("READY", body)
 
@@ -329,10 +324,15 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
                     self.assertNotIn("Ready for mobilization.", advice.summary)
                     self.assertTrue(advice.actions)
 
+                expected_status = (
+                    "CHECKING"
+                    if reason_code == "COI_DOCUMENT_PARTIAL"
+                    else "BLOCKED"
+                )
                 body = self.assert_view_status(
                     project_id,
-                    "PENDING",
-                    advice.summary,
+                    expected_status,
+                    None,
                 )
                 self.assertNotIn("Ready for mobilization.", body)
 
@@ -382,7 +382,7 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
             self.assertEqual(readiness["status"], PENDING)
             self.assertIn("could not be validated", advice.summary)
 
-        self.assert_view_status(project_id, "PENDING", advice.summary)
+        self.assert_view_status(project_id, "BLOCKED", None)
 
     def test_multiple_subcontractors_have_independent_advice_and_block_project(self):
         with self.app.app_context():
@@ -406,12 +406,12 @@ class EndToEndComplianceFlowTest(unittest.TestCase):
             self.assertEqual(project.compliance_score, 33)
             project_id = project.id
 
-        body = self.assert_view_status(project_id, "BLOCKED", "Mobilization blocked")
+        body = self.assert_view_status(project_id, "BLOCKED", "cannot work today")
         self.assertIn("Ready Sub", body)
         self.assertIn("Pending Sub", body)
         self.assertIn("Blocked Sub", body)
-        self.assertLess(body.index("Ready Sub"), body.index("Pending Sub"))
-        self.assertLess(body.index("Pending Sub"), body.index("Blocked Sub"))
+        self.assertLess(body.index("Blocked Sub"), body.index("Pending Sub"))
+        self.assertLess(body.index("Pending Sub"), body.index("Ready Sub"))
 
     def test_add_project_ignores_subcontractor_owned_by_another_user(self):
         with self.app.app_context():
