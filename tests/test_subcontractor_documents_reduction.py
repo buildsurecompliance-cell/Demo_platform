@@ -1,7 +1,10 @@
 import os
+import re
+import tempfile
 import unittest
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from io import BytesIO
 from unittest.mock import patch
 
 
@@ -12,7 +15,9 @@ from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
 from app.models import (
+    DOCUMENT_REQUEST_PENDING,
     Document,
+    DocumentRequest,
     Project,
     ProjectSubcontractor,
     Subcontractor,
@@ -24,10 +29,15 @@ from app.services.organizations import create_default_organization_for_user
 class SubcontractorDocumentsReductionTest(unittest.TestCase):
 
     def setUp(self):
+        self.uploads = tempfile.TemporaryDirectory()
         self.app = create_app(TestingConfig)
         self.app.config.update(
             TESTING=True,
-            WTF_CSRF_ENABLED=False,
+            WTF_CSRF_ENABLED=True,
+            PROPAGATE_EXCEPTIONS=False,
+            STORAGE_BACKEND="local",
+            UPLOAD_FOLDER=self.uploads.name,
+            RATELIMIT_ENABLED=False,
         )
         self.client = self.app.test_client()
 
@@ -59,6 +69,8 @@ class SubcontractorDocumentsReductionTest(unittest.TestCase):
             db.drop_all()
             db.engine.dispose()
 
+        self.uploads.cleanup()
+
     def login(self, user_id=None, organization_id=None):
         with self.client.session_transaction() as session:
             session["_user_id"] = str(user_id or self.user_id)
@@ -67,6 +79,38 @@ class SubcontractorDocumentsReductionTest(unittest.TestCase):
             session["active_organization_id"] = (
                 organization_id or self.organization_id
             )
+
+    def csrf_token(self, path):
+        response = self.client.get(path)
+        match = re.search(
+            rb'name="csrf_token" value="([^"]+)"',
+            response.data,
+        )
+        self.assertIsNotNone(match)
+        return match.group(1).decode()
+
+    def upload_coi(
+        self,
+        sub_id,
+        *,
+        filename="renewal.pdf",
+        content=b"%PDF-1.4 coi",
+        extra=None,
+    ):
+        self.login()
+        token = self.csrf_token(f"/sub/{sub_id}/documents")
+        data = {
+            "csrf_token": token,
+            "file": (BytesIO(content), filename),
+        }
+        if extra:
+            data.update(extra)
+
+        return self.client.post(
+            f"/sub/{sub_id}/documents/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
 
     def make_subcontractor(self, **overrides):
         sub = Subcontractor(
@@ -162,6 +206,22 @@ class SubcontractorDocumentsReductionTest(unittest.TestCase):
         db.session.add(document)
         db.session.flush()
         return document
+
+    def add_pending_request(self, project, sub):
+        request = DocumentRequest(
+            organization_id=self.organization_id,
+            project_id=project.id,
+            subcontractor_id=sub.id,
+            document_type="COI",
+            token_hash=f"pending-{project.id}-{sub.id}",
+            status=DOCUMENT_REQUEST_PENDING,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(days=7),
+            created_by_user_id=self.user_id,
+        )
+        db.session.add(request)
+        db.session.flush()
+        return request
 
     def render_documents(self, sub_id):
         self.login()
@@ -466,6 +526,250 @@ class SubcontractorDocumentsReductionTest(unittest.TestCase):
         self.assertIn("Project Readiness", body)
         self.assertIn("COI missing", body)
         self.assertIn("No documents uploaded.", body)
+
+    def test_upload_action_matches_coi_summary_state(self):
+        with self.app.app_context():
+            missing = self.make_subcontractor(name="Missing Upload Sub")
+
+            expired = self.make_subcontractor(name="Expired Upload Sub")
+            self.add_coi(
+                expired,
+                expiration=date.today() - timedelta(days=1),
+            )
+
+            valid = self.make_subcontractor(name="Valid Upload Sub")
+            self.add_coi(
+                valid,
+                expiration=date.today() + timedelta(days=90),
+            )
+
+            checking = self.make_subcontractor(name="Checking Upload Sub")
+            self.add_coi(
+                checking,
+                ai_status="not_analyzed",
+                expiration=None,
+                coverage=None,
+                compliance_result=None,
+            )
+            db.session.commit()
+            ids = {
+                "missing": missing.id,
+                "expired": expired.id,
+                "valid": valid.id,
+                "checking": checking.id,
+            }
+
+        missing_body = self.render_documents(ids["missing"]).get_data(as_text=True)
+        expired_body = self.render_documents(ids["expired"]).get_data(as_text=True)
+        valid_body = self.render_documents(ids["valid"]).get_data(as_text=True)
+        checking_body = self.render_documents(ids["checking"]).get_data(as_text=True)
+
+        self.assertIn("Upload COI", missing_body)
+        self.assertIn("Upload New COI", expired_body)
+        self.assertIn("Upload New COI", valid_body)
+        self.assertIn('aria-expanded="false"', valid_body)
+        self.assertIn("hidden", valid_body)
+        self.assertNotIn("Upload COI", checking_body)
+        self.assertNotIn("Upload New COI", checking_body)
+
+    def test_valid_upload_creates_versioned_coi_and_runs_analysis_once(self):
+        with self.app.app_context():
+            sub = self.make_subcontractor()
+            project = self.make_project()
+            self.link(project, sub)
+            self.add_coi(
+                sub,
+                original_name="old-coi.pdf",
+                version=1,
+                expiration=date.today() + timedelta(days=10),
+            )
+            request = self.add_pending_request(project, sub)
+            db.session.commit()
+            sub_id = sub.id
+            request_id = request.id
+
+        def analyze_success(document_id):
+            document = db.session.get(Document, document_id)
+            document.ai_status = "analyzed"
+            document.ai_confidence = 0.95
+            document.ai_extracted_data = {
+                "expiration_date": (
+                    date.today() + timedelta(days=90)
+                ).isoformat(),
+                "coverage_limit": 2_000_000,
+                "general_liability": {
+                    "each_occurrence": 2_000_000,
+                    "expiration_date": (
+                        date.today() + timedelta(days=90)
+                    ).isoformat(),
+                },
+                "confidence": 0.95,
+            }
+            document.ai_compliance_result = {
+                "is_coi": True,
+                "validator": {"valid": True, "errors": []},
+                "confidence": 0.95,
+            }
+            db.session.commit()
+            return {"success": True}
+
+        with patch(
+            "app.routes.subcontractors.analyze_and_save_document",
+            side_effect=analyze_success,
+        ) as analyze:
+            response = self.upload_coi(sub_id, filename="renewal.pdf")
+
+        self.assertEqual(response.status_code, 302)
+        analyze.assert_called_once()
+
+        with self.app.app_context():
+            documents = (
+                Document.query
+                .filter_by(sub_id=sub_id)
+                .order_by(Document.version.desc())
+                .all()
+            )
+            self.assertEqual(len(documents), 2)
+            self.assertEqual(documents[0].document_type, "COI")
+            self.assertEqual(documents[0].version, 2)
+            self.assertEqual(documents[0].original_name, "renewal.pdf")
+            self.assertEqual(documents[0].ai_status, "analyzed")
+            self.assertEqual(documents[1].version, 1)
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(
+                        self.uploads.name,
+                        *documents[0].filename.split("/"),
+                    )
+                )
+            )
+            pending = db.session.get(DocumentRequest, request_id)
+            self.assertEqual(pending.status, DOCUMENT_REQUEST_PENDING)
+            self.assertIsNone(pending.document_id)
+
+        body = self.render_documents(sub_id).get_data(as_text=True)
+        self.assertLess(body.index("renewal.pdf"), body.index("old-coi.pdf"))
+        self.assertIn("v2", body)
+        self.assertIn("v1", body)
+
+    def test_analysis_failure_preserves_document_and_file_as_failed(self):
+        with self.app.app_context():
+            sub = self.make_subcontractor()
+            db.session.commit()
+            sub_id = sub.id
+
+        with patch(
+            "app.routes.subcontractors.analyze_and_save_document",
+            side_effect=RuntimeError("ai unavailable"),
+        ) as analyze:
+            response = self.upload_coi(sub_id, filename="needs-review.pdf")
+
+        self.assertEqual(response.status_code, 302)
+        analyze.assert_called_once()
+
+        with self.app.app_context():
+            document = Document.query.filter_by(sub_id=sub_id).one()
+            self.assertEqual(document.ai_status, "failed")
+            self.assertEqual(document.ai_error, "Document analysis failed.")
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(
+                        self.uploads.name,
+                        *document.filename.split("/"),
+                    )
+                )
+            )
+
+    def test_invalid_and_dangerous_uploads_are_rejected(self):
+        with self.app.app_context():
+            sub = self.make_subcontractor()
+            db.session.commit()
+            sub_id = sub.id
+
+        with patch("app.routes.subcontractors.analyze_and_save_document") as analyze:
+            invalid = self.upload_coi(sub_id, filename="coi.exe")
+            dangerous = self.upload_coi(sub_id, filename="coi.exe.pdf")
+
+        self.assertEqual(invalid.status_code, 302)
+        self.assertEqual(dangerous.status_code, 302)
+        analyze.assert_not_called()
+
+        with self.app.app_context():
+            self.assertEqual(Document.query.filter_by(sub_id=sub_id).count(), 0)
+
+    def test_upload_requires_csrf_and_preserves_tenant_isolation(self):
+        with self.app.app_context():
+            owned = self.make_subcontractor(name="Owned Upload Sub")
+            other = self.make_subcontractor(
+                name="Other Upload Sub",
+                user_id=self.other_user_id,
+                organization_id=self.other_organization_id,
+            )
+            db.session.commit()
+            owned_id = owned.id
+            other_id = other.id
+
+        self.login()
+        missing_csrf = self.client.post(
+            f"/sub/{owned_id}/documents/upload",
+            data={
+                "file": (BytesIO(b"%PDF-1.4 coi"), "coi.pdf"),
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(missing_csrf.status_code, 403)
+
+        token = self.csrf_token(f"/sub/{owned_id}/documents")
+        with patch("app.routes.subcontractors.analyze_and_save_document") as analyze:
+            other_response = self.client.post(
+                f"/sub/{other_id}/documents/upload",
+                data={
+                    "csrf_token": token,
+                    "file": (BytesIO(b"%PDF-1.4 coi"), "coi.pdf"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(other_response.status_code, 404)
+        analyze.assert_not_called()
+
+        with self.app.app_context():
+            self.assertEqual(Document.query.filter_by(sub_id=other_id).count(), 0)
+
+    def test_upload_ignores_tampered_fields_and_does_not_write_legacy_coverage(self):
+        with self.app.app_context():
+            sub = self.make_subcontractor(coi_expiration=None)
+            project = self.make_project()
+            link = self.link(project, sub, coverage_limit=None)
+            db.session.commit()
+            sub_id = sub.id
+            link_id = link.id
+
+        with patch(
+            "app.routes.subcontractors.analyze_and_save_document",
+            return_value={"success": True},
+        ):
+            response = self.upload_coi(
+                sub_id,
+                filename="tampered.pdf",
+                extra={
+                    "document_type": "Scope",
+                    "coverage": "9000000",
+                    "coverage_limit": "9000000",
+                    "coi_expiration": "2030-01-01",
+                    "expiration": "2030-01-01",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            document = Document.query.filter_by(sub_id=sub_id).one()
+            sub = db.session.get(Subcontractor, sub_id)
+            link = db.session.get(ProjectSubcontractor, link_id)
+            self.assertEqual(document.document_type, "COI")
+            self.assertIsNone(sub.coi_expiration)
+            self.assertIsNone(link.coverage_limit)
 
     def test_tenant_isolation_is_preserved(self):
         with self.app.app_context():

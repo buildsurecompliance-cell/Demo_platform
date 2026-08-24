@@ -29,6 +29,49 @@
 {% if coi_summary.coverage %}
 <div class="ux-help">{{ coi_summary.coverage }}</div>
 {% endif %}
+{% if coi_summary.status != "CHECKING" %}
+{% set upload_label = "Upload COI" if coi_summary.status == "MISSING" else "Upload New COI" %}
+{% set upload_panel_id = "coi-upload-panel-" ~ sub.id %}
+{% set upload_input_id = "coi-upload-input-" ~ sub.id %}
+<div class="mt-3" data-coi-upload>
+<button
+    type="button"
+    class="ux-btn ux-btn-secondary"
+    aria-expanded="false"
+    aria-controls="{{ upload_panel_id }}"
+    onclick="const panel = document.getElementById('{{ upload_panel_id }}'); const expanded = this.getAttribute('aria-expanded') === 'true'; panel.hidden = expanded; this.setAttribute('aria-expanded', String(!expanded)); if (!expanded) { document.getElementById('{{ upload_input_id }}').focus(); }">
+    {{ upload_label }}
+</button>
+<form
+    id="{{ upload_panel_id }}"
+    class="mt-3"
+    action="{{ url_for('subcontractors.upload_subcontractor_coi', sub_id=sub.id) }}"
+    method="POST"
+    enctype="multipart/form-data"
+    hidden>
+    {{ csrf_input() }}
+    <label for="{{ upload_input_id }}" class="ux-sr-only">Choose COI file</label>
+    <input
+        id="{{ upload_input_id }}"
+        name="file"
+        type="file"
+        class="form-control"
+        accept=".pdf,.jpg,.jpeg,.png"
+        required>
+    <div class="form-actions mt-2">
+    <button type="submit" class="ux-btn ux-btn-primary">
+        Upload COI
+    </button>
+    <button
+        type="button"
+        class="ux-btn ux-btn-secondary"
+        onclick="const panel = this.closest('form'); const trigger = panel.previousElementSibling; panel.hidden = true; trigger.setAttribute('aria-expanded', 'false'); trigger.focus();">
+        Cancel
+    </button>
+    </div>
+</form>
+</div>
+{% endif %}
 </div>
 
 <div class="form-actions mt-3">

@@ -43,7 +43,9 @@
                     class="form-control"
                     value="{{ sub_email }}"
                     aria-describedby="sub-email-help">
-                <div id="sub-email-help" class="field-help">Used for COI requests.</div>
+                <div id="sub-email-help" class="field-help">
+                    {% if sub_email %}Used for COI requests.{% else %}Required to send COI requests.{% endif %}
+                </div>
             </div>
 
             <div class="form-field">
@@ -108,7 +110,7 @@
             {% endif %}
 
             <div class="mt-3">
-                <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=sub.id) }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=sub.id) }}" class="ux-btn ux-btn-secondary">
                     View Documents
                 </a>
             </div>
@@ -118,9 +120,6 @@
             <button type="submit" class="btn btn-success">
                 Save Changes
             </button>
-            <a href="{{ url_for('subcontractors.view_sub_documents', sub_id=sub.id) }}" class="btn btn-outline-secondary">
-                Cancel
-            </a>
         </div>
     </form>
 

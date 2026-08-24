@@ -236,6 +236,20 @@ def _coi_summary_view_model(sub):
     }
 
 
+def _next_subcontractor_document_version(sub_id, document_type):
+    latest = (
+        Document.query
+        .filter_by(
+            sub_id=sub_id,
+            document_type=document_type,
+        )
+        .order_by(Document.version.desc())
+        .first()
+    )
+
+    return (latest.version + 1) if latest else 1
+
+
 def _date_with_year_label(value):
     if not value:
         return ""
@@ -515,7 +529,10 @@ def view_sub_documents(sub_id):
     documents = (
         Document.query
         .filter_by(sub_id=sub.id)
-        .order_by(Document.uploaded_at.desc())
+        .order_by(
+            Document.uploaded_at.desc(),
+            Document.id.desc(),
+        )
         .all()
     )
 
@@ -529,6 +546,91 @@ def view_sub_documents(sub_id):
             _coi_document_view_model(doc)
             for doc in documents
         ],
+    )
+
+
+@subcontractors_bp.route("/sub/<int:sub_id>/documents/upload", methods=["POST"])
+@login_required
+@subscription_required
+def upload_subcontractor_coi(sub_id):
+    sub = Subcontractor.query.filter_by(
+        id=sub_id,
+    ).filter(
+        subcontractor_scope_filter(Subcontractor)
+    ).first_or_404()
+
+    file = request.files.get("file")
+
+    if not file or file.filename == "":
+        flash("Choose a COI file to upload.", "danger")
+        return redirect(
+            url_for(
+                "subcontractors.view_sub_documents",
+                sub_id=sub.id,
+            )
+        )
+
+    if not allowed_file(file.filename):
+        flash("Upload a PDF, JPG, JPEG, or PNG file.", "danger")
+        return redirect(
+            url_for(
+                "subcontractors.view_sub_documents",
+                sub_id=sub.id,
+            )
+        )
+
+    saved_storage_key = None
+
+    try:
+        original_name = file.filename
+        saved_storage_key = save_document_file(
+            file,
+            original_name,
+            sub_id=sub.id,
+        )
+        document = Document(
+            filename=saved_storage_key,
+            original_name=original_name,
+            document_type=SUBCONTRACTOR_DOCUMENT_TYPE,
+            version=_next_subcontractor_document_version(
+                sub.id,
+                SUBCONTRACTOR_DOCUMENT_TYPE,
+            ),
+            sub_id=sub.id,
+            uploaded_by=current_user.id,
+        )
+        db.session.add(document)
+        db.session.commit()
+        document_id = document.id
+
+    except Exception:
+        db.session.rollback()
+
+        if saved_storage_key:
+            cleanup_saved_document(saved_storage_key)
+
+        logger.exception(
+            "Internal COI upload failed subcontractor_id=%s",
+            sub.id,
+        )
+        flash("We could not upload that COI.", "danger")
+        return redirect(
+            url_for(
+                "subcontractors.view_sub_documents",
+                sub_id=sub.id,
+            )
+        )
+
+    if _analyze_uploaded_documents([document_id]):
+        flash("COI uploaded successfully.", "success")
+    else:
+        flash("COI uploaded, but analysis needs review.", "warning")
+
+    return redirect(
+        url_for(
+            "subcontractors.view_sub_documents",
+            sub_id=sub.id,
+        )
     )
 
 

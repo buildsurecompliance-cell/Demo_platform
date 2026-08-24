@@ -775,6 +775,8 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         self.assertIn("Projects", body)
         self.assertIn("Current COI", body)
         self.assertIn("View Documents", body)
+        self.assertIn("ux-btn ux-btn-secondary", body)
+        self.assertNotIn(">Cancel<", body)
         self.assertNotIn('name="phone"', body)
         self.assertNotIn('name="timezone"', body)
         self.assertNotIn('name="coi_expiration"', body)
@@ -846,6 +848,7 @@ class ProjectSubcontractorFormUXTest(unittest.TestCase):
         ).get_data(as_text=True)
 
         self.assertIn("No COI on file.", missing_body)
+        self.assertIn("Required to send COI requests.", missing_body)
         self.assertIn("EXPIRED", expired_body)
         self.assertIn("Expired", expired_body)
         self.assertIn("CHECKING", checking_body)
