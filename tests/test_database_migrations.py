@@ -80,6 +80,7 @@ class DatabaseMigrationTest(unittest.TestCase):
                 "APP_ENV": "production",
                 "SECRET_KEY": "prod-secret",
                 "DATABASE_URL": "postgres://user:pass@example.com/db",
+                "APPLICATION_BASE_URL": "https://app.buildsure.test",
             },
             clear=True,
         ):
@@ -99,6 +100,7 @@ class DatabaseMigrationTest(unittest.TestCase):
                 "APP_ENV": "production",
                 "SECRET_KEY": "prod-secret",
                 "DATABASE_URL": "postgresql://user:pass@example.com/db",
+                "APPLICATION_BASE_URL": "https://app.buildsure.test",
             },
             clear=True,
         ):

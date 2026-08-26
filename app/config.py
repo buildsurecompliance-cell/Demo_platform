@@ -2,7 +2,7 @@ import os
 import sys
 
 from datetime import timedelta
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -179,6 +179,41 @@ def _int_env(name, default):
         return default
 
 
+def _application_base_url(default=None):
+    value = os.getenv(
+        "APPLICATION_BASE_URL",
+        os.getenv("APP_BASE_URL", default),
+    )
+
+    if not value:
+        return value
+
+    return value.strip().rstrip("/")
+
+
+def _is_local_application_base_url(value):
+    parsed = urlparse(value or "")
+    hostname = (parsed.hostname or "").lower()
+
+    return hostname in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    }
+
+
+def _is_valid_application_base_url(value):
+    parsed = urlparse(value or "")
+
+    return bool(
+        parsed.scheme in {
+            "http",
+            "https",
+        }
+        and parsed.netloc
+    )
+
+
 class Config:
 
     ENV = APP_ENV
@@ -186,10 +221,7 @@ class Config:
     DEBUG = _bool_env("DEBUG", False)
     TESTING = False
     PORT = _int_env("PORT", 8000)
-    APPLICATION_BASE_URL = os.getenv(
-        "APPLICATION_BASE_URL",
-        os.getenv("APP_BASE_URL", "http://localhost:8000"),
-    )
+    APPLICATION_BASE_URL = _application_base_url("http://localhost:8000")
     DOCUMENT_REQUEST_EXPIRATION_DAYS = _int_env(
         "DOCUMENT_REQUEST_EXPIRATION_DAYS",
         7,
@@ -337,6 +369,7 @@ class ProductionConfig(Config):
 
     DEBUG = False
     SECRET_KEY = os.getenv("SECRET_KEY")
+    APPLICATION_BASE_URL = _application_base_url()
     SQLALCHEMY_DATABASE_URI = _database_url(default_sqlite=False)
     SESSION_COOKIE_SECURE = True
     STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "s3").lower()
@@ -371,6 +404,25 @@ def get_config():
         if ProductionConfig.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
             raise RuntimeError(
                 "Production DATABASE_URL must use PostgreSQL"
+            )
+
+        if not ProductionConfig.APPLICATION_BASE_URL:
+            raise RuntimeError(
+                "APPLICATION_BASE_URL not set in environment variables"
+            )
+
+        if not _is_valid_application_base_url(
+            ProductionConfig.APPLICATION_BASE_URL
+        ):
+            raise RuntimeError(
+                "APPLICATION_BASE_URL must be an absolute HTTP(S) URL"
+            )
+
+        if _is_local_application_base_url(
+            ProductionConfig.APPLICATION_BASE_URL
+        ):
+            raise RuntimeError(
+                "Production APPLICATION_BASE_URL must not point to localhost"
             )
 
         if (

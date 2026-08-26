@@ -222,10 +222,11 @@ def _money_label(value):
 
 
 def document_request_url(token):
-    base_url = current_app.config.get(
-        "APPLICATION_BASE_URL",
-        "http://localhost:8000",
-    )
+    base_url = current_app.config.get("APPLICATION_BASE_URL")
+
+    if not base_url:
+        raise DocumentRequestError("APPLICATION_BASE_URL is required.")
+
     path = f"/document-request/{token}"
     return urljoin(f"{base_url.rstrip('/')}/", path.lstrip("/"))
 

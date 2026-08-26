@@ -34,6 +34,7 @@ Run this with:
 - `APP_ENV=production`
 - a valid PostgreSQL `DATABASE_URL`
 - a production `SECRET_KEY`
+- `APPLICATION_BASE_URL` set to the public app URL used in outbound links
 
 ## Migration Commands
 
@@ -431,6 +432,7 @@ branch such as `codex-review` until a permanent staging branch is chosen.
 APP_ENV=production
 SECRET_KEY=<railway-generated-secret>
 DATABASE_URL=<railway-postgres-url>
+APPLICATION_BASE_URL=<railway-public-app-url>
 OPENAI_API_KEY=<staging-or-empty-while-mocked>
 RESEND_API_KEY=<staging-or-empty-while-email-disabled>
 AI_MOCK_MODE=true

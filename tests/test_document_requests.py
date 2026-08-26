@@ -273,19 +273,51 @@ class DocumentRequestTest(unittest.TestCase):
             "https://buildsure.test/document-request/"
         ))
 
+    def test_document_request_url_uses_configured_local_base_url(self):
+        self.app.config["APPLICATION_BASE_URL"] = "http://localhost:5000"
+
+        self.assertEqual(
+            document_request_url("local-token"),
+            "http://localhost:5000/document-request/local-token",
+        )
+
+    def test_document_request_url_normalizes_trailing_slash(self):
+        self.app.config["APPLICATION_BASE_URL"] = "https://buildsure.test/"
+
+        self.assertEqual(
+            document_request_url("slash-token"),
+            "https://buildsure.test/document-request/slash-token",
+        )
+
     def test_valid_link_opens_without_login(self):
         delivery = self.create_request()
 
         response = self.client.get(f"/document-request/{delivery.token}")
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Upload Certificate of Insurance", response.data)
+        self.assertIn(b"BuildSure", response.data)
+        self.assertIn(b"For", response.data)
         self.assertIn(b"Request Project", response.data)
+        self.assertIn(b"Project", response.data)
         self.assertIn(b"Request Sub", response.data)
+        self.assertIn(
+            b"Please upload the updated Certificate of Insurance",
+            response.data,
+        )
+        self.assertIn(b'name="file"', response.data)
+        self.assertIn(b'accept=".pdf,.jpg,.jpeg,.png"', response.data)
+        self.assertIn(b"Upload COI", response.data)
+        self.assertIn(b"No account required", response.data)
+        self.assertIn(b'name="csrf_token"', response.data)
 
     def test_invalid_expired_and_cancelled_links_are_generic(self):
         invalid = self.client.get("/document-request/not-a-real-token")
         self.assertEqual(invalid.status_code, 404)
-        self.assertIn(b"invalid or has expired", invalid.data)
+        self.assertIn(b"This upload link is no longer valid", invalid.data)
+        self.assertIn(b"Please contact the contractor", invalid.data)
+        self.assertNotIn(b"not-a-real-token", invalid.data)
+        self.assertNotIn(b"DOCUMENT_REQUEST", invalid.data)
 
         expired = self.create_request()
         expired.request.expires_at = datetime.now(timezone.utc).replace(
@@ -295,6 +327,8 @@ class DocumentRequestTest(unittest.TestCase):
 
         expired_response = self.client.get(f"/document-request/{expired.token}")
         self.assertEqual(expired_response.status_code, 404)
+        self.assertIn(b"This upload link is no longer valid", expired_response.data)
+        self.assertNotIn(expired.token.encode(), expired_response.data)
         self.assertEqual(
             db.session.get(DocumentRequest, expired.request.id).status,
             DOCUMENT_REQUEST_EXPIRED,
@@ -308,6 +342,8 @@ class DocumentRequestTest(unittest.TestCase):
             f"/document-request/{cancelled.token}"
         )
         self.assertEqual(cancelled_response.status_code, 404)
+        self.assertIn(b"This upload link is no longer valid", cancelled_response.data)
+        self.assertNotIn(cancelled.token.encode(), cancelled_response.data)
 
     def test_upload_creates_normal_document_and_completes_request(self):
         delivery = self.create_request()
@@ -319,6 +355,9 @@ class DocumentRequestTest(unittest.TestCase):
             response = self.post_upload(delivery.token)
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn(b"COI uploaded successfully", response.data)
+        self.assertIn(b"You can close this page", response.data)
+        self.assertNotIn(delivery.token.encode(), response.data)
         document = Document.query.one()
         request = DocumentRequest.query.one()
         self.assertEqual(document.sub_id, self.subcontractor_id)

@@ -295,6 +295,7 @@ class ProductionBootstrapTest(unittest.TestCase):
                 "APP_ENV": "production",
                 "SECRET_KEY": "prod-secret",
                 "DATABASE_URL": "postgres://example",
+                "APPLICATION_BASE_URL": "https://app.buildsure.test",
             },
             clear=True,
         ):
@@ -325,6 +326,7 @@ class ProductionBootstrapTest(unittest.TestCase):
                 "SECRET_KEY": "prod-secret",
                 "DATABASE_URL": "postgres://example",
                 "STORAGE_BACKEND": "local",
+                "APPLICATION_BASE_URL": "https://app.buildsure.test",
             },
             clear=True,
         ):
@@ -344,6 +346,7 @@ class ProductionBootstrapTest(unittest.TestCase):
                 "DATABASE_URL": "postgres://example",
                 "STORAGE_BACKEND": "local",
                 "ALLOW_LOCAL_STORAGE_IN_PRODUCTION": "true",
+                "APPLICATION_BASE_URL": "https://app.buildsure.test",
             },
             clear=True,
         ):
@@ -353,6 +356,61 @@ class ProductionBootstrapTest(unittest.TestCase):
             config = reloaded.get_config()
 
         self.assertEqual(config.STORAGE_BACKEND, "local")
+
+    def test_production_config_requires_public_application_base_url(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "SECRET_KEY": "prod-secret",
+                "DATABASE_URL": "postgres://example",
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            reloaded = importlib.reload(config_module)
+
+            with self.assertRaisesRegex(RuntimeError, "APPLICATION_BASE_URL"):
+                reloaded.get_config()
+
+    def test_production_config_rejects_localhost_application_base_url(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "SECRET_KEY": "prod-secret",
+                "DATABASE_URL": "postgres://example",
+                "APPLICATION_BASE_URL": "http://localhost:5000",
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            reloaded = importlib.reload(config_module)
+
+            with self.assertRaisesRegex(RuntimeError, "localhost"):
+                reloaded.get_config()
+
+    def test_application_base_url_falls_back_to_legacy_app_base_url(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "SECRET_KEY": "prod-secret",
+                "DATABASE_URL": "postgres://example",
+                "APP_BASE_URL": "https://legacy-base.buildsure.test/",
+            },
+            clear=True,
+        ):
+            import app.config as config_module
+
+            config = importlib.reload(config_module).get_config()
+
+        self.assertEqual(
+            config.APPLICATION_BASE_URL,
+            "https://legacy-base.buildsure.test",
+        )
 
     def test_openai_module_import_does_not_require_api_key(self):
         with patch.dict(os.environ, {}, clear=True):
