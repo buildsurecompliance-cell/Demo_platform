@@ -21,6 +21,9 @@ START_COMMAND = (
     "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 "
     "--timeout 120 --access-logfile - --error-logfile - run:app"
 )
+PRE_DEPLOY_COMMAND = (
+    "python scripts/wait_for_database.py && flask --app run db upgrade"
+)
 
 
 class RailwayStagingTest(unittest.TestCase):
@@ -42,7 +45,7 @@ class RailwayStagingTest(unittest.TestCase):
         self.assertIn("--workers 1", config["deploy"]["startCommand"])
         self.assertEqual(
             config["deploy"]["preDeployCommand"],
-            "flask --app run db upgrade",
+            PRE_DEPLOY_COMMAND,
         )
         self.assertEqual(config["deploy"]["healthcheckPath"], "/health")
         self.assertEqual(config["deploy"]["restartPolicyType"], "ON_FAILURE")
