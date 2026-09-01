@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 def send_email_reminder(
     to_email,
     subject,
-    message
+    message,
+    html_message=None,
 ):
 
     api_key = os.environ.get(
@@ -28,18 +29,21 @@ def send_email_reminder(
         return False
 
     try:
+        payload = {
+            "from": "BuildSure <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_message or f"<p>{message}</p>",
+            "text": message,
+        }
+
         response = requests.post(
             "https://api.resend.com/emails",
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "from": "BuildSure <onboarding@resend.dev>",
-                "to": [to_email],
-                "subject": subject,
-                "html": f"<p>{message}</p>",
-            },
+            json=payload,
             timeout=10,
         )
 

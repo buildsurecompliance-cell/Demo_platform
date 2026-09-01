@@ -1,4 +1,5 @@
 import hashlib
+import html
 import logging
 import secrets
 from dataclasses import dataclass
@@ -137,28 +138,34 @@ def complete_document_request(request, document):
 def send_document_request_email(request, token):
     upload_url = document_request_url(token)
     correction_context = _coverage_correction_context(request)
+    expires_in_days = current_app.config.get(
+        "DOCUMENT_REQUEST_EXPIRATION_DAYS",
+        7,
+    )
 
     if correction_context:
-        subject = f"Corrected COI requested for {request.project.name}"
-        message = (
-            f"{request.organization.name} needs a corrected Certificate of "
-            f"Insurance for {request.project.name}.\n\n"
-            "The submitted COI shows:\n"
-            f"General Liability: {_money_label(correction_context['current'])}\n\n"
-            "Project requirement:\n"
-            f"General Liability: {_money_label(correction_context['required'])}\n\n"
-            "Please upload a corrected COI using the secure link below.\n\n"
-            f"{upload_url}\n\n"
-            "No account is required."
+        subject = (
+            "Corrected Certificate of Insurance requested for "
+            f"{request.project.name}"
+        )
+        message, html_message = _corrected_coi_email_content(
+            organization_name=request.organization.name,
+            project_name=request.project.name,
+            upload_url=upload_url,
+            expires_in_days=expires_in_days,
+            current_coverage=correction_context["current"],
+            required_coverage=correction_context["required"],
         )
     else:
-        subject = f"COI requested for {request.project.name}"
-        message = (
-            f"{request.organization.name} needs an updated Certificate of "
-            f"Insurance for {request.project.name}.\n\n"
-            "Upload your COI using the secure link below.\n\n"
-            f"{upload_url}\n\n"
-            "No account is required."
+        subject = (
+            "Certificate of Insurance requested for "
+            f"{request.project.name}"
+        )
+        message, html_message = _coi_request_email_content(
+            organization_name=request.organization.name,
+            project_name=request.project.name,
+            upload_url=upload_url,
+            expires_in_days=expires_in_days,
         )
 
     try:
@@ -166,6 +173,7 @@ def send_document_request_email(request, token):
             request.subcontractor.email,
             subject,
             message,
+            html_message=html_message,
         )
     except Exception as error:
         logger.error(
@@ -174,6 +182,169 @@ def send_document_request_email(request, token):
             error.__class__.__name__,
         )
         return False
+
+
+def _coi_request_email_content(
+    *,
+    organization_name,
+    project_name,
+    upload_url,
+    expires_in_days,
+):
+    text = (
+        "BuildSure\n\n"
+        "Certificate of Insurance Request\n\n"
+        f"{organization_name} has requested an updated Certificate of "
+        "Insurance.\n\n"
+        "Project\n"
+        f"{project_name}\n\n"
+        "Upload COI:\n"
+        f"{upload_url}\n\n"
+        "No account required.\n"
+        f"This secure upload link expires in {expires_in_days} days.\n\n"
+        "If the button does not work, copy and paste this link into your "
+        "browser:\n"
+        f"{upload_url}\n\n"
+        "Powered by BuildSure"
+    )
+    html_message = _document_request_email_html(
+        heading="Certificate of Insurance Request",
+        organization_copy=(
+            f"{organization_name} has requested an updated Certificate of "
+            "Insurance."
+        ),
+        project_name=project_name,
+        upload_url=upload_url,
+        cta_label="Upload COI",
+        expires_in_days=expires_in_days,
+    )
+
+    return text, html_message
+
+
+def _corrected_coi_email_content(
+    *,
+    organization_name,
+    project_name,
+    upload_url,
+    expires_in_days,
+    current_coverage,
+    required_coverage,
+):
+    current_label = _money_label(current_coverage)
+    required_label = _money_label(required_coverage)
+    text = (
+        "BuildSure\n\n"
+        "Corrected Certificate of Insurance Requested\n\n"
+        f"{organization_name} has requested a corrected Certificate of "
+        "Insurance.\n\n"
+        "Project\n"
+        f"{project_name}\n\n"
+        "Current General Liability\n"
+        f"{current_label}\n\n"
+        "Required General Liability\n"
+        f"{required_label}\n\n"
+        "Upload Corrected COI:\n"
+        f"{upload_url}\n\n"
+        "No account required.\n"
+        f"This secure upload link expires in {expires_in_days} days.\n\n"
+        "If the button does not work, copy and paste this link into your "
+        "browser:\n"
+        f"{upload_url}\n\n"
+        "Powered by BuildSure"
+    )
+    html_message = _document_request_email_html(
+        heading="Corrected Certificate of Insurance Requested",
+        organization_copy=(
+            f"{organization_name} has requested a corrected Certificate of "
+            "Insurance."
+        ),
+        project_name=project_name,
+        upload_url=upload_url,
+        cta_label="Upload Corrected COI",
+        expires_in_days=expires_in_days,
+        facts=[
+            ("Current General Liability", current_label),
+            ("Required General Liability", required_label),
+        ],
+    )
+
+    return text, html_message
+
+
+def _document_request_email_html(
+    *,
+    heading,
+    organization_copy,
+    project_name,
+    upload_url,
+    cta_label,
+    expires_in_days,
+    facts=None,
+):
+    escaped_heading = html.escape(heading)
+    escaped_copy = html.escape(organization_copy)
+    escaped_project = html.escape(project_name)
+    escaped_url = html.escape(upload_url, quote=True)
+    escaped_url_text = html.escape(upload_url)
+    escaped_cta = html.escape(cta_label)
+    fact_markup = ""
+
+    for label, value in facts or []:
+        fact_markup += (
+            "<p style=\"margin:0 0 12px;\">"
+            f"<span style=\"display:block;color:#64748b;font-size:12px;"
+            f"font-weight:700;text-transform:uppercase;\">{html.escape(label)}</span>"
+            f"<span style=\"color:#0f172a;font-size:16px;font-weight:700;\">"
+            f"{html.escape(value)}</span>"
+            "</p>"
+        )
+
+    return (
+        "<!doctype html>"
+        "<html>"
+        "<body style=\"margin:0;padding:0;background:#f8fafc;"
+        "font-family:Arial,sans-serif;color:#0f172a;\">"
+        "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" "
+        "cellpadding=\"0\" style=\"background:#f8fafc;padding:24px;\">"
+        "<tr><td align=\"center\">"
+        "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" "
+        "cellpadding=\"0\" style=\"max-width:560px;background:#ffffff;"
+        "border:1px solid #e2e8f0;border-radius:10px;padding:32px;\">"
+        "<tr><td>"
+        "<p style=\"margin:0 0 18px;color:#475569;font-size:14px;"
+        "font-weight:700;letter-spacing:.02em;\">BuildSure</p>"
+        f"<h1 style=\"margin:0 0 18px;font-size:24px;line-height:1.25;"
+        f"color:#0f172a;\">{escaped_heading}</h1>"
+        f"<p style=\"margin:0 0 22px;color:#475569;font-size:16px;"
+        f"line-height:1.5;\">{escaped_copy}</p>"
+        "<p style=\"margin:0 0 12px;\">"
+        "<span style=\"display:block;color:#64748b;font-size:12px;"
+        "font-weight:700;text-transform:uppercase;\">Project</span>"
+        f"<span style=\"color:#0f172a;font-size:16px;font-weight:700;\">"
+        f"{escaped_project}</span>"
+        "</p>"
+        f"{fact_markup}"
+        f"<p style=\"margin:24px 0;\"><a href=\"{escaped_url}\" "
+        "style=\"display:inline-block;background:#2563eb;color:#ffffff;"
+        "text-decoration:none;border-radius:7px;padding:12px 18px;"
+        f"font-weight:700;\">{escaped_cta}</a></p>"
+        "<p style=\"margin:0 0 8px;color:#475569;font-size:14px;\">"
+        "No account required.</p>"
+        f"<p style=\"margin:0 0 20px;color:#475569;font-size:14px;\">"
+        f"This secure upload link expires in {int(expires_in_days)} days.</p>"
+        "<p style=\"margin:0 0 8px;color:#475569;font-size:14px;\">"
+        "If the button does not work, copy and paste this link into your "
+        "browser:</p>"
+        f"<p style=\"margin:0 0 24px;color:#2563eb;font-size:14px;"
+        f"line-height:1.5;word-break:break-all;\">{escaped_url_text}</p>"
+        "<p style=\"margin:0;color:#64748b;font-size:13px;\">"
+        "Powered by BuildSure</p>"
+        "</td></tr></table>"
+        "</td></tr></table>"
+        "</body>"
+        "</html>"
+    )
 
 
 def _coverage_correction_context(request):

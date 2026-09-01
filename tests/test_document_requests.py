@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from datetime import date, datetime, timedelta, timezone
+from html import escape
 from io import BytesIO
 from unittest.mock import patch
 
@@ -174,6 +175,30 @@ class DocumentRequestTest(unittest.TestCase):
         self.assertIsNotNone(request.sent_at)
         self.assertIsNotNone(request.last_sent_at)
         send_email.assert_called_once()
+        to_email, subject, message = send_email.call_args.args
+        html_message = send_email.call_args.kwargs["html_message"]
+        self.assertEqual(to_email, "sub@example.com")
+        self.assertEqual(
+            subject,
+            "Certificate of Insurance requested for Request Project",
+        )
+        self.assertIn("Certificate of Insurance Request", message)
+        self.assertIn(
+            f"{self.organization.name} has requested an updated Certificate of "
+            "Insurance.",
+            message,
+        )
+        self.assertIn("Project\nRequest Project", message)
+        self.assertIn("No account required.", message)
+        self.assertIn("This secure upload link expires in 7 days.", message)
+        self.assertIn("https://buildsure.test/document-request/", message)
+        self.assertIn("Certificate of Insurance Request", html_message)
+        self.assertIn(escape(self.organization.name), html_message)
+        self.assertIn("Request Project", html_message)
+        self.assertIn(">Upload COI</a>", html_message)
+        self.assertIn("No account required.", html_message)
+        self.assertIn("This secure upload link expires in 7 days.", html_message)
+        self.assertIn('href="https://buildsure.test/document-request/', html_message)
 
     def test_corrected_coi_request_email_includes_coverage_context(self):
         self.project.required_coverage = 5_000_000
@@ -216,10 +241,57 @@ class DocumentRequestTest(unittest.TestCase):
 
         self.assertTrue(delivery.sent)
         _, subject, message = send_email.call_args.args
-        self.assertEqual(subject, "Corrected COI requested for Request Project")
+        html_message = send_email.call_args.kwargs["html_message"]
+        self.assertEqual(
+            subject,
+            "Corrected Certificate of Insurance requested for Request Project",
+        )
         self.assertIn("corrected Certificate of Insurance", message)
-        self.assertIn("General Liability: $2M", message)
-        self.assertIn("General Liability: $5M", message)
+        self.assertIn("Current General Liability\n$2M", message)
+        self.assertIn("Required General Liability\n$5M", message)
+        self.assertIn("Corrected Certificate of Insurance Requested", html_message)
+        self.assertIn("Current General Liability", html_message)
+        self.assertIn("$2M", html_message)
+        self.assertIn("Required General Liability", html_message)
+        self.assertIn("$5M", html_message)
+        self.assertIn(">Upload Corrected COI</a>", html_message)
+        self.assertIn("https://buildsure.test/document-request/", message)
+        self.assertIn('href="https://buildsure.test/document-request/', html_message)
+        internal_terms = ("readiness", "AI", "confidence", "coverage gap")
+        for term in internal_terms:
+            self.assertNotIn(term, message)
+            self.assertNotIn(term, html_message)
+
+    def test_document_request_email_html_escapes_dynamic_content(self):
+        self.organization.name = "Build <script>alert(1)</script>"
+        self.project.name = "Tower & <Risk>"
+        db.session.commit()
+
+        with patch(
+            "app.services.document_requests.send_email_reminder",
+            return_value=True,
+        ) as send_email:
+            create_or_resend_coi_request(
+                organization=self.organization,
+                project=self.project,
+                subcontractor=self.subcontractor,
+                created_by_user_id=self.owner_id,
+            )
+
+        _, subject, message = send_email.call_args.args
+        html_message = send_email.call_args.kwargs["html_message"]
+        self.assertEqual(
+            subject,
+            "Certificate of Insurance requested for Tower & <Risk>",
+        )
+        self.assertIn("Build <script>alert(1)</script>", message)
+        self.assertIn("Tower & <Risk>", message)
+        self.assertIn(
+            "Build &lt;script&gt;alert(1)&lt;/script&gt;",
+            html_message,
+        )
+        self.assertIn("Tower &amp; &lt;Risk&gt;", html_message)
+        self.assertNotIn("<script>", html_message)
 
     def test_request_requires_same_organization_and_link(self):
         self.login_owner()
@@ -288,6 +360,16 @@ class DocumentRequestTest(unittest.TestCase):
             document_request_url("slash-token"),
             "https://buildsure.test/document-request/slash-token",
         )
+
+    def test_document_request_url_ignores_host_header(self):
+        with self.app.test_request_context(
+            "/",
+            headers={"Host": "attacker.example"},
+        ):
+            self.assertEqual(
+                document_request_url("host-token"),
+                "https://buildsure.test/document-request/host-token",
+            )
 
     def test_valid_link_opens_without_login(self):
         delivery = self.create_request()
