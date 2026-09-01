@@ -5,6 +5,7 @@ from .dashboard import dashboard_bp
 from .documents import documents_bp
 from .health import health_bp
 from .notifications import notifications_bp
+from .organization_settings import organization_settings_bp
 from .projects import projects_bp
 from .subcontractors import subcontractors_bp
 from .document_requests import document_requests_bp
@@ -19,6 +20,7 @@ __all__ = [
     "document_requests_bp",
     "health_bp",
     "notifications_bp",
+    "organization_settings_bp",
     "projects_bp",
     "subcontractors_bp",
     "team_bp",

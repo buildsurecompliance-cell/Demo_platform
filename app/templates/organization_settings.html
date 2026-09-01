@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="form-shell">
+
+    <div class="form-header">
+        <div>
+            <h1>Organization Settings</h1>
+        </div>
+    </div>
+
+    <form method="POST">
+        {{ csrf_input() }}
+
+        <section class="form-card">
+            <div class="form-field">
+                <label for="name">Company Name <span class="text-danger">*</span></label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    class="form-control"
+                    value="{{ organization.name }}"
+                    maxlength="255"
+                    aria-describedby="company-name-help"
+                    required>
+                <div id="company-name-help" class="field-help">
+                    Used in emails and external requests.
+                </div>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+                Save Changes
+            </button>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}

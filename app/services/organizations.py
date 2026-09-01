@@ -51,6 +51,26 @@ def default_organization_name(user):
     return f"{prefix}'s Organization"
 
 
+def update_organization_name(organization, name):
+    if not organization:
+        raise ValueError("An active organization is required.")
+
+    normalized_name = (name or "").strip()
+    max_length = Organization.name.type.length
+
+    if not normalized_name:
+        raise ValueError("Company name is required.")
+
+    if max_length and len(normalized_name) > max_length:
+        raise ValueError(
+            f"Company name must be {max_length} characters or fewer."
+        )
+
+    organization.name = normalized_name
+    db.session.flush()
+    return organization
+
+
 def create_default_organization_for_user(user, role=ROLE_OWNER):
     organization = Organization(
         name=default_organization_name(user)

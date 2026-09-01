@@ -9,6 +9,11 @@
 <h2>Team</h2>
 <p class="text-muted mb-0">{{ organization.name }}</p>
 </div>
+{% if can_manage %}
+<a href="{{ url_for('organization_settings.settings') }}" class="btn btn-outline-secondary">
+Organization Settings
+</a>
+{% endif %}
 </div>
 
 <h4>Members</h4>

@@ -27,6 +27,7 @@ from app.routes import (
     documents_bp,
     health_bp,
     notifications_bp,
+    organization_settings_bp,
     projects_bp,
     subcontractors_bp,
     team_bp,
@@ -103,6 +104,7 @@ def create_app(config_object=None):
     app.register_blueprint(documents_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(organization_settings_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(subcontractors_bp)
     app.register_blueprint(team_bp)
