@@ -26,6 +26,22 @@ def _default_org_name(email):
     return f"{prefix}'s Organization"
 
 
+def _user_backfill_select():
+    user_table = sa.table(
+        "user",
+        sa.column("id", sa.Integer),
+        sa.column("email", sa.String),
+    )
+
+    return (
+        sa.select(
+            user_table.c.id,
+            user_table.c.email,
+        )
+        .order_by(user_table.c.id)
+    )
+
+
 def upgrade():
     organization_table = sa.table(
         "organization",
@@ -153,9 +169,7 @@ def upgrade():
     bind = op.get_bind()
     now = datetime.utcnow()
 
-    users = bind.execute(
-        sa.text("SELECT id, email FROM user ORDER BY id")
-    ).fetchall()
+    users = bind.execute(_user_backfill_select()).fetchall()
 
     for user in users:
         result = bind.execute(

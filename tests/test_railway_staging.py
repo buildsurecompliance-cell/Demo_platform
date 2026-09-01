@@ -19,7 +19,7 @@ from app.extensions import db
 ROOT = Path(__file__).resolve().parents[1]
 START_COMMAND = (
     "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 "
-    "--timeout 120 --access-logfile - --error-logfile - main:app"
+    "--timeout 120 --access-logfile - --error-logfile - run:app"
 )
 
 
@@ -40,7 +40,10 @@ class RailwayStagingTest(unittest.TestCase):
         self.assertEqual(config["build"]["builder"], "NIXPACKS")
         self.assertEqual(config["deploy"]["startCommand"], START_COMMAND)
         self.assertIn("--workers 1", config["deploy"]["startCommand"])
-        self.assertEqual(config["deploy"]["preDeployCommand"], "flask db upgrade")
+        self.assertEqual(
+            config["deploy"]["preDeployCommand"],
+            "flask --app run db upgrade",
+        )
         self.assertEqual(config["deploy"]["healthcheckPath"], "/health")
         self.assertEqual(config["deploy"]["restartPolicyType"], "ON_FAILURE")
         self.assertEqual(config["deploy"]["restartPolicyMaxRetries"], 10)

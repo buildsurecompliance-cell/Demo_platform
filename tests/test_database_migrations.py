@@ -312,6 +312,21 @@ class DatabaseMigrationTest(unittest.TestCase):
             compiled_tables["organization_membership"],
         )
 
+    def test_organization_tenancy_user_backfill_select_quotes_user_for_postgresql(self):
+        migration = importlib.import_module(
+            "migrations.versions.7c2b8d91f0a4_add_organization_tenancy"
+        )
+
+        compiled = str(
+            migration._user_backfill_select().compile(
+                dialect=postgresql.dialect()
+            )
+        )
+
+        self.assertIn('FROM "user"', compiled)
+        self.assertIn('ORDER BY "user".id', compiled)
+        self.assertNotIn("FROM user ", compiled)
+
     def test_app_can_use_schema_after_migration_upgrade(self):
         with self.temporary_migrated_app() as app:
             with app.app_context():
