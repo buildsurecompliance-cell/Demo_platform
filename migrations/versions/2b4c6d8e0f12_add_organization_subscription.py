@@ -113,7 +113,7 @@ def upgrade():
                 organization.id,
                 'internal',
                 'active',
-                0,
+                FALSE,
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             FROM organization
